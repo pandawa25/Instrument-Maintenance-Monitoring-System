@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AreaStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InstrumentStatus {
+  ACTIVE
+  STANDBY
+  OUT_OF_SERVICE
+}
+
+enum Criticality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FailureCategory {
+  INSTRUMENT
+  ELECTRICAL
+  MECHANICAL
+  COMMUNICATION
+  CONFIGURATION
+  CALIBRATION
+  PROCESS
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Role {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(50)
+  description String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(150)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(150)
+  roleId       String    @map("role_id") @db.Uuid
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  role               Role                    @relation(fields: [roleId], references: [id])
+  maintenanceAsTech  CorrectiveMaintenance[] @relation("TechnicianMaintenance")
+  maintenanceCreated CorrectiveMaintenance[] @relation("CreatedByMaintenance")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Area {
+  id          String     @id @default(uuid()) @db.Uuid
+  areaCode    String     @unique @map("area_code") @db.VarChar(20)
+  areaName    String     @map("area_name") @db.VarChar(150)
+  description String?    @db.VarChar(255)
+  status      AreaStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+
+  instruments Instrument[]
+  maintenance CorrectiveMaintenance[]
+
+  @@index([status])
+  @@map("areas")
+}
+
+model InstrumentType {
+  id          String    @id @default(uuid()) @db.Uuid
+  typeCode    String    @unique @map("type_code") @db.VarChar(30)
+  typeName    String    @map("type_name") @db.VarChar(100)
+  description String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  instruments Instrument[]
+
+  @@map("instrument_types")
+}
+
+model Instrument {
+  id               String           @id @default(uuid()) @db.Uuid
+  tagNumber        String           @unique @map("tag_number") @db.VarChar(50)
+  instrumentName   String           @map("instrument_name") @db.VarChar(150)
+  description      String?          @db.VarChar(255)
+  areaId           String           @map("area_id") @db.Uuid
+  instrumentTypeId String           @map("instrument_type_id") @db.Uuid
+  manufacturer     String?          @db.VarChar(100)
+  model            String?          @db.VarChar(100)
+  serialNumber     String?          @map("serial_number") @db.VarChar(100)
+  installationDate DateTime?        @map("installation_date") @db.Date
+  status           InstrumentStatus @default(ACTIVE)
+  criticality      Criticality      @default(MEDIUM)
+  remarks          String?          @db.VarChar(500)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  area           Area                    @relation(fields: [areaId], references: [id])
+  instrumentType InstrumentType          @relation(fields: [instrumentTypeId], references: [id])
+  maintenance    CorrectiveMaintenance[]
+
+  @@index([areaId])
+  @@index([instrumentTypeId])
+  @@index([status])
+  @@index([areaId, status])
+  @@map("instruments")
+}
+
+model CorrectiveMaintenance {
+  id                 String            @id @default(uuid()) @db.Uuid
+  maintenanceDate    DateTime          @map("maintenance_date") @db.Date
+  instrumentId       String            @map("instrument_id") @db.Uuid
+  areaId             String            @map("area_id") @db.Uuid
+  failureCategory    FailureCategory   @map("failure_category")
+  problemDescription String            @map("problem_description") @db.VarChar(1000)
+  rootCause          String?           @map("root_cause") @db.VarChar(1000)
+  actionTaken        String?           @map("action_taken") @db.VarChar(1000)
+  downtimeHours      Decimal?          @map("downtime_hours") @db.Decimal(6, 2)
+  technicianId       String            @map("technician_id") @db.Uuid
+  status             MaintenanceStatus @default(OPEN)
+  completionDate     DateTime?         @map("completion_date") @db.Date
+  createdById        String            @map("created_by_id") @db.Uuid
+  remarks            String?           @db.VarChar(500)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  deletedAt          DateTime?         @map("deleted_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+  area       Area       @relation(fields: [areaId], references: [id])
+  technician User       @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
+  createdBy  User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
+
+  @@index([maintenanceDate])
+  @@index([instrumentId])
+  @@index([areaId])
+  @@index([status])
+  @@index([areaId, maintenanceDate])
+  @@map("corrective_maintenance")
+}
