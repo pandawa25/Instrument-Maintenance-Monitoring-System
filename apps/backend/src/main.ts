@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -10,8 +10,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
+  // Tanpa URI versioning untuk MVP — semua route ada langsung di /api/*
+  // (mis. /api/areas), sesuai kontrak yang dipakai frontend (VITE_API_BASE_URL=.../api).
+  // Tambahkan app.enableVersioning() lagi nanti kalau memang dibutuhkan breaking change API.
   app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   app.enableCors({
     origin: config.get<string>('corsOrigin'),

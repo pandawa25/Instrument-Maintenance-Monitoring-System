@@ -22,10 +22,14 @@ RUN npm run build --workspace=apps/backend
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# npm workspaces meng-hoist semua dependency ke node_modules di ROOT repo,
+# bukan ke apps/backend/node_modules — copy dari sana, bukan dari path per-workspace.
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/backend/dist ./dist
-COPY --from=build /app/apps/backend/node_modules ./node_modules
 COPY --from=build /app/apps/backend/prisma ./prisma
 COPY --from=build /app/apps/backend/package.json ./package.json
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+# Jalankan migration production (prisma migrate deploy) setiap container start,
+# baru start server. Aman dipanggil berkali-kali — Prisma skip migration yang sudah applied.
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.js"]
