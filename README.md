@@ -94,7 +94,7 @@ chore: update dependency
 - [x] Project scaffolding
 - [x] Auth (JWT)
 - [x] Module Area (backend + frontend) — pattern acuan modul lain
-- [ ] Module Instrument
+- [x] Module Instrument (backend + frontend) — termasuk master Instrument Type (read-only)
 - [ ] Module Corrective Maintenance
 - [ ] Dashboard
 - [ ] Deployment ke Railway
