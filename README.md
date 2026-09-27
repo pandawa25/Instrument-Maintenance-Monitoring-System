@@ -50,6 +50,16 @@ docker compose -f docker/docker-compose.yml up -d db
 
 ### 3. Migration & Seed
 
+> **Catatan**: file migration formal (`prisma/migrations/`) belum ada di repo ini —
+> environment development awal terblokir akses ke `binaries.prisma.sh` sehingga
+> `prisma migrate dev` belum sempat dijalankan. Jalankan sekali di komputer dengan
+> akses internet penuh, lalu commit folder `prisma/migrations/` yang dihasilkan:
+> ```bash
+> npx prisma migrate dev --name init --schema=apps/backend/prisma/schema.prisma
+> ```
+> Sebelum itu ada, deployment (termasuk Docker) memakai `prisma db push` sebagai
+> pengganti sementara — lihat komentar di `docker/Dockerfile.backend`.
+
 ```bash
 npm run prisma:migrate
 npm run prisma:seed
