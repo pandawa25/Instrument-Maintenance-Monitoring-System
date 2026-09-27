@@ -1,6 +1,9 @@
 # ===== Base =====
 FROM node:20-alpine AS base
 WORKDIR /app
+# Prisma engine butuh OpenSSL, tapi base image node:20-alpine tidak menyertakannya —
+# tanpa ini, Prisma gagal load engine ("Error: Could not parse schema engine response").
+RUN apk add --no-cache openssl
 RUN corepack enable
 
 # ===== Dependencies =====
@@ -21,6 +24,9 @@ RUN npm run build --workspace=apps/backend
 # ===== Runtime =====
 FROM node:20-alpine AS runtime
 WORKDIR /app
+# Runtime adalah base image baru (bukan lanjutan dari stage build), jadi OpenSSL
+# harus diinstall lagi di sini juga — dipakai saat `prisma db push` jalan di CMD.
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 # npm workspaces meng-hoist semua dependency ke node_modules di ROOT repo,
 # bukan ke apps/backend/node_modules — copy dari sana, bukan dari path per-workspace.
