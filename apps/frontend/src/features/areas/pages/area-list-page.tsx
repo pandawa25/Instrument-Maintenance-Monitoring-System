@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { useAreas, useDeleteArea } from '../hooks/use-areas';
 import { AreaTable } from '../components/area-table';
 import { AreaFormDialog } from '../components/area-form-dialog';
+import { AreaDetailDialog } from '../components/area-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Area, AreaQueryParams } from '../types/area.types';
 
@@ -20,6 +21,7 @@ export function AreaListPage() {
   const [params, setParams] = useState<AreaQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [viewingArea, setViewingArea] = useState<Area | null>(null);
   const [deletingArea, setDeletingArea] = useState<Area | null>(null);
 
   const { data, isLoading } = useAreas(params);
@@ -81,7 +83,7 @@ export function AreaListPage() {
             canEdit={canEdit}
             onEdit={openEdit}
             onDelete={setDeletingArea}
-            onView={openEdit}
+            onView={setViewingArea}
           />
         </div>
 
@@ -91,6 +93,8 @@ export function AreaListPage() {
       </div>
 
       <AreaFormDialog open={formOpen} onOpenChange={setFormOpen} area={editingArea} />
+
+      <AreaDetailDialog open={Boolean(viewingArea)} onOpenChange={(open) => !open && setViewingArea(null)} area={viewingArea} />
 
       <ConfirmDialog
         open={Boolean(deletingArea)}

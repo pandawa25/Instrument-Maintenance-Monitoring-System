@@ -9,6 +9,7 @@ import { useInstruments, useDeleteInstrument } from '../hooks/use-instruments';
 import { useAreasLookup, useInstrumentTypes } from '../hooks/use-instrument-lookups';
 import { InstrumentTable } from '../components/instrument-table';
 import { InstrumentFormDialog } from '../components/instrument-form-dialog';
+import { InstrumentDetailDialog } from '../components/instrument-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Instrument, InstrumentQueryParams } from '../types/instrument.types';
 
@@ -28,6 +29,7 @@ export function InstrumentListPage() {
   const [params, setParams] = useState<InstrumentQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState<Instrument | null>(null);
+  const [viewingInstrument, setViewingInstrument] = useState<Instrument | null>(null);
   const [deletingInstrument, setDeletingInstrument] = useState<Instrument | null>(null);
 
   const { data, isLoading } = useInstruments(params);
@@ -118,7 +120,7 @@ export function InstrumentListPage() {
             canEdit={canEdit}
             onEdit={openEdit}
             onDelete={setDeletingInstrument}
-            onView={openEdit}
+            onView={setViewingInstrument}
           />
         </div>
 
@@ -128,6 +130,12 @@ export function InstrumentListPage() {
       </div>
 
       <InstrumentFormDialog open={formOpen} onOpenChange={setFormOpen} instrument={editingInstrument} />
+
+      <InstrumentDetailDialog
+        open={Boolean(viewingInstrument)}
+        onOpenChange={(open) => !open && setViewingInstrument(null)}
+        instrument={viewingInstrument}
+      />
 
       <ConfirmDialog
         open={Boolean(deletingInstrument)}

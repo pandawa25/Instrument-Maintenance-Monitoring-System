@@ -10,6 +10,7 @@ import { useMaintenanceList, useDeleteMaintenance } from '../hooks/use-maintenan
 import { useAreasLookup, useInstrumentsLookup } from '../hooks/use-maintenance-lookups';
 import { MaintenanceTable } from '../components/maintenance-table';
 import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
+import { MaintenanceDetailDialog } from '../components/maintenance-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Maintenance, MaintenanceQueryParams } from '../types/maintenance.types';
 
@@ -31,6 +32,7 @@ export function MaintenanceListPage() {
   const [params, setParams] = useState<MaintenanceQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Maintenance | null>(null);
+  const [viewingItem, setViewingItem] = useState<Maintenance | null>(null);
   const [deletingItem, setDeletingItem] = useState<Maintenance | null>(null);
 
   const { data, isLoading } = useMaintenanceList(params);
@@ -144,7 +146,7 @@ export function MaintenanceListPage() {
             canEdit={canEdit}
             onEdit={openEdit}
             onDelete={setDeletingItem}
-            onView={openEdit}
+            onView={setViewingItem}
           />
         </div>
 
@@ -154,6 +156,12 @@ export function MaintenanceListPage() {
       </div>
 
       <MaintenanceFormDialog open={formOpen} onOpenChange={setFormOpen} maintenance={editingItem} />
+
+      <MaintenanceDetailDialog
+        open={Boolean(viewingItem)}
+        onOpenChange={(open) => !open && setViewingItem(null)}
+        maintenance={viewingItem}
+      />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}
