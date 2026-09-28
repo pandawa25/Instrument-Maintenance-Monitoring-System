@@ -9,7 +9,8 @@ import { InstrumentsModule } from './modules/instruments/instruments.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
-import { DashboardModule } from './modules/dashboard/dashboard.module';
+// DashboardModule ditunda sesuai permintaan — pasang lagi saat siap upload module Dashboard.
+// import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     RolesModule,
     UsersModule,
     MaintenanceModule,
-    DashboardModule,
+    // DashboardModule, // ditunda — lihat catatan import di atas
   ],
 })
 export class AppModule {}
