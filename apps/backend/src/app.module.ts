@@ -6,6 +6,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AreasModule } from './modules/areas/areas.module';
 import { InstrumentTypesModule } from './modules/instrument-types/instrument-types.module';
 import { InstrumentsModule } from './modules/instruments/instruments.module';
+import { UsersModule } from './modules/users/users.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -15,8 +17,8 @@ import { InstrumentsModule } from './modules/instruments/instruments.module';
     AreasModule,
     InstrumentTypesModule,
     InstrumentsModule,
-    // CorrectiveMaintenanceModule ditambahkan di tahap berikutnya,
-    // mengikuti pola yang sama dengan InstrumentsModule.
+    UsersModule,
+    MaintenanceModule,
   ],
 })
 export class AppModule {}
