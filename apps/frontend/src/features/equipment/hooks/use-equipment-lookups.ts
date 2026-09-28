@@ -5,7 +5,7 @@ import { fetchAreasForDropdown } from '../api/areas-lookup.api';
 // Data master yang jarang berubah — staleTime panjang supaya tidak query ulang tiap buka form.
 export function useInstrumentNames() {
   return useQuery({
-    queryKey: ['instrument-names'],
+    queryKey: ['instrument-names', 'dropdown'],
     queryFn: fetchInstrumentNames,
     staleTime: 5 * 60 * 1000,
   });
