@@ -68,6 +68,7 @@ model User {
   role               Role                    @relation(fields: [roleId], references: [id])
   maintenanceAsTech  CorrectiveMaintenance[] @relation("TechnicianMaintenance")
   maintenanceCreated CorrectiveMaintenance[] @relation("CreatedByMaintenance")
+  importBatches      ImportBatch[]
 
   @@index([roleId])
   @@map("users")
@@ -108,7 +109,17 @@ model InstrumentName {
 
 model Equipment {
   id               String          @id @default(uuid()) @db.Uuid
-  tagNumber        String          @unique @map("tag_number") @db.VarChar(50)
+  // CATATAN PENTING soal uniqueness tag_number:
+  // Tidak pakai @unique biasa di sini. Constraint sebenarnya adalah PARTIAL UNIQUE INDEX
+  // case-insensitive yang hanya berlaku untuk baris aktif (deleted_at IS NULL), dibuat manual
+  // lewat migration SQL (lihat migrations/20260928000100_equipment_tag_partial_unique) karena
+  // Prisma schema tidak punya syntax untuk partial index. Ini sengaja: tag_number BOLEH dipakai
+  // ulang setelah equipment lama di-soft-delete.
+  // AKIBATNYA: field ini harus tetap TANPA @unique dan TANPA @@unique di schema ini selamanya.
+  // Kalau nanti mengubah model Equipment dan menjalankan `prisma migrate dev`, WAJIB pakai
+  // `--create-only` lalu review manual — migrate dev tidak tahu soal partial index ini dan bisa
+  // mengusulkan DROP INDEX "equipment_tag_number_active_key". Jangan pernah terima diff itu.
+  tagNumber        String          @map("tag_number") @db.VarChar(50)
   service          String          @db.VarChar(150)
   description      String?         @db.VarChar(255)
   areaId           String          @map("area_id") @db.Uuid
@@ -124,18 +135,27 @@ model Equipment {
   status           EquipmentStatus @default(ACTIVE)
   criticality      Criticality     @default(MEDIUM)
   remarks          String?         @db.VarChar(500)
+  // Batch bulk-upload yang membuat baris ini — nullable karena mayoritas equipment dibuat
+  // manual lewat form, bukan dari import. Murni untuk penelusuran/audit ("equipment ini dari
+  // upload mana"), tidak dipakai untuk validasi apa pun.
+  importBatchId    String?         @map("import_batch_id") @db.Uuid
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
   deletedAt        DateTime?       @map("deleted_at")
 
   area           Area                    @relation(fields: [areaId], references: [id])
   instrumentName InstrumentName          @relation(fields: [instrumentNameId], references: [id])
+  importBatch    ImportBatch?            @relation(fields: [importBatchId], references: [id])
   maintenance    CorrectiveMaintenance[]
 
   @@index([areaId])
   @@index([instrumentNameId])
   @@index([status])
   @@index([areaId, status])
+  @@index([importBatchId])
+  // Index biasa (bukan unique) supaya schema tidak "buta" soal index di kolom ini — lihat
+  // catatan di field tagNumber. Uniqueness case-insensitive & partial ada di migration SQL.
+  @@index([tagNumber])
   @@map("equipment")
 }
 
@@ -169,4 +189,86 @@ model CorrectiveMaintenance {
   @@index([status])
   @@index([areaId, maintenanceDate])
   @@map("corrective_maintenance")
+}
+
+// ===== Bulk Import (mulai dari Module Equipment; entityType siap dipakai modul lain nanti) =====
+
+enum ImportEntityType {
+  EQUIPMENT
+}
+
+enum ImportMode {
+  CREATE_ONLY
+}
+
+enum ImportBatchStatus {
+  VALIDATED // hasil preview siap dilihat user; boleh masih ada baris ERROR (commit akan ditolak selama itu)
+  COMMITTED // sudah berhasil disimpan ke tabel entitasnya (mis. equipment)
+  FAILED // commit dicoba tapi gagal (mis. race condition tag/kode berubah di antara preview & commit)
+  EXPIRED // preview kedaluwarsa (lihat expiresAt), tidak bisa di-commit lagi — harus preview ulang
+}
+
+enum ImportRowSeverity {
+  OK
+  WARNING
+  ERROR
+}
+
+model ImportBatch {
+  id           String            @id @default(uuid()) @db.Uuid
+  entityType   ImportEntityType  @map("entity_type")
+  mode         ImportMode        @default(CREATE_ONLY)
+  filename     String            @db.VarChar(255)
+  // SHA-256 file. CATATAN: uniqueness-nya BUKAN @@unique biasa (lihat bawah) — harus partial
+  // (hanya untuk status COMMITTED), supaya user tetap boleh preview ulang file yang sama
+  // berkali-kali sebelum commit. Pola sama seperti tagNumber di Equipment: constraint asli
+  // ada di migration SQL manual, bukan di schema ini.
+  fileChecksum String            @map("file_checksum") @db.VarChar(64)
+  status       ImportBatchStatus @default(VALIDATED)
+  totalRows    Int               @map("total_rows")
+  okRows       Int               @map("ok_rows")
+  warningRows  Int               @map("warning_rows")
+  errorRows    Int               @map("error_rows")
+  createdById  String            @map("created_by_id") @db.Uuid
+  committedAt  DateTime?         @map("committed_at")
+  // Batas waktu preview ini masih boleh di-commit — lihat catatan EXPIRED di atas.
+  expiresAt    DateTime          @map("expires_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  deletedAt    DateTime?         @map("deleted_at")
+
+  createdBy User             @relation(fields: [createdById], references: [id])
+  rows      ImportBatchRow[]
+  equipment Equipment[]
+
+  // Index biasa supaya schema tidak "buta" soal index di kolom ini — uniqueness sebenarnya
+  // (partial, hanya WHERE status = 'COMMITTED') ada di migration SQL manual. Kalau nanti
+  // menjalankan `prisma migrate dev` setelah mengubah model ini, WAJIB --create-only + review
+  // manual, sama seperti catatan di field Equipment.tagNumber.
+  @@index([entityType, fileChecksum])
+  @@index([status])
+  @@index([createdById])
+  @@map("import_batches")
+}
+
+model ImportBatchRow {
+  id        String            @id @default(uuid()) @db.Uuid
+  batchId   String            @map("batch_id") @db.Uuid
+  rowNumber Int               @map("row_number")
+  // Nilai mentah dari Excel + nilai yang sudah di-resolve (areaId, instrumentNameId, dst)
+  // supaya commit tidak perlu parse ulang Excel-nya.
+  payload   Json
+  severity  ImportRowSeverity
+  // Daftar pesan validasi untuk baris ini (bisa lebih dari satu WARNING sekaligus, atau
+  // berhenti di ERROR pertama — lihat EquipmentImportService).
+  messages  Json
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  deletedAt DateTime?         @map("deleted_at")
+
+  batch ImportBatch @relation(fields: [batchId], references: [id])
+
+  @@unique([batchId, rowNumber])
+  @@index([batchId, severity])
+  @@map("import_batch_rows")
 }

@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  commitBulkImport,
   createEquipment,
   deleteEquipment,
   fetchEquipment,
+  fetchImportBatchRows,
+  previewBulkEquipment,
   updateEquipment,
-  uploadBulkEquipment,
 } from '../api/equipment.api';
-import type { EquipmentFormValues, EquipmentQueryParams } from '../types/equipment.types';
+import type { EquipmentFormValues, EquipmentQueryParams, ImportRowSeverity } from '../types/equipment.types';
 
 const EQUIPMENT_KEY = 'equipment';
 
@@ -43,10 +45,30 @@ export function useDeleteEquipment() {
   });
 }
 
-export function useBulkUploadEquipment() {
+// Tahap 1 — belum mengubah data equipment, jadi TIDAK invalidate query list di sini.
+export function usePreviewBulkImport() {
+  return useMutation({
+    mutationFn: (file: File) => previewBulkEquipment(file),
+  });
+}
+
+export function useImportBatchRows(
+  batchId: string | null,
+  params: { severity?: ImportRowSeverity; page: number; limit: number },
+) {
+  return useQuery({
+    queryKey: ['import-batch-rows', batchId, params],
+    queryFn: () => fetchImportBatchRows(batchId as string, params),
+    enabled: Boolean(batchId),
+    placeholderData: (prev) => prev,
+  });
+}
+
+// Tahap 2 — baru di sini data equipment benar-benar berubah, jadi invalidate list.
+export function useCommitBulkImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => uploadBulkEquipment(file),
+    mutationFn: (batchId: string) => commitBulkImport(batchId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] }),
   });
 }

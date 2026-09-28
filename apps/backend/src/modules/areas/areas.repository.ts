@@ -59,6 +59,12 @@ export class AreasRepository {
     return this.prisma.area.findFirst({ where: { areaCode, deletedAt: null } });
   }
 
+  // Dipakai EquipmentImportService untuk preload semua area aktif ke Map sekali di awal
+  // (bukan findByCode per baris) — menghindari N+1 query saat validasi bulk upload.
+  findAllActive() {
+    return this.prisma.area.findMany({ where: { deletedAt: null }, orderBy: { areaCode: 'asc' } });
+  }
+
   create(dto: CreateAreaDto) {
     return this.prisma.area.create({ data: dto });
   }

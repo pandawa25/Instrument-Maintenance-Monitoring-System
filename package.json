@@ -8,8 +8,11 @@
     "packages/*"
   ],
   "scripts": {
+    "build:shared-utils": "npm run build --workspace=packages/shared-utils",
+    "predev:backend": "npm run build:shared-utils",
     "dev:backend": "npm run start:dev --workspace=apps/backend",
     "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "prebuild:backend": "npm run build:shared-utils",
     "build:backend": "npm run build --workspace=apps/backend",
     "build:frontend": "npm run build --workspace=apps/frontend",
     "build": "npm run build:backend && npm run build:frontend",
