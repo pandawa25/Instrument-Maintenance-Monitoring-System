@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Equipment } from '@prisma/client';
+import { normalizeTag } from '@imms/shared-utils';
 import { EquipmentRepository } from './equipment.repository';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
@@ -87,30 +88,40 @@ export class EquipmentService {
   }
 
   async create(dto: CreateEquipmentDto) {
-    const existing = await this.repository.findByTagNumber(dto.tagNumber);
+    // Selalu normalisasi tag_number (trim, rapikan spasi, uppercase) sebelum dicek atau
+    // disimpan — harus konsisten dengan constraint DB (partial unique index case-insensitive
+    // di migration 20260928000100_equipment_tag_partial_unique) dan dengan modul import nanti.
+    const tagNumber = normalizeTag(dto.tagNumber);
+
+    // Pre-check ini murni untuk pesan error yang ramah (409 dengan nama field jelas).
+    // Constraint DB tetap jadi pagar terakhir kalau ada race condition di antara
+    // pre-check ini dan insert (lihat catatan di equipment.repository.ts).
+    const existing = await this.repository.findByTagNumber(tagNumber);
     if (existing) {
-      throw new ConflictException(`Tag number '${dto.tagNumber}' sudah digunakan`);
+      throw new ConflictException(`Tag number '${tagNumber}' sudah digunakan`);
     }
 
     await this.validateReferences(dto.areaId, dto.instrumentNameId);
 
-    const created = await this.repository.create(dto);
+    const created = await this.repository.create({ ...dto, tagNumber });
     return this.findOne(created.id);
   }
 
   async update(id: string, dto: UpdateEquipmentDto) {
     await this.findOne(id); // memastikan ada & belum dihapus
 
+    let tagNumber: string | undefined;
     if (dto.tagNumber) {
-      const existing = await this.repository.findByTagNumber(dto.tagNumber);
+      tagNumber = normalizeTag(dto.tagNumber);
+      const existing = await this.repository.findByTagNumber(tagNumber);
       if (existing && existing.id !== id) {
-        throw new ConflictException(`Tag number '${dto.tagNumber}' sudah digunakan`);
+        throw new ConflictException(`Tag number '${tagNumber}' sudah digunakan`);
       }
     }
 
     await this.validateReferences(dto.areaId, dto.instrumentNameId);
 
-    await this.repository.update(id, dto);
+    await this.repository.update(id, { ...dto, ...(tagNumber ? { tagNumber } : {}) });
     return this.findOne(id);
   }
 

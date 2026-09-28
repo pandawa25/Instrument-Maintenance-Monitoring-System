@@ -80,8 +80,18 @@ export class EquipmentRepository {
     });
   }
 
+  /**
+   * Cari equipment AKTIF dengan tag_number yang sama (case-insensitive).
+   * Case-insensitive supaya tetap menangkap data lama yang mungkin belum tersimpan
+   * dalam bentuk ternormalisasi (lihat normalizeTag() di @shared-utils), bukan cuma
+   * data baru yang sudah pasti uppercase. Constraint uniqueness yang sesungguhnya ada
+   * di DB (partial unique index UPPER(tag_number) WHERE deleted_at IS NULL) — pre-check
+   * di sini hanya untuk pesan error 409 yang lebih ramah daripada P2002 mentah.
+   */
   findByTagNumber(tagNumber: string) {
-    return this.prisma.equipment.findFirst({ where: { tagNumber, deletedAt: null } });
+    return this.prisma.equipment.findFirst({
+      where: { tagNumber: { equals: tagNumber, mode: 'insensitive' }, deletedAt: null },
+    });
   }
 
   create(dto: CreateEquipmentDto) {

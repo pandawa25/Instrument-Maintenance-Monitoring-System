@@ -74,8 +74,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private mapPrismaMessage(exception: Prisma.PrismaClientKnownRequestError): string {
     switch (exception.code) {
       case 'P2002': {
-        const target = (exception.meta?.target as string[] | undefined)?.join(', ');
-        return `Nilai untuk field ${target ?? 'unik'} sudah digunakan`;
+        const target = exception.meta?.target;
+        // `equipment_tag_number_active_key` adalah partial unique index yang dibuat manual
+        // lewat migration SQL (bukan @@unique di schema.prisma) — lihat catatan di
+        // equipment.repository.ts. Karena tidak dikenal Prisma DMMF, `target` untuk index ini
+        // biasanya berupa nama index/constraint mentah, bukan nama field — di-special-case di
+        // sini supaya pesannya tetap jelas kalau race condition membuat pre-check di
+        // EquipmentService.create/update kebobolan (dua request bersamaan lolos pre-check,
+        // baru gagal di constraint DB).
+        const targetStr = Array.isArray(target) ? target.join(', ') : String(target ?? '');
+        if (targetStr.includes('equipment_tag_number_active_key')) {
+          return 'Tag number sudah digunakan oleh equipment aktif lain';
+        }
+        return `Nilai untuk field ${targetStr || 'unik'} sudah digunakan`;
       }
       case 'P2025':
         return 'Data tidak ditemukan';

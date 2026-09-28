@@ -108,7 +108,17 @@ model InstrumentName {
 
 model Equipment {
   id               String          @id @default(uuid()) @db.Uuid
-  tagNumber        String          @unique @map("tag_number") @db.VarChar(50)
+  // CATATAN PENTING soal uniqueness tag_number:
+  // Tidak pakai @unique biasa di sini. Constraint sebenarnya adalah PARTIAL UNIQUE INDEX
+  // case-insensitive yang hanya berlaku untuk baris aktif (deleted_at IS NULL), dibuat manual
+  // lewat migration SQL (lihat migrations/20260928000100_equipment_tag_partial_unique) karena
+  // Prisma schema tidak punya syntax untuk partial index. Ini sengaja: tag_number BOLEH dipakai
+  // ulang setelah equipment lama di-soft-delete.
+  // AKIBATNYA: field ini harus tetap TANPA @unique dan TANPA @@unique di schema ini selamanya.
+  // Kalau nanti mengubah model Equipment dan menjalankan `prisma migrate dev`, WAJIB pakai
+  // `--create-only` lalu review manual — migrate dev tidak tahu soal partial index ini dan bisa
+  // mengusulkan DROP INDEX "equipment_tag_number_active_key". Jangan pernah terima diff itu.
+  tagNumber        String          @map("tag_number") @db.VarChar(50)
   service          String          @db.VarChar(150)
   description      String?         @db.VarChar(255)
   areaId           String          @map("area_id") @db.Uuid
@@ -136,6 +146,9 @@ model Equipment {
   @@index([instrumentNameId])
   @@index([status])
   @@index([areaId, status])
+  // Index biasa (bukan unique) supaya schema tidak "buta" soal index di kolom ini — lihat
+  // catatan di field tagNumber. Uniqueness case-insensitive & partial ada di migration SQL.
+  @@index([tagNumber])
   @@map("equipment")
 }
 
