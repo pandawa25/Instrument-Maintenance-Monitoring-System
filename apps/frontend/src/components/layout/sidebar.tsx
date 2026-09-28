@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, MapPinned, Gauge, Wrench, Users, Boxes } from 'lucide-react';
+import { LayoutDashboard, MapPinned, Gauge, Tag, Wrench, Users, Boxes } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/areas', label: 'Area', icon: MapPinned, roles: ['Admin', 'Viewer'] },
       { to: '/equipment', label: 'Equipment', icon: Gauge, roles: ['Admin', 'Viewer'] },
+      { to: '/instrument-names', label: 'Instrument Name', icon: Tag, roles: ['Admin', 'Viewer'] },
     ],
   },
   {
