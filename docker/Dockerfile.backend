@@ -20,6 +20,9 @@ COPY packages ./packages
 COPY apps/backend ./apps/backend
 RUN npm run prisma:generate --workspace=apps/backend
 RUN npm run build --workspace=apps/backend
+# Diagnostic — pastikan dist/main.js benar-benar ada sebelum lanjut ke stage runtime.
+# Kalau baris ini gagal, build logs akan langsung tunjukkan isi folder dist yang sebenarnya.
+RUN ls -la apps/backend/dist && test -f apps/backend/dist/main.js
 
 # ===== Runtime =====
 FROM node:20-alpine AS runtime
