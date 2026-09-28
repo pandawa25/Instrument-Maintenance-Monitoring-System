@@ -244,8 +244,12 @@ export class EquipmentBulkUploadService {
     const rows: NewImportRow[] = parsedRows.map(({ rowNumber, row }) => {
       const result = this.validateRow(rowNumber, row, ctx);
       const payload: Prisma.InputJsonValue = {
-        raw: row as Prisma.InputJsonValue,
-        resolved: (result.resolved ?? null) as Prisma.InputJsonValue,
+        raw: row as unknown as Prisma.InputJsonValue,
+        // Cast lewat `unknown` dulu — ResolvedEquipmentRow adalah interface domain biasa
+        // tanpa index signature, jadi TS menolak cast langsung ke Prisma.InputJsonValue
+        // (union type JSON Prisma mensyaratkan bentuk yang "comparable", termasuk index
+        // signature). Data resolved tetap plain object JSON-serializable, aman di-cast.
+        resolved: (result.resolved ?? null) as unknown as Prisma.InputJsonValue,
       };
       return { rowNumber, severity: result.severity, messages: result.messages, payload };
     });
