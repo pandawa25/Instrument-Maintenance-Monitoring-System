@@ -31,6 +31,7 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
           <th className="px-4 py-2.5 font-medium">Type</th>
           <th className="px-4 py-2.5 font-medium">Area</th>
           <th className="px-4 py-2.5 font-medium">Manufacturer</th>
+          <th className="px-4 py-2.5 font-medium">Range</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
           <th className="px-4 py-2.5 font-medium">Last Maintenance</th>
           <th className="px-4 py-2.5 font-medium text-right">Action</th>
@@ -45,6 +46,11 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
             <td className="px-4 py-2.5 text-text-muted">{item.type || '—'}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.manufacturer || '—'}</td>
+            <td className="px-4 py-2.5 text-text-muted">
+              {item.lrv !== null && item.urv !== null && item.lrv !== undefined && item.urv !== undefined
+                ? `${item.lrv} – ${item.urv}${item.unit ? ` ${item.unit}` : ''}`
+                : '—'}
+            </td>
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
             </td>

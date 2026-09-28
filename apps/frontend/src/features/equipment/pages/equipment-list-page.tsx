@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
@@ -10,6 +10,7 @@ import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-looku
 import { EquipmentTable } from '../components/equipment-table';
 import { EquipmentFormDialog } from '../components/equipment-form-dialog';
 import { EquipmentDetailDialog } from '../components/equipment-detail-dialog';
+import { EquipmentBulkUploadDialog } from '../components/equipment-bulk-upload-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
 
@@ -28,6 +29,7 @@ export function EquipmentListPage() {
 
   const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
   const [viewingItem, setViewingItem] = useState<Equipment | null>(null);
   const [deletingItem, setDeletingItem] = useState<Equipment | null>(null);
@@ -61,10 +63,16 @@ export function EquipmentListPage() {
           <p className="text-sm text-text-muted">Kelola data equipment/instrument pada seluruh area.</p>
         </div>
         {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Equipment
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+              <UploadCloud className="h-4 w-4" />
+              Bulk Upload
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Equipment
+            </Button>
+          </div>
         )}
       </div>
 
@@ -130,6 +138,8 @@ export function EquipmentListPage() {
       </div>
 
       <EquipmentFormDialog open={formOpen} onOpenChange={setFormOpen} equipment={editingItem} />
+
+      <EquipmentBulkUploadDialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} />
 
       <EquipmentDetailDialog
         open={Boolean(viewingItem)}

@@ -118,6 +118,9 @@ model Equipment {
   model            String?         @db.VarChar(100)
   serialNumber     String?         @map("serial_number") @db.VarChar(100)
   installationDate DateTime?       @map("installation_date") @db.Date
+  lrv              Decimal?        @db.Decimal(14, 4)
+  urv              Decimal?        @db.Decimal(14, 4)
+  unit             String?         @db.VarChar(20)
   status           EquipmentStatus @default(ACTIVE)
   criticality      Criticality     @default(MEDIUM)
   remarks          String?         @db.VarChar(500)

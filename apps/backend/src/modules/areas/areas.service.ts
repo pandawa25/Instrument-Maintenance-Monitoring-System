@@ -65,6 +65,14 @@ export class AreasService {
     return this.repository.update(id, dto);
   }
 
+  /**
+   * Lookup non-throwing berdasarkan Area Code — dipakai oleh proses Bulk Upload Equipment
+   * untuk mencocokkan kolom "Area Code" di file Excel tanpa perlu tahu UUID-nya.
+   */
+  findByCode(areaCode: string) {
+    return this.repository.findByCode(areaCode);
+  }
+
   async remove(id: string) {
     await this.findOne(id);
 

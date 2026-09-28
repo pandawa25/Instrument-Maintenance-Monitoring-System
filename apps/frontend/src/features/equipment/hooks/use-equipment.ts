@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createEquipment, deleteEquipment, fetchEquipment, updateEquipment } from '../api/equipment.api';
+import {
+  createEquipment,
+  deleteEquipment,
+  fetchEquipment,
+  updateEquipment,
+  uploadBulkEquipment,
+} from '../api/equipment.api';
 import type { EquipmentFormValues, EquipmentQueryParams } from '../types/equipment.types';
 
 const EQUIPMENT_KEY = 'equipment';
@@ -33,6 +39,14 @@ export function useDeleteEquipment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteEquipment(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] }),
+  });
+}
+
+export function useBulkUploadEquipment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadBulkEquipment(file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] }),
   });
 }

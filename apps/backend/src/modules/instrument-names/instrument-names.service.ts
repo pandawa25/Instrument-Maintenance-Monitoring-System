@@ -31,6 +31,14 @@ export class InstrumentNamesService {
     return this.repository.findAllActive();
   }
 
+  /**
+   * Lookup non-throwing berdasarkan Code — dipakai oleh proses Bulk Upload Equipment
+   * untuk mencocokkan kolom "Instrument Name Code" di file Excel tanpa perlu tahu UUID-nya.
+   */
+  findByCode(code: string) {
+    return this.repository.findByCode(code);
+  }
+
   async findOne(id: string) {
     const row = await this.repository.findById(id);
     if (!row) {

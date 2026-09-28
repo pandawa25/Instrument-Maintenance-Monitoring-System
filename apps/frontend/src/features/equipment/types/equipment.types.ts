@@ -25,6 +25,9 @@ export interface Equipment {
   model: string | null;
   serialNumber: string | null;
   installationDate: string | null;
+  lrv: number | string | null;
+  urv: number | string | null;
+  unit: string | null;
   status: EquipmentStatus;
   criticality: Criticality;
   remarks: string | null;
@@ -44,9 +47,25 @@ export interface EquipmentFormValues {
   model?: string;
   serialNumber?: string;
   installationDate?: string;
+  lrv?: number | string;
+  urv?: number | string;
+  unit?: string;
   status: EquipmentStatus;
   criticality: Criticality;
   remarks?: string;
+}
+
+export interface BulkUploadRowError {
+  row: number;
+  message: string;
+}
+
+export interface BulkUploadResult {
+  totalRows: number;
+  created: number;
+  updated: number;
+  failed: number;
+  errors: BulkUploadRowError[];
 }
 
 export interface EquipmentQueryParams {

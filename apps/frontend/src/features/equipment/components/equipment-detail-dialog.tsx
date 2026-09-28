@@ -25,6 +25,9 @@ export function EquipmentDetailDialog({ open, onOpenChange, equipment }: Props) 
       label: 'Installation Date',
       value: equipment.installationDate ? new Date(equipment.installationDate).toLocaleDateString('id-ID') : null,
     },
+    { label: 'LRV', value: equipment.lrv !== null && equipment.lrv !== undefined ? String(equipment.lrv) : null },
+    { label: 'URV', value: equipment.urv !== null && equipment.urv !== undefined ? String(equipment.urv) : null },
+    { label: 'Unit', value: equipment.unit },
     { label: 'Status', value: <StatusBadge value={equipment.status} /> },
     { label: 'Criticality', value: <StatusBadge value={equipment.criticality} /> },
     {

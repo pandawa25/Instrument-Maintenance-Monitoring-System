@@ -19,6 +19,9 @@ const EMPTY_FORM: EquipmentFormValues = {
   model: '',
   serialNumber: '',
   installationDate: '',
+  lrv: '',
+  urv: '',
+  unit: '',
   status: 'ACTIVE',
   criticality: 'MEDIUM',
   remarks: '',
@@ -70,6 +73,9 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
           model: equipment.model ?? '',
           serialNumber: equipment.serialNumber ?? '',
           installationDate: equipment.installationDate?.slice(0, 10) ?? '',
+          lrv: equipment.lrv ?? '',
+          urv: equipment.urv ?? '',
+          unit: equipment.unit ?? '',
           status: equipment.status,
           criticality: equipment.criticality,
           remarks: equipment.remarks ?? '',
@@ -103,6 +109,9 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
         ...form,
         tagNumber: composedTagNumber,
         installationDate: form.installationDate || undefined,
+        lrv: form.lrv === '' || form.lrv === undefined ? undefined : Number(form.lrv),
+        urv: form.urv === '' || form.urv === undefined ? undefined : Number(form.urv),
+        unit: form.unit || undefined,
       };
       if (isEdit && equipment) {
         await updateMutation.mutateAsync({ id: equipment.id, payload });
@@ -243,6 +252,41 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
               type="date"
               value={form.installationDate}
               onChange={(e) => setForm({ ...form, installationDate: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="lrv">LRV (Lower Range Value)</Label>
+            <Input
+              id="lrv"
+              type="number"
+              step="any"
+              value={form.lrv}
+              onChange={(e) => setForm({ ...form, lrv: e.target.value })}
+              placeholder="0"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="urv">URV (Upper Range Value)</Label>
+            <Input
+              id="urv"
+              type="number"
+              step="any"
+              value={form.urv}
+              onChange={(e) => setForm({ ...form, urv: e.target.value })}
+              placeholder="100"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="unit">Unit</Label>
+            <Input
+              id="unit"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              placeholder="mis. barg, °C, m3/h"
+              maxLength={20}
             />
           </div>
 

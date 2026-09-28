@@ -1,9 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Criticality, EquipmentStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -69,6 +71,24 @@ export class CreateEquipmentDto {
   @IsOptional()
   @IsDateString()
   installationDate?: string;
+
+  @ApiProperty({ required: false, example: 0, description: 'Lower Range Value' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  lrv?: number;
+
+  @ApiProperty({ required: false, example: 100, description: 'Upper Range Value' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  urv?: number;
+
+  @ApiProperty({ required: false, maxLength: 20, example: 'barg' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  unit?: string;
 
   @ApiProperty({ enum: EquipmentStatus, default: EquipmentStatus.ACTIVE, required: false })
   @IsOptional()
