@@ -23,6 +23,15 @@ RUN npm run build --workspace=apps/backend
 # Diagnostic — pastikan dist/main.js benar-benar ada sebelum lanjut ke stage runtime.
 # Kalau baris ini gagal, build logs akan langsung tunjukkan isi folder dist yang sebenarnya.
 RUN ls -la apps/backend/dist && test -f apps/backend/dist/main.js
+# Compile prisma/seed.ts terpisah (bukan lewat ts-node, yang notabene devDependency
+# dan tidak ikut ke image production) — file ini murni PrismaClient + bcrypt, tanpa
+# decorator NestJS, jadi aman dikompilasi standalone dan dijalankan manual di Railway
+# (Settings -> Deploy -> Custom Start Command) untuk seeding data awal:
+#   node seed.js && node dist/main.js
+RUN npx tsc apps/backend/prisma/seed.ts \
+      --outDir apps/backend/dist-seed \
+      --module commonjs --target es2021 --moduleResolution node \
+      --esModuleInterop --skipLibCheck --resolveJsonModule
 
 # ===== Runtime =====
 FROM node:20-alpine AS runtime
@@ -37,6 +46,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/apps/backend/prisma ./prisma
 COPY --from=build /app/apps/backend/package.json ./package.json
+COPY --from=build /app/apps/backend/dist-seed/seed.js ./seed.js
 
 EXPOSE 3000
 # CATATAN SEMENTARA: memakai `db push` (bukan `migrate deploy`) karena belum ada
