@@ -105,6 +105,6 @@ chore: update dependency
 - [x] Auth (JWT)
 - [x] Module Area (backend + frontend) — pattern acuan modul lain
 - [x] Module Instrument (backend + frontend) — termasuk master Instrument Type (read-only)
-- [ ] Module Corrective Maintenance
-- [ ] Dashboard
-- [ ] Deployment ke Railway
+- [x] Module Corrective Maintenance (backend + frontend) — termasuk lookup Technician (`GET /users`, read-only)
+- [x] Dashboard — summary cards, chart maintenance per bulan/area/failure category (Recharts), tabel 10 maintenance terbaru
+- [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
