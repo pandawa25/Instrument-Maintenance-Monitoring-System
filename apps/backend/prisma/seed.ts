@@ -72,20 +72,28 @@ async function main() {
 
   const pt = await prisma.instrumentName.findUnique({ where: { code: 'PT' } });
   if (pt) {
-    await prisma.equipment.upsert({
-      where: { tagNumber: 'PU-01-PT-1001' },
-      update: {},
-      create: {
-        tagNumber: 'PU-01-PT-1001',
-        service: 'Pressure Transmitter Separator Inlet',
-        areaId: area.id,
-        instrumentNameId: pt.id,
-        manufacturer: 'Yokogawa',
-        model: 'EJA430E',
-        status: EquipmentStatus.ACTIVE,
-        criticality: Criticality.HIGH,
-      },
+    // tagNumber bukan lagi @unique biasa di schema.prisma (diganti partial unique index
+    // case-insensitive + active-rows-only lewat migration SQL) — Prisma generated types
+    // jadi tidak lagi menerima tagNumber sebagai field `where` untuk upsert/findUnique.
+    // Pola findFirst + create manual ini meniru logic findByTagNumber() di
+    // equipment.repository.ts supaya seeding tetap idempotent.
+    const existingEquipment = await prisma.equipment.findFirst({
+      where: { tagNumber: { equals: 'PU-01-PT-1001', mode: 'insensitive' }, deletedAt: null },
     });
+    if (!existingEquipment) {
+      await prisma.equipment.create({
+        data: {
+          tagNumber: 'PU-01-PT-1001',
+          service: 'Pressure Transmitter Separator Inlet',
+          areaId: area.id,
+          instrumentNameId: pt.id,
+          manufacturer: 'Yokogawa',
+          model: 'EJA430E',
+          status: EquipmentStatus.ACTIVE,
+          criticality: Criticality.HIGH,
+        },
+      });
+    }
   }
 
   console.log('Seed selesai.');
