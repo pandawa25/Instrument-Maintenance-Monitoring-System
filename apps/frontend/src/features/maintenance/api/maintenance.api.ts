@@ -7,7 +7,7 @@ export async function fetchMaintenance(params: MaintenanceQueryParams) {
     params: {
       ...params,
       areaId: params.areaId || undefined,
-      instrumentId: params.instrumentId || undefined,
+      equipmentId: params.equipmentId || undefined,
       status: params.status || undefined,
       dateFrom: params.dateFrom || undefined,
       dateTo: params.dateTo || undefined,

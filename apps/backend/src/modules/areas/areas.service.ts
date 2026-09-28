@@ -13,13 +13,13 @@ export class AreasService {
   async findAll(query: QueryAreaDto): Promise<PaginatedResult<unknown>> {
     const { rows, total } = await this.repository.findMany(query);
 
-    const data = rows.map((area: Area & { _count: { instruments: number } }) => ({
+    const data = rows.map((area: Area & { _count: { equipment: number } }) => ({
       id: area.id,
       areaCode: area.areaCode,
       areaName: area.areaName,
       description: area.description,
       status: area.status,
-      totalInstrument: area._count.instruments,
+      totalEquipment: area._count.equipment,
       createdAt: area.createdAt,
       updatedAt: area.updatedAt,
     }));
@@ -38,7 +38,7 @@ export class AreasService {
       areaName: area.areaName,
       description: area.description,
       status: area.status,
-      totalInstrument: area._count.instruments,
+      totalEquipment: area._count.equipment,
       createdAt: area.createdAt,
       updatedAt: area.updatedAt,
     };
@@ -68,10 +68,10 @@ export class AreasService {
   async remove(id: string) {
     await this.findOne(id);
 
-    const instrumentCount = await this.repository.countInstruments(id);
-    if (instrumentCount > 0) {
+    const equipmentCount = await this.repository.countEquipment(id);
+    if (equipmentCount > 0) {
       throw new ConflictException(
-        `Area masih memiliki ${instrumentCount} instrument aktif — pindahkan atau nonaktifkan instrument terlebih dahulu`,
+        `Area masih memiliki ${equipmentCount} equipment aktif — pindahkan atau nonaktifkan equipment terlebih dahulu`,
       );
     }
 

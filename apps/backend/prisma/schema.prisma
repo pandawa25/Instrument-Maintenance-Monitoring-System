@@ -12,7 +12,7 @@ enum AreaStatus {
   INACTIVE
 }
 
-enum InstrumentStatus {
+enum EquipmentStatus {
   ACTIVE
   STANDBY
   OUT_OF_SERVICE
@@ -83,60 +83,63 @@ model Area {
   updatedAt   DateTime   @updatedAt @map("updated_at")
   deletedAt   DateTime?  @map("deleted_at")
 
-  instruments Instrument[]
+  equipment   Equipment[]
   maintenance CorrectiveMaintenance[]
 
   @@index([status])
   @@map("areas")
 }
 
-model InstrumentType {
+// Master data nama instrument (dulu "Instrument Type") — mis. Pressure Transmitter,
+// Temperature Transmitter, dst. Dipakai sebagai relasi pada kolom "Instrument Name".
+model InstrumentName {
   id          String    @id @default(uuid()) @db.Uuid
-  typeCode    String    @unique @map("type_code") @db.VarChar(30)
-  typeName    String    @map("type_name") @db.VarChar(100)
+  code        String    @unique @db.VarChar(30)
+  name        String    @db.VarChar(100)
   description String?   @db.VarChar(255)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  instruments Instrument[]
+  equipment Equipment[]
 
-  @@map("instrument_types")
+  @@map("instrument_names")
 }
 
-model Instrument {
-  id               String           @id @default(uuid()) @db.Uuid
-  tagNumber        String           @unique @map("tag_number") @db.VarChar(50)
-  instrumentName   String           @map("instrument_name") @db.VarChar(150)
-  description      String?          @db.VarChar(255)
-  areaId           String           @map("area_id") @db.Uuid
-  instrumentTypeId String           @map("instrument_type_id") @db.Uuid
-  manufacturer     String?          @db.VarChar(100)
-  model            String?          @db.VarChar(100)
-  serialNumber     String?          @map("serial_number") @db.VarChar(100)
-  installationDate DateTime?        @map("installation_date") @db.Date
-  status           InstrumentStatus @default(ACTIVE)
-  criticality      Criticality      @default(MEDIUM)
-  remarks          String?          @db.VarChar(500)
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  deletedAt        DateTime?        @map("deleted_at")
+model Equipment {
+  id               String          @id @default(uuid()) @db.Uuid
+  tagNumber        String          @unique @map("tag_number") @db.VarChar(50)
+  service          String          @db.VarChar(150)
+  description      String?         @db.VarChar(255)
+  areaId           String          @map("area_id") @db.Uuid
+  instrumentNameId String          @map("instrument_name_id") @db.Uuid
+  type             String?         @db.VarChar(100)
+  manufacturer     String?         @db.VarChar(100)
+  model            String?         @db.VarChar(100)
+  serialNumber     String?         @map("serial_number") @db.VarChar(100)
+  installationDate DateTime?       @map("installation_date") @db.Date
+  status           EquipmentStatus @default(ACTIVE)
+  criticality      Criticality     @default(MEDIUM)
+  remarks          String?         @db.VarChar(500)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  deletedAt        DateTime?       @map("deleted_at")
 
   area           Area                    @relation(fields: [areaId], references: [id])
-  instrumentType InstrumentType          @relation(fields: [instrumentTypeId], references: [id])
+  instrumentName InstrumentName          @relation(fields: [instrumentNameId], references: [id])
   maintenance    CorrectiveMaintenance[]
 
   @@index([areaId])
-  @@index([instrumentTypeId])
+  @@index([instrumentNameId])
   @@index([status])
   @@index([areaId, status])
-  @@map("instruments")
+  @@map("equipment")
 }
 
 model CorrectiveMaintenance {
   id                 String            @id @default(uuid()) @db.Uuid
   maintenanceDate    DateTime          @map("maintenance_date") @db.Date
-  instrumentId       String            @map("instrument_id") @db.Uuid
+  equipmentId        String            @map("equipment_id") @db.Uuid
   areaId             String            @map("area_id") @db.Uuid
   failureCategory    FailureCategory   @map("failure_category")
   problemDescription String            @map("problem_description") @db.VarChar(1000)
@@ -152,13 +155,13 @@ model CorrectiveMaintenance {
   updatedAt          DateTime          @updatedAt @map("updated_at")
   deletedAt          DateTime?         @map("deleted_at")
 
-  instrument Instrument @relation(fields: [instrumentId], references: [id])
+  equipment  Equipment  @relation(fields: [equipmentId], references: [id])
   area       Area       @relation(fields: [areaId], references: [id])
   technician User       @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
   createdBy  User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
 
   @@index([maintenanceDate])
-  @@index([instrumentId])
+  @@index([equipmentId])
   @@index([areaId])
   @@index([status])
   @@index([areaId, maintenanceDate])

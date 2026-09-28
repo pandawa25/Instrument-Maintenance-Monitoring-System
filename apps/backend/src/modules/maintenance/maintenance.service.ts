@@ -4,12 +4,12 @@ import { MaintenanceRepository } from './maintenance.repository';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
-import { InstrumentsService } from '../instruments/instruments.service';
+import { EquipmentService } from '../equipment/equipment.service';
 import { UsersService } from '../users/users.service';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
 
 type MaintenanceWithRelations = CorrectiveMaintenance & {
-  instrument: { id: string; tagNumber: string; instrumentName: string };
+  equipment: { id: string; tagNumber: string; service: string };
   area: { id: string; areaCode: string; areaName: string };
   technician: { id: string; fullName: string };
   createdBy: { id: string; fullName: string };
@@ -19,7 +19,7 @@ type MaintenanceWithRelations = CorrectiveMaintenance & {
 export class MaintenanceService {
   constructor(
     private readonly repository: MaintenanceRepository,
-    private readonly instrumentsService: InstrumentsService,
+    private readonly equipmentService: EquipmentService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -27,7 +27,7 @@ export class MaintenanceService {
     return {
       id: row.id,
       maintenanceDate: row.maintenanceDate,
-      instrument: row.instrument,
+      equipment: row.equipment,
       area: row.area,
       failureCategory: row.failureCategory,
       problemDescription: row.problemDescription,
@@ -45,16 +45,16 @@ export class MaintenanceService {
   }
 
   /**
-   * area_id pada corrective_maintenance didenormalisasi dari instrument.area_id
+   * area_id pada corrective_maintenance didenormalisasi dari equipment.area_id
    * (keputusan design-document.md, untuk performa filter dashboard) — disinkronkan
    * di sini, bukan dipercaya dari input client.
    */
-  private async resolveAreaId(instrumentId: string): Promise<string> {
+  private async resolveAreaId(equipmentId: string): Promise<string> {
     try {
-      const instrument = await this.instrumentsService.findOne(instrumentId);
-      return instrument.area.id;
+      const equipment = await this.equipmentService.findOne(equipmentId);
+      return equipment.area.id;
     } catch {
-      throw new BadRequestException(`Instrument dengan id '${instrumentId}' tidak ditemukan`);
+      throw new BadRequestException(`Equipment dengan id '${equipmentId}' tidak ditemukan`);
     }
   }
 
@@ -82,7 +82,7 @@ export class MaintenanceService {
 
   async create(dto: CreateMaintenanceDto, createdById: string) {
     await this.validateTechnician(dto.technicianId);
-    const areaId = await this.resolveAreaId(dto.instrumentId);
+    const areaId = await this.resolveAreaId(dto.equipmentId);
 
     const created = await this.repository.create(dto, areaId, createdById);
     return this.findOne(created.id);
@@ -96,8 +96,8 @@ export class MaintenanceService {
     }
 
     let areaId: string | undefined;
-    if (dto.instrumentId) {
-      areaId = await this.resolveAreaId(dto.instrumentId); // sync ulang kalau instrument diganti
+    if (dto.equipmentId) {
+      areaId = await this.resolveAreaId(dto.equipmentId); // sync ulang kalau equipment diganti
     }
 
     await this.repository.update(id, dto, areaId);

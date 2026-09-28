@@ -9,10 +9,10 @@ export type FailureCategory =
 
 export type MaintenanceStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
 
-export interface InstrumentRef {
+export interface EquipmentRef {
   id: string;
   tagNumber: string;
-  instrumentName: string;
+  service: string;
 }
 
 export interface AreaRef {
@@ -29,7 +29,7 @@ export interface TechnicianRef {
 export interface Maintenance {
   id: string;
   maintenanceDate: string;
-  instrument: InstrumentRef;
+  equipment: EquipmentRef;
   area: AreaRef;
   failureCategory: FailureCategory;
   problemDescription: string;
@@ -47,7 +47,7 @@ export interface Maintenance {
 
 export interface MaintenanceFormValues {
   maintenanceDate: string;
-  instrumentId: string;
+  equipmentId: string;
   failureCategory: FailureCategory;
   problemDescription: string;
   rootCause?: string;
@@ -64,7 +64,7 @@ export interface MaintenanceQueryParams {
   limit: number;
   search?: string;
   areaId?: string | '';
-  instrumentId?: string | '';
+  equipmentId?: string | '';
   status?: MaintenanceStatus | '';
   dateFrom?: string;
   dateTo?: string;

@@ -37,7 +37,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
           <th className="px-4 py-2.5 font-medium">Maintenance Date</th>
           <th className="px-4 py-2.5 font-medium">Tag Number</th>
-          <th className="px-4 py-2.5 font-medium">Instrument Name</th>
+          <th className="px-4 py-2.5 font-medium">Service</th>
           <th className="px-4 py-2.5 font-medium">Area</th>
           <th className="px-4 py-2.5 font-medium">Failure Category</th>
           <th className="px-4 py-2.5 font-medium">Problem Description</th>
@@ -52,8 +52,8 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}
             </td>
-            <td className="px-4 py-2.5 font-mono text-xs text-text">{item.instrument.tagNumber}</td>
-            <td className="px-4 py-2.5 text-text">{item.instrument.instrumentName}</td>
+            <td className="px-4 py-2.5 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
+            <td className="px-4 py-2.5 text-text">{item.equipment.service}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
             <td className="px-4 py-2.5 text-text-muted">{FAILURE_CATEGORY_LABEL[item.failureCategory]}</td>
             <td className="max-w-xs truncate px-4 py-2.5 text-text-muted" title={item.problemDescription}>

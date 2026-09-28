@@ -24,8 +24,8 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance }: Pro
   const fields: DetailField[] = [
     { label: 'Maintenance Date', value: new Date(maintenance.maintenanceDate).toLocaleDateString('id-ID') },
     {
-      label: 'Instrument',
-      value: `${maintenance.instrument.tagNumber} — ${maintenance.instrument.instrumentName}`,
+      label: 'Equipment',
+      value: `${maintenance.equipment.tagNumber} — ${maintenance.equipment.service}`,
     },
     { label: 'Area', value: `${maintenance.area.areaCode} — ${maintenance.area.areaName}` },
     { label: 'Failure Category', value: FAILURE_CATEGORY_LABEL[maintenance.failureCategory] },
@@ -52,7 +52,7 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance }: Pro
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail Corrective Maintenance — ${maintenance.instrument.tagNumber}`}
+      title={`Detail Corrective Maintenance — ${maintenance.equipment.tagNumber}`}
       fields={fields}
     />
   );

@@ -40,7 +40,7 @@ export class AreasRepository {
         skip: query.skip,
         take: query.limit,
         orderBy: { [query.sortBy]: query.sortOrder },
-        include: { _count: { select: { instruments: true } } },
+        include: { _count: { select: { equipment: true } } },
       }),
       this.prisma.area.count({ where }),
     ]);
@@ -51,7 +51,7 @@ export class AreasRepository {
   findById(id: string) {
     return this.prisma.area.findFirst({
       where: { id, deletedAt: null },
-      include: { _count: { select: { instruments: true } } },
+      include: { _count: { select: { equipment: true } } },
     });
   }
 
@@ -71,7 +71,7 @@ export class AreasRepository {
     return this.prisma.area.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
-  countInstruments(areaId: string) {
-    return this.prisma.instrument.count({ where: { areaId, deletedAt: null } });
+  countEquipment(areaId: string) {
+    return this.prisma.equipment.count({ where: { areaId, deletedAt: null } });
   }
 }

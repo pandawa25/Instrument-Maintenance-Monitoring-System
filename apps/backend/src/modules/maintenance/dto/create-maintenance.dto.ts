@@ -23,9 +23,9 @@ export class CreateMaintenanceDto {
   @IsDateString()
   maintenanceDate!: string;
 
-  @ApiProperty({ description: 'UUID Instrument' })
+  @ApiProperty({ description: 'UUID Equipment' })
   @IsUUID()
-  instrumentId!: string;
+  equipmentId!: string;
 
   @ApiProperty({ enum: FailureCategory })
   @IsEnum(FailureCategory)

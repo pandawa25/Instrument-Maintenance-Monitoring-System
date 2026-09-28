@@ -6,7 +6,7 @@ import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 
 const LIST_INCLUDE = {
-  instrument: { select: { id: true, tagNumber: true, instrumentName: true } },
+  equipment: { select: { id: true, tagNumber: true, service: true } },
   area: { select: { id: true, areaCode: true, areaName: true } },
   technician: { select: { id: true, fullName: true } },
   createdBy: { select: { id: true, fullName: true } },
@@ -14,7 +14,7 @@ const LIST_INCLUDE = {
 
 /**
  * Satu-satunya tempat yang bicara langsung ke Prisma untuk domain Corrective Maintenance.
- * Mengikuti pola yang sama dengan InstrumentsRepository.
+ * Mengikuti pola yang sama dengan EquipmentRepository.
  */
 @Injectable()
 export class MaintenanceRepository {
@@ -27,8 +27,8 @@ export class MaintenanceRepository {
       where.areaId = query.areaId;
     }
 
-    if (query.instrumentId) {
-      where.instrumentId = query.instrumentId;
+    if (query.equipmentId) {
+      where.equipmentId = query.equipmentId;
     }
 
     if (query.status) {
@@ -45,8 +45,8 @@ export class MaintenanceRepository {
     if (query.search) {
       where.OR = [
         { problemDescription: { contains: query.search, mode: 'insensitive' } },
-        { instrument: { tagNumber: { contains: query.search, mode: 'insensitive' } } },
-        { instrument: { instrumentName: { contains: query.search, mode: 'insensitive' } } },
+        { equipment: { tagNumber: { contains: query.search, mode: 'insensitive' } } },
+        { equipment: { service: { contains: query.search, mode: 'insensitive' } } },
       ];
     }
 

@@ -31,7 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Master Data',
     items: [
       { to: '/areas', label: 'Area', icon: MapPinned, roles: ['Admin', 'Viewer'] },
-      { to: '/instruments', label: 'Instrument', icon: Gauge, roles: ['Admin', 'Viewer'] },
+      { to: '/equipment', label: 'Equipment', icon: Gauge, roles: ['Admin', 'Viewer'] },
     ],
   },
   {

@@ -28,7 +28,7 @@ export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView 
           <th className="px-4 py-2.5 font-medium">Area Code</th>
           <th className="px-4 py-2.5 font-medium">Area Name</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
-          <th className="px-4 py-2.5 font-medium text-center">Total Instrument</th>
+          <th className="px-4 py-2.5 font-medium text-center">Total Equipment</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
           <th className="px-4 py-2.5 font-medium">Created Date</th>
           <th className="px-4 py-2.5 font-medium text-right">Action</th>
@@ -40,7 +40,7 @@ export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView 
             <td className="px-4 py-2.5 font-mono text-xs text-text">{area.areaCode}</td>
             <td className="px-4 py-2.5 text-text">{area.areaName}</td>
             <td className="px-4 py-2.5 text-text-muted">{area.description || '—'}</td>
-            <td className="px-4 py-2.5 text-center text-text">{area.totalInstrument}</td>
+            <td className="px-4 py-2.5 text-center text-text">{area.totalEquipment}</td>
             <td className="px-4 py-2.5">
               <StatusBadge value={area.status} />
             </td>

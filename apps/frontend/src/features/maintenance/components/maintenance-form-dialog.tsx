@@ -6,12 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/use-maintenance';
-import { useInstrumentsLookup, useTechniciansLookup } from '../hooks/use-maintenance-lookups';
+import { useEquipmentLookup, useTechniciansLookup } from '../hooks/use-maintenance-lookups';
 import type { Maintenance, MaintenanceFormValues } from '../types/maintenance.types';
 
 const EMPTY_FORM: MaintenanceFormValues = {
   maintenanceDate: '',
-  instrumentId: '',
+  equipmentId: '',
   failureCategory: 'INSTRUMENT',
   problemDescription: '',
   rootCause: '',
@@ -34,7 +34,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
   const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateMaintenance();
   const updateMutation = useUpdateMaintenance();
-  const { data: instruments } = useInstrumentsLookup();
+  const { data: equipmentOptions } = useEquipmentLookup();
   const { data: technicians } = useTechniciansLookup();
   const isEdit = Boolean(maintenance);
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -45,7 +45,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
         maintenance
           ? {
               maintenanceDate: maintenance.maintenanceDate.slice(0, 10),
-              instrumentId: maintenance.instrument.id,
+              equipmentId: maintenance.equipment.id,
               failureCategory: maintenance.failureCategory,
               problemDescription: maintenance.problemDescription,
               rootCause: maintenance.rootCause ?? '',
@@ -105,19 +105,19 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
           </div>
 
           <div>
-            <Label htmlFor="instrumentId">Instrument</Label>
+            <Label htmlFor="equipmentId">Equipment</Label>
             <Select
-              id="instrumentId"
-              value={form.instrumentId}
-              onChange={(e) => setForm({ ...form, instrumentId: e.target.value })}
+              id="equipmentId"
+              value={form.equipmentId}
+              onChange={(e) => setForm({ ...form, equipmentId: e.target.value })}
               required
             >
               <option value="" disabled>
-                Pilih instrument...
+                Pilih equipment...
               </option>
-              {instruments?.map((instrument) => (
-                <option key={instrument.id} value={instrument.id}>
-                  {instrument.tagNumber} — {instrument.instrumentName}
+              {equipmentOptions?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.tagNumber} — {item.service}
                 </option>
               ))}
             </Select>

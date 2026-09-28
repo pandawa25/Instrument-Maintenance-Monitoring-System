@@ -6,7 +6,7 @@ export interface Area {
   areaName: string;
   description: string | null;
   status: AreaStatus;
-  totalInstrument: number;
+  totalEquipment: number;
   createdAt: string;
   updatedAt: string;
 }

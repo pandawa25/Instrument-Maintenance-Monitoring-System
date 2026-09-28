@@ -1,27 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { QueryInstrumentDto } from './dto/query-instrument.dto';
-import { CreateInstrumentDto } from './dto/create-instrument.dto';
-import { UpdateInstrumentDto } from './dto/update-instrument.dto';
+import { QueryEquipmentDto } from './dto/query-equipment.dto';
+import { CreateEquipmentDto } from './dto/create-equipment.dto';
+import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 
 /**
- * Satu-satunya tempat yang bicara langsung ke Prisma untuk domain Instrument.
- * Mengikuti pola yang sama dengan AreasRepository.
+ * Satu-satunya tempat yang bicara langsung ke Prisma untuk domain Equipment
+ * (dulu bernama "Instrument"). Mengikuti pola yang sama dengan AreasRepository.
  */
 @Injectable()
-export class InstrumentsRepository {
+export class EquipmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private buildWhere(query: QueryInstrumentDto): Prisma.InstrumentWhereInput {
-    const where: Prisma.InstrumentWhereInput = { deletedAt: null };
+  private buildWhere(query: QueryEquipmentDto): Prisma.EquipmentWhereInput {
+    const where: Prisma.EquipmentWhereInput = { deletedAt: null };
 
     if (query.areaId) {
       where.areaId = query.areaId;
     }
 
-    if (query.instrumentTypeId) {
-      where.instrumentTypeId = query.instrumentTypeId;
+    if (query.instrumentNameId) {
+      where.instrumentNameId = query.instrumentNameId;
     }
 
     if (query.status) {
@@ -31,25 +31,25 @@ export class InstrumentsRepository {
     if (query.search) {
       where.OR = [
         { tagNumber: { contains: query.search, mode: 'insensitive' } },
-        { instrumentName: { contains: query.search, mode: 'insensitive' } },
+        { service: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
     return where;
   }
 
-  async findMany(query: QueryInstrumentDto) {
+  async findMany(query: QueryEquipmentDto) {
     const where = this.buildWhere(query);
 
     const [rows, total] = await this.prisma.$transaction([
-      this.prisma.instrument.findMany({
+      this.prisma.equipment.findMany({
         where,
         skip: query.skip,
         take: query.limit,
         orderBy: { [query.sortBy]: query.sortOrder },
         include: {
           area: { select: { id: true, areaCode: true, areaName: true } },
-          instrumentType: { select: { id: true, typeCode: true, typeName: true } },
+          instrumentName: { select: { id: true, code: true, name: true } },
           maintenance: {
             where: { deletedAt: null, status: 'COMPLETED' },
             orderBy: { maintenanceDate: 'desc' },
@@ -58,18 +58,18 @@ export class InstrumentsRepository {
           },
         },
       }),
-      this.prisma.instrument.count({ where }),
+      this.prisma.equipment.count({ where }),
     ]);
 
     return { rows, total };
   }
 
   findById(id: string) {
-    return this.prisma.instrument.findFirst({
+    return this.prisma.equipment.findFirst({
       where: { id, deletedAt: null },
       include: {
         area: { select: { id: true, areaCode: true, areaName: true } },
-        instrumentType: { select: { id: true, typeCode: true, typeName: true } },
+        instrumentName: { select: { id: true, code: true, name: true } },
         maintenance: {
           where: { deletedAt: null, status: 'COMPLETED' },
           orderBy: { maintenanceDate: 'desc' },
@@ -81,12 +81,12 @@ export class InstrumentsRepository {
   }
 
   findByTagNumber(tagNumber: string) {
-    return this.prisma.instrument.findFirst({ where: { tagNumber, deletedAt: null } });
+    return this.prisma.equipment.findFirst({ where: { tagNumber, deletedAt: null } });
   }
 
-  create(dto: CreateInstrumentDto) {
+  create(dto: CreateEquipmentDto) {
     const { installationDate, ...rest } = dto;
-    return this.prisma.instrument.create({
+    return this.prisma.equipment.create({
       data: {
         ...rest,
         installationDate: installationDate ? new Date(installationDate) : undefined,
@@ -94,9 +94,9 @@ export class InstrumentsRepository {
     });
   }
 
-  update(id: string, dto: UpdateInstrumentDto) {
+  update(id: string, dto: UpdateEquipmentDto) {
     const { installationDate, ...rest } = dto;
-    return this.prisma.instrument.update({
+    return this.prisma.equipment.update({
       where: { id },
       data: {
         ...rest,
@@ -106,10 +106,10 @@ export class InstrumentsRepository {
   }
 
   softDelete(id: string) {
-    return this.prisma.instrument.update({ where: { id }, data: { deletedAt: new Date() } });
+    return this.prisma.equipment.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
-  countMaintenance(instrumentId: string) {
-    return this.prisma.correctiveMaintenance.count({ where: { instrumentId, deletedAt: null } });
+  countMaintenance(equipmentId: string) {
+    return this.prisma.correctiveMaintenance.count({ where: { equipmentId, deletedAt: null } });
   }
 }

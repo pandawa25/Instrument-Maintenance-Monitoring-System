@@ -30,7 +30,7 @@ export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List corrective maintenance — filter date range/area/instrument/status, pagination' })
+  @ApiOperation({ summary: 'List corrective maintenance — filter date range/area/equipment/status, pagination' })
   findAll(@Query() query: QueryMaintenanceDto) {
     return this.maintenanceService.findAll(query);
   }

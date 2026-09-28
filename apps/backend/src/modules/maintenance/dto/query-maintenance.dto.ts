@@ -23,10 +23,10 @@ export class QueryMaintenanceDto extends PaginationQueryDto {
   @IsUUID()
   areaId?: string;
 
-  @ApiPropertyOptional({ description: 'Filter berdasarkan UUID Instrument' })
+  @ApiPropertyOptional({ description: 'Filter berdasarkan UUID Equipment' })
   @IsOptional()
   @IsUUID()
-  instrumentId?: string;
+  equipmentId?: string;
 
   @ApiPropertyOptional({ enum: MaintenanceStatus })
   @IsOptional()

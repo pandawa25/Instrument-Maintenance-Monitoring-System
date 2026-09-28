@@ -100,7 +100,7 @@ export function AreaListPage() {
         open={Boolean(deletingArea)}
         onOpenChange={(open) => !open && setDeletingArea(null)}
         title="Hapus Area"
-        description={`Area "${deletingArea?.areaName}" akan dihapus. Aksi ini ditolak jika area masih memiliki instrument aktif.`}
+        description={`Area "${deletingArea?.areaName}" akan dihapus. Aksi ini ditolak jika area masih memiliki equipment aktif.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
       />

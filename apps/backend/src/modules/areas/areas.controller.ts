@@ -57,7 +57,7 @@ export class AreasController {
   @Delete(':id')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Soft delete area (Admin only) — ditolak jika masih ada instrument aktif' })
+  @ApiOperation({ summary: 'Soft delete area (Admin only) — ditolak jika masih ada equipment aktif' })
   remove(@Param('id', ParseUuidPipe) id: string) {
     return this.areasService.remove(id);
   }

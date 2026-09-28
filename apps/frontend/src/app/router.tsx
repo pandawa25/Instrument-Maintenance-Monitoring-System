@@ -4,7 +4,7 @@ import { RequireAuth, RequireRole } from './providers/route-guards';
 import { LoginPage } from '@/features/auth/pages/login-page';
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 import { AreaListPage } from '@/features/areas/pages/area-list-page';
-import { InstrumentListPage } from '@/features/instruments/pages/instrument-list-page';
+import { EquipmentListPage } from '@/features/equipment/pages/equipment-list-page';
 import { MaintenanceListPage } from '@/features/maintenance/pages/maintenance-list-page';
 import { UserManagementPage } from '@/features/users/pages/user-management-page';
 
@@ -23,8 +23,8 @@ export const router = createBrowserRouter([
         children: [{ path: '/areas', element: <AreaListPage /> }],
       },
       {
-        element: <DashboardLayout title="Master Instrument" />,
-        children: [{ path: '/instruments', element: <InstrumentListPage /> }],
+        element: <DashboardLayout title="Master Equipment" />,
+        children: [{ path: '/equipment', element: <EquipmentListPage /> }],
       },
       {
         element: <DashboardLayout title="Corrective Maintenance" />,

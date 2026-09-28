@@ -16,7 +16,7 @@ export function AreaDetailDialog({ open, onOpenChange, area }: Props) {
     { label: 'Area Name', value: area.areaName },
     { label: 'Description', value: area.description, fullWidth: true },
     { label: 'Status', value: <StatusBadge value={area.status} /> },
-    { label: 'Total Instrument', value: area.totalInstrument },
+    { label: 'Total Equipment', value: area.totalEquipment },
     { label: 'Dibuat Pada', value: new Date(area.createdAt).toLocaleString('id-ID') },
     { label: 'Terakhir Diubah', value: new Date(area.updatedAt).toLocaleString('id-ID') },
   ];

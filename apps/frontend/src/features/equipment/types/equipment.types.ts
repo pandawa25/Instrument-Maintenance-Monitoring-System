@@ -1,10 +1,10 @@
-export type InstrumentStatus = 'ACTIVE' | 'STANDBY' | 'OUT_OF_SERVICE';
+export type EquipmentStatus = 'ACTIVE' | 'STANDBY' | 'OUT_OF_SERVICE';
 export type Criticality = 'HIGH' | 'MEDIUM' | 'LOW';
 
-export interface InstrumentTypeRef {
+export interface InstrumentNameRef {
   id: string;
-  typeCode: string;
-  typeName: string;
+  code: string;
+  name: string;
 }
 
 export interface AreaRef {
@@ -13,18 +13,19 @@ export interface AreaRef {
   areaName: string;
 }
 
-export interface Instrument {
+export interface Equipment {
   id: string;
   tagNumber: string;
-  instrumentName: string;
+  service: string;
   description: string | null;
   area: AreaRef;
-  instrumentType: InstrumentTypeRef;
+  instrumentName: InstrumentNameRef;
+  type: string | null;
   manufacturer: string | null;
   model: string | null;
   serialNumber: string | null;
   installationDate: string | null;
-  status: InstrumentStatus;
+  status: EquipmentStatus;
   criticality: Criticality;
   remarks: string | null;
   lastMaintenanceDate: string | null;
@@ -32,28 +33,29 @@ export interface Instrument {
   updatedAt: string;
 }
 
-export interface InstrumentFormValues {
+export interface EquipmentFormValues {
   tagNumber: string;
-  instrumentName: string;
+  service: string;
   description?: string;
   areaId: string;
-  instrumentTypeId: string;
+  instrumentNameId: string;
+  type?: string;
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
   installationDate?: string;
-  status: InstrumentStatus;
+  status: EquipmentStatus;
   criticality: Criticality;
   remarks?: string;
 }
 
-export interface InstrumentQueryParams {
+export interface EquipmentQueryParams {
   page: number;
   limit: number;
   search?: string;
   areaId?: string | '';
-  instrumentTypeId?: string | '';
-  status?: InstrumentStatus | '';
+  instrumentNameId?: string | '';
+  status?: EquipmentStatus | '';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchAreasForDropdown } from '../api/areas-lookup.api';
-import { fetchInstrumentsForDropdown } from '../api/instruments-lookup.api';
+import { fetchEquipmentForDropdown } from '../api/equipment-lookup.api';
 import { fetchTechniciansForDropdown } from '../api/technicians-lookup.api';
 
 // Data master yang jarang berubah — staleTime panjang supaya tidak query ulang tiap buka form/filter.
@@ -12,10 +12,10 @@ export function useAreasLookup() {
   });
 }
 
-export function useInstrumentsLookup() {
+export function useEquipmentLookup() {
   return useQuery({
-    queryKey: ['instruments-lookup'],
-    queryFn: fetchInstrumentsForDropdown,
+    queryKey: ['equipment-lookup'],
+    queryFn: fetchEquipmentForDropdown,
     staleTime: 5 * 60 * 1000,
   });
 }

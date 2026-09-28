@@ -6,6 +6,6 @@ import { AreasRepository } from './areas.repository';
 @Module({
   controllers: [AreasController],
   providers: [AreasService, AreasRepository],
-  exports: [AreasService], // dipakai module Instrument nanti untuk validasi area_id
+  exports: [AreasService], // dipakai module Equipment untuk validasi area_id
 })
 export class AreasModule {}

@@ -1,24 +1,24 @@
-import { PrismaClient, AreaStatus, InstrumentStatus, Criticality } from '@prisma/client';
+import { PrismaClient, AreaStatus, EquipmentStatus, Criticality } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const INSTRUMENT_TYPES: Array<{ typeCode: string; typeName: string }> = [
-  { typeCode: 'PT', typeName: 'Pressure Transmitter' },
-  { typeCode: 'TT', typeName: 'Temperature Transmitter' },
-  { typeCode: 'FT', typeName: 'Flow Transmitter' },
-  { typeCode: 'LT', typeName: 'Level Transmitter' },
-  { typeCode: 'PG', typeName: 'Pressure Gauge' },
-  { typeCode: 'TG', typeName: 'Temperature Gauge' },
-  { typeCode: 'CV', typeName: 'Control Valve' },
-  { typeCode: 'OOV', typeName: 'On-Off Valve' },
-  { typeCode: 'VP', typeName: 'Valve Positioner' },
-  { typeCode: 'AN', typeName: 'Analyzer' },
-  { typeCode: 'GD', typeName: 'Gas Detector' },
-  { typeCode: 'VS', typeName: 'Vibration Sensor' },
-  { typeCode: 'PLC', typeName: 'PLC' },
-  { typeCode: 'RTU', typeName: 'RTU' },
-  { typeCode: 'FC', typeName: 'Flow Computer' },
+const INSTRUMENT_NAMES: Array<{ code: string; name: string }> = [
+  { code: 'PT', name: 'Pressure Transmitter' },
+  { code: 'TT', name: 'Temperature Transmitter' },
+  { code: 'FT', name: 'Flow Transmitter' },
+  { code: 'LT', name: 'Level Transmitter' },
+  { code: 'PG', name: 'Pressure Gauge' },
+  { code: 'TG', name: 'Temperature Gauge' },
+  { code: 'CV', name: 'Control Valve' },
+  { code: 'OOV', name: 'On-Off Valve' },
+  { code: 'VP', name: 'Valve Positioner' },
+  { code: 'AN', name: 'Analyzer' },
+  { code: 'GD', name: 'Gas Detector' },
+  { code: 'VS', name: 'Vibration Sensor' },
+  { code: 'PLC', name: 'PLC' },
+  { code: 'RTU', name: 'RTU' },
+  { code: 'FC', name: 'Flow Computer' },
 ];
 
 async function main() {
@@ -32,15 +32,15 @@ async function main() {
   await prisma.role.upsert({
     where: { name: 'Viewer' },
     update: {},
-    create: { name: 'Viewer', description: 'Read-only — dashboard, instrument, dan riwayat maintenance' },
+    create: { name: 'Viewer', description: 'Read-only — dashboard, equipment, dan riwayat maintenance' },
   });
 
-  console.log('Seeding instrument types...');
-  for (const type of INSTRUMENT_TYPES) {
-    await prisma.instrumentType.upsert({
-      where: { typeCode: type.typeCode },
+  console.log('Seeding instrument names...');
+  for (const item of INSTRUMENT_NAMES) {
+    await prisma.instrumentName.upsert({
+      where: { code: item.code },
       update: {},
-      create: type,
+      create: item,
     });
   }
 
@@ -70,19 +70,19 @@ async function main() {
     },
   });
 
-  const ptType = await prisma.instrumentType.findUnique({ where: { typeCode: 'PT' } });
-  if (ptType) {
-    await prisma.instrument.upsert({
-      where: { tagNumber: 'PT-1001' },
+  const pt = await prisma.instrumentName.findUnique({ where: { code: 'PT' } });
+  if (pt) {
+    await prisma.equipment.upsert({
+      where: { tagNumber: 'PU-01-PT-1001' },
       update: {},
       create: {
-        tagNumber: 'PT-1001',
-        instrumentName: 'Pressure Transmitter Separator Inlet',
+        tagNumber: 'PU-01-PT-1001',
+        service: 'Pressure Transmitter Separator Inlet',
         areaId: area.id,
-        instrumentTypeId: ptType.id,
+        instrumentNameId: pt.id,
         manufacturer: 'Yokogawa',
         model: 'EJA430E',
-        status: InstrumentStatus.ACTIVE,
+        status: EquipmentStatus.ACTIVE,
         criticality: Criticality.HIGH,
       },
     });

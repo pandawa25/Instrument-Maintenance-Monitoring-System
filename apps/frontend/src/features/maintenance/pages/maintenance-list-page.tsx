@@ -7,7 +7,7 @@ import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { useMaintenanceList, useDeleteMaintenance } from '../hooks/use-maintenance';
-import { useAreasLookup, useInstrumentsLookup } from '../hooks/use-maintenance-lookups';
+import { useAreasLookup, useEquipmentLookup } from '../hooks/use-maintenance-lookups';
 import { MaintenanceTable } from '../components/maintenance-table';
 import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
 import { MaintenanceDetailDialog } from '../components/maintenance-detail-dialog';
@@ -19,7 +19,7 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
   limit: 20,
   search: '',
   areaId: '',
-  instrumentId: '',
+  equipmentId: '',
   status: '',
   dateFrom: '',
   dateTo: '',
@@ -37,7 +37,7 @@ export function MaintenanceListPage() {
 
   const { data, isLoading } = useMaintenanceList(params);
   const { data: areas } = useAreasLookup();
-  const { data: instruments } = useInstrumentsLookup();
+  const { data: equipmentOptions } = useEquipmentLookup();
   const deleteMutation = useDeleteMaintenance();
 
   function openCreate() {
@@ -61,7 +61,7 @@ export function MaintenanceListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-text">Corrective Maintenance</h2>
-          <p className="text-sm text-text-muted">Riwayat perbaikan dan gangguan instrument di seluruh area.</p>
+          <p className="text-sm text-text-muted">Riwayat perbaikan dan gangguan equipment di seluruh area.</p>
         </div>
         {canEdit && (
           <Button onClick={openCreate}>
@@ -114,13 +114,13 @@ export function MaintenanceListPage() {
 
           <Select
             className="w-52"
-            value={params.instrumentId}
-            onChange={(e) => setParams((p) => ({ ...p, instrumentId: e.target.value, page: 1 }))}
+            value={params.equipmentId}
+            onChange={(e) => setParams((p) => ({ ...p, equipmentId: e.target.value, page: 1 }))}
           >
-            <option value="">Semua Instrument</option>
-            {instruments?.map((instrument) => (
-              <option key={instrument.id} value={instrument.id}>
-                {instrument.tagNumber}
+            <option value="">Semua Equipment</option>
+            {equipmentOptions?.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.tagNumber}
               </option>
             ))}
           </Select>
@@ -167,7 +167,7 @@ export function MaintenanceListPage() {
         open={Boolean(deletingItem)}
         onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Hapus Data Maintenance"
-        description={`Data corrective maintenance untuk instrument "${deletingItem?.instrument.tagNumber}" pada tanggal ${
+        description={`Data corrective maintenance untuk equipment "${deletingItem?.equipment.tagNumber}" pada tanggal ${
           deletingItem ? new Date(deletingItem.maintenanceDate).toLocaleDateString('id-ID') : ''
         } akan dihapus.`}
         loading={deleteMutation.isPending}

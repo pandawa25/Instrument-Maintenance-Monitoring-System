@@ -4,8 +4,8 @@ import { appConfig } from './config/app.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AreasModule } from './modules/areas/areas.module';
-import { InstrumentTypesModule } from './modules/instrument-types/instrument-types.module';
-import { InstrumentsModule } from './modules/instruments/instruments.module';
+import { InstrumentNamesModule } from './modules/instrument-names/instrument-names.module';
+import { EquipmentModule } from './modules/equipment/equipment.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
@@ -18,8 +18,8 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     PrismaModule,
     AuthModule,
     AreasModule,
-    InstrumentTypesModule,
-    InstrumentsModule,
+    InstrumentNamesModule,
+    EquipmentModule,
     RolesModule,
     UsersModule,
     MaintenanceModule,

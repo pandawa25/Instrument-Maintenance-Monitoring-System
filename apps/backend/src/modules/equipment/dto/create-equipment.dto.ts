@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Criticality, InstrumentStatus } from '@prisma/client';
+import { Criticality, EquipmentStatus } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
@@ -10,8 +10,12 @@ import {
   MaxLength,
 } from 'class-validator';
 
-export class CreateInstrumentDto {
-  @ApiProperty({ example: 'PT-1001', maxLength: 50 })
+export class CreateEquipmentDto {
+  @ApiProperty({
+    example: 'PU-01-PT-1001',
+    maxLength: 50,
+    description: 'Format: {Area Code}-{Tag No}. Frontend otomatis menempelkan prefix area saat area dipilih.',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
@@ -21,7 +25,7 @@ export class CreateInstrumentDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)
-  instrumentName!: string;
+  service!: string;
 
   @ApiProperty({ required: false, maxLength: 255 })
   @IsOptional()
@@ -33,9 +37,15 @@ export class CreateInstrumentDto {
   @IsUUID()
   areaId!: string;
 
-  @ApiProperty({ description: 'UUID Instrument Type' })
+  @ApiProperty({ description: 'UUID master Instrument Name' })
   @IsUUID()
-  instrumentTypeId!: string;
+  instrumentNameId!: string;
+
+  @ApiProperty({ required: false, maxLength: 100, example: 'Smart' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  type?: string;
 
   @ApiProperty({ required: false, maxLength: 100 })
   @IsOptional()
@@ -60,10 +70,10 @@ export class CreateInstrumentDto {
   @IsDateString()
   installationDate?: string;
 
-  @ApiProperty({ enum: InstrumentStatus, default: InstrumentStatus.ACTIVE, required: false })
+  @ApiProperty({ enum: EquipmentStatus, default: EquipmentStatus.ACTIVE, required: false })
   @IsOptional()
-  @IsEnum(InstrumentStatus)
-  status?: InstrumentStatus;
+  @IsEnum(EquipmentStatus)
+  status?: EquipmentStatus;
 
   @ApiProperty({ enum: Criticality, default: Criticality.MEDIUM, required: false })
   @IsOptional()
