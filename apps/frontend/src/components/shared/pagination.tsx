@@ -13,7 +13,7 @@ export function Pagination({ meta, onPageChange }: Props) {
   const to = Math.min(page * limit, total);
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-text-muted">
+    <div className="flex flex-col gap-3 border-t border-border px-4 py-3 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between">
       <span>
         Menampilkan {from}–{to} dari {total} data
       </span>

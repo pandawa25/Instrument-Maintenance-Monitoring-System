@@ -56,7 +56,7 @@ export function AreaListPage() {
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-surface">
+      <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <SearchInput
             value={params.search ?? ''}

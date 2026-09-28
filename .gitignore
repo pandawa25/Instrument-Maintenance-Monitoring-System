@@ -33,5 +33,10 @@ Thumbs.db
 # Testing
 coverage/
 
+# TypeScript build cache / stray compiled config output
+*.tsbuildinfo
+apps/frontend/vite.config.js
+apps/frontend/vite.config.d.ts
+
 # Docker
 docker/**/*.env

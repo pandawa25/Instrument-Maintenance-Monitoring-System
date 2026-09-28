@@ -31,11 +31,11 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-primary-tint/60 px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-surface p-8 shadow-xl">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-primary text-white">
-            <Gauge className="h-5 w-5" />
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white shadow-md">
+            <Gauge className="h-6 w-6" />
           </div>
           <h1 className="text-lg font-semibold text-text">Instrument Maintenance</h1>
           <p className="text-sm text-text-muted">Monitoring System</p>
