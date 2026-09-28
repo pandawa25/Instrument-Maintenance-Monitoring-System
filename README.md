@@ -84,7 +84,9 @@ docker compose -f docker/docker-compose.yml up --build
 |---|---|---|
 | admin@imms.local | Admin123! | Admin |
 
-> Ganti password ini segera setelah environment production pertama kali dijalankan.
+> Ganti password ini segera setelah environment production pertama kali dijalankan —
+> login sebagai Admin, buka menu **User Management**, lalu gunakan aksi "Reset Password"
+> pada akun admin@imms.local.
 
 ## Konvensi Commit
 
@@ -107,4 +109,5 @@ chore: update dependency
 - [x] Module Instrument (backend + frontend) — termasuk master Instrument Type (read-only)
 - [x] Module Corrective Maintenance (backend + frontend) — termasuk lookup Technician (`GET /users`, read-only)
 - [x] Dashboard — summary cards, chart maintenance per bulan/area/failure category (Recharts), tabel 10 maintenance terbaru
+- [x] Module Manage User (backend + frontend, Admin only) — CRUD user, assign role, reset password; proteksi self-lockout (tidak bisa nonaktifkan/hapus akun sendiri)
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
