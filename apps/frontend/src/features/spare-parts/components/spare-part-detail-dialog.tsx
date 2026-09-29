@@ -14,8 +14,8 @@ export function SparePartDetailDialog({ open, onOpenChange, sparePart }: Props) 
   const fields: DetailField[] = [
     { label: 'KIMAP', value: sparePart.kimap },
     { label: 'Nama Material', value: sparePart.name },
-    { label: 'Unit', value: sparePart.unit },
     { label: 'Stock', value: sparePart.stock },
+    { label: 'Unit', value: sparePart.unit },
     { label: 'Status', value: <StatusBadge value={sparePart.status} /> },
     { label: 'Remarks', value: sparePart.remarks, fullWidth: true },
     { label: 'Dibuat Pada', value: new Date(sparePart.createdAt).toLocaleString('id-ID') },

@@ -27,8 +27,8 @@ export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, on
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
           <th className="px-4 py-2.5 font-medium">KIMAP</th>
           <th className="px-4 py-2.5 font-medium">Nama</th>
-          <th className="px-4 py-2.5 font-medium">Unit</th>
           <th className="px-4 py-2.5 font-medium text-center">Stock</th>
+          <th className="px-4 py-2.5 font-medium">Unit</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
           <th className="px-4 py-2.5 font-medium text-right">Action</th>
         </tr>
@@ -38,8 +38,8 @@ export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, on
           <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
             <td className="px-4 py-2.5 font-mono text-xs text-text">{item.kimap}</td>
             <td className="px-4 py-2.5 text-text">{item.name}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.unit}</td>
             <td className="px-4 py-2.5 text-center text-text">{item.stock}</td>
+            <td className="px-4 py-2.5 text-text-muted">{item.unit}</td>
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
             </td>

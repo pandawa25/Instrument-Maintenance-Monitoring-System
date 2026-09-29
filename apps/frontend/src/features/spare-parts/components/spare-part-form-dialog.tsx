@@ -97,6 +97,16 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="stock">Stock</Label>
+              <Input
+                id="stock"
+                type="number"
+                min={0}
+                value={form.stock}
+                onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              />
+            </div>
+            <div>
               <Label htmlFor="unit">Unit</Label>
               <Input
                 id="unit"
@@ -105,16 +115,6 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
                 placeholder="pcs"
                 maxLength={20}
                 required
-              />
-            </div>
-            <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                min={0}
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
               />
             </div>
           </div>
