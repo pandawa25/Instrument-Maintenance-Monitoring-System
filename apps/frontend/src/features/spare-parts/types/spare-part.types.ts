@@ -29,3 +29,32 @@ export interface SparePartQueryParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+// Ledger pergerakan stock — sumber kebenaran (source of truth) untuk stock.
+// MAINTENANCE_USAGE/MAINTENANCE_RETURN otomatis dari Corrective Maintenance;
+// RESTOCK/ADJUSTMENT diinput manual oleh Admin.
+export type StockMovementType = 'MAINTENANCE_USAGE' | 'MAINTENANCE_RETURN' | 'RESTOCK' | 'ADJUSTMENT';
+export type ManualStockMovementType = 'RESTOCK' | 'ADJUSTMENT';
+
+export interface StockMovement {
+  id: string;
+  type: StockMovementType;
+  quantityDelta: number;
+  balanceAfter: number;
+  referenceType: string | null;
+  referenceId: string | null;
+  notes: string | null;
+  createdBy: { id: string; fullName: string };
+  createdAt: string;
+}
+
+export interface StockMovementQueryParams {
+  page: number;
+  limit: number;
+}
+
+export interface CreateStockMovementPayload {
+  type: ManualStockMovementType;
+  quantityDelta: number;
+  notes?: string;
+}

@@ -1,12 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createSparePart,
+  createStockMovement,
   deleteSparePart,
   fetchSpareParts,
   fetchSparePartsForDropdown,
+  fetchStockMovements,
   updateSparePart,
 } from '../api/spare-parts.api';
-import type { SparePartFormValues, SparePartQueryParams } from '../types/spare-part.types';
+import type {
+  CreateStockMovementPayload,
+  SparePartFormValues,
+  SparePartQueryParams,
+  StockMovementQueryParams,
+} from '../types/spare-part.types';
 
 const SPARE_PARTS_KEY = 'spare-parts';
 
@@ -48,5 +55,26 @@ export function useDeleteSparePart() {
   return useMutation({
     mutationFn: (id: string) => deleteSparePart(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [SPARE_PARTS_KEY] }),
+  });
+}
+
+export function useStockMovements(sparePartId: string | undefined, params: StockMovementQueryParams) {
+  return useQuery({
+    queryKey: [SPARE_PARTS_KEY, 'stock-movements', sparePartId, params],
+    queryFn: () => fetchStockMovements(sparePartId as string, params),
+    enabled: Boolean(sparePartId),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCreateStockMovement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sparePartId, payload }: { sparePartId: string; payload: CreateStockMovementPayload }) =>
+      createStockMovement(sparePartId, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [SPARE_PARTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [SPARE_PARTS_KEY, 'stock-movements', variables.sparePartId] });
+    },
   });
 }

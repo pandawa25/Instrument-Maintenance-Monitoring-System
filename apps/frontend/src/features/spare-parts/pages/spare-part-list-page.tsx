@@ -9,6 +9,7 @@ import { useSpareParts, useDeleteSparePart } from '../hooks/use-spare-parts';
 import { SparePartTable } from '../components/spare-part-table';
 import { SparePartFormDialog } from '../components/spare-part-form-dialog';
 import { SparePartDetailDialog } from '../components/spare-part-detail-dialog';
+import { StockMovementDialog } from '../components/stock-movement-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
 
@@ -23,6 +24,7 @@ export function SparePartListPage() {
   const [editingItem, setEditingItem] = useState<SparePart | null>(null);
   const [viewingItem, setViewingItem] = useState<SparePart | null>(null);
   const [deletingItem, setDeletingItem] = useState<SparePart | null>(null);
+  const [stockItem, setStockItem] = useState<SparePart | null>(null);
 
   const { data, isLoading } = useSpareParts(params);
   const deleteMutation = useDeleteSparePart();
@@ -84,6 +86,7 @@ export function SparePartListPage() {
             onEdit={openEdit}
             onDelete={setDeletingItem}
             onView={setViewingItem}
+            onStockMovement={setStockItem}
           />
         </div>
 
@@ -93,6 +96,14 @@ export function SparePartListPage() {
       <SparePartFormDialog open={formOpen} onOpenChange={setFormOpen} sparePart={editingItem} />
 
       <SparePartDetailDialog open={Boolean(viewingItem)} onOpenChange={(open) => !open && setViewingItem(null)} sparePart={viewingItem} />
+
+      <StockMovementDialog
+        open={Boolean(stockItem)}
+        onOpenChange={(open) => !open && setStockItem(null)}
+        sparePart={stockItem}
+        canEdit={canEdit}
+        onSparePartUpdated={setStockItem}
+      />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

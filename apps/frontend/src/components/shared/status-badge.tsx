@@ -17,6 +17,10 @@ const STATUS_STYLES: Record<string, string> = {
   OK: 'bg-success/10 text-success border-success/30',
   NOT_OK: 'bg-danger/10 text-danger border-danger/30',
   NA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
+  MAINTENANCE_USAGE: 'bg-danger/10 text-danger border-danger/30',
+  MAINTENANCE_RETURN: 'bg-success/10 text-success border-success/30',
+  RESTOCK: 'bg-success/10 text-success border-success/30',
+  ADJUSTMENT: 'bg-warning/10 text-warning border-warning/30',
 };
 
 export function StatusBadge({ value }: { value: string }) {

@@ -51,15 +51,19 @@ export class MaintenanceController {
   @Patch(':id')
   @Roles('Admin')
   @ApiOperation({ summary: 'Update corrective maintenance (Admin only)' })
-  update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateMaintenanceDto) {
-    return this.maintenanceService.update(id, dto);
+  update(
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() dto: UpdateMaintenanceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.maintenanceService.update(id, dto, user.id);
   }
 
   @Delete(':id')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete corrective maintenance (Admin only)' })
-  remove(@Param('id', ParseUuidPipe) id: string) {
-    return this.maintenanceService.remove(id);
+  remove(@Param('id', ParseUuidPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.maintenanceService.remove(id, user.id);
   }
 }

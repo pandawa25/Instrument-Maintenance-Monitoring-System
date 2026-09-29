@@ -52,10 +52,14 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
     e.preventDefault();
     setError(null);
     try {
-      const payload: SparePartFormValues = { ...form, stock: form.stock === '' ? 0 : Number(form.stock) };
       if (isEdit && sparePart) {
-        await updateMutation.mutateAsync({ id: sparePart.id, payload });
+        // `stock` sengaja tidak dikirim saat update — sejak Stock Movement
+        // Ledger, perubahan stock wajib lewat tombol Stock In / Adjustment
+        // supaya selalu tercatat di ledger.
+        const { stock: _stock, ...updatePayload } = form;
+        await updateMutation.mutateAsync({ id: sparePart.id, payload: updatePayload });
       } else {
+        const payload: SparePartFormValues = { ...form, stock: form.stock === '' ? 0 : Number(form.stock) };
         await createMutation.mutateAsync(payload);
       }
       onOpenChange(false);
@@ -97,14 +101,20 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="stock">Stock</Label>
+              <Label htmlFor="stock">Stock {isEdit && <span className="font-normal text-text-muted">(saldo awal)</span>}</Label>
               <Input
                 id="stock"
                 type="number"
                 min={0}
                 value={form.stock}
+                disabled={isEdit}
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
               />
+              {isEdit && (
+                <p className="mt-1 text-xs text-text-muted">
+                  Gunakan tombol "Stock In / Adjustment" pada detail untuk mengubah stock.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="unit">Unit</Label>

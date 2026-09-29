@@ -120,7 +120,7 @@ export class MaintenanceService {
     return this.findOne(created.id);
   }
 
-  async update(id: string, dto: UpdateMaintenanceDto) {
+  async update(id: string, dto: UpdateMaintenanceDto, actorId: string) {
     await this.findOne(id); // memastikan ada & belum dihapus
 
     if (dto.technicianId) {
@@ -133,13 +133,13 @@ export class MaintenanceService {
       areaId = await this.resolveAreaId(dto.equipmentId); // sync ulang kalau equipment diganti
     }
 
-    await this.repository.update(id, dto, areaId);
+    await this.repository.update(id, dto, actorId, areaId);
     return this.findOne(id);
   }
 
-  async remove(id: string) {
+  async remove(id: string, actorId: string) {
     await this.findOne(id);
-    await this.repository.softDelete(id);
+    await this.repository.softDelete(id, actorId);
     return { id, deleted: true };
   }
 }

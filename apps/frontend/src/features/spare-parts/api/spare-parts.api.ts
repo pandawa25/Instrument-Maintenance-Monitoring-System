@@ -1,6 +1,13 @@
 import { api } from '@/lib/axios';
 import type { PaginatedResult } from '@/lib/types';
-import type { SparePart, SparePartFormValues, SparePartQueryParams } from '../types/spare-part.types';
+import type {
+  CreateStockMovementPayload,
+  SparePart,
+  SparePartFormValues,
+  SparePartQueryParams,
+  StockMovement,
+  StockMovementQueryParams,
+} from '../types/spare-part.types';
 
 export async function fetchSpareParts(params: SparePartQueryParams) {
   const { data } = await api.get<PaginatedResult<SparePart>>('/spare-parts', {
@@ -33,4 +40,16 @@ export async function updateSparePart(id: string, payload: Partial<SparePartForm
 
 export async function deleteSparePart(id: string) {
   await api.delete(`/spare-parts/${id}`);
+}
+
+export async function fetchStockMovements(sparePartId: string, params: StockMovementQueryParams) {
+  const { data } = await api.get<PaginatedResult<StockMovement>>(`/spare-parts/${sparePartId}/stock-movements`, {
+    params,
+  });
+  return data;
+}
+
+export async function createStockMovement(sparePartId: string, payload: CreateStockMovementPayload) {
+  const { data } = await api.post<{ data: SparePart }>(`/spare-parts/${sparePartId}/stock-movements`, payload);
+  return data.data;
 }

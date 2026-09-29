@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, PackagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { SparePart } from '../types/spare-part.types';
@@ -10,9 +10,10 @@ interface Props {
   onEdit: (item: SparePart) => void;
   onDelete: (item: SparePart) => void;
   onView: (item: SparePart) => void;
+  onStockMovement: (item: SparePart) => void;
 }
 
-export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, onView, onStockMovement }: Props) {
   if (isLoading) {
     return <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>;
   }
@@ -47,6 +48,9 @@ export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, on
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" onClick={() => onView(item)} title="View detail">
                   <Eye className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onStockMovement(item)} title="Stock In / Adjustment">
+                  <PackagePlus className="h-4 w-4" />
                 </Button>
                 {canEdit && (
                   <>

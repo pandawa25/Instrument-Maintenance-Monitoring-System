@@ -78,6 +78,13 @@ enum SparePartStatus {
   INACTIVE
 }
 
+enum StockMovementType {
+  MAINTENANCE_USAGE // otomatis: dipakai di Corrective Maintenance (quantityDelta negatif)
+  MAINTENANCE_RETURN // otomatis: dikembalikan krn Corrective Maintenance diedit/dihapus (quantityDelta positif)
+  RESTOCK // manual: Admin tambah stock baru (quantityDelta positif)
+  ADJUSTMENT // manual: koreksi hasil stock opname (quantityDelta boleh +/-)
+}
+
 model Role {
   id          String    @id @default(uuid()) @db.Uuid
   name        String    @unique @db.VarChar(50)
@@ -107,6 +114,7 @@ model User {
   maintenanceAsTech  CorrectiveMaintenance[] @relation("TechnicianMaintenance")
   maintenanceCreated CorrectiveMaintenance[] @relation("CreatedByMaintenance")
   importBatches      ImportBatch[]
+  stockMovements     SparePartStockMovement[]
 
   @@index([roleId])
   @@map("users")
@@ -404,9 +412,34 @@ model SparePart {
   deletedAt DateTime?       @map("deleted_at")
 
   materials CorrectiveMaintenanceMaterial[]
+  stockMovements SparePartStockMovement[]
 
   @@index([status])
   @@map("spare_parts")
+}
+
+// Ledger pergerakan stock — sumber kebenaran histori, `SparePart.stock` adalah
+// cached balance hasil movement terakhir (supaya list/dropdown tetap cepat
+// tanpa perlu SUM tiap request). Setiap perubahan stock WAJIB lewat sini
+// (SparePartsRepository.recordMovement), tidak boleh update stock langsung.
+model SparePartStockMovement {
+  id            String            @id @default(uuid()) @db.Uuid
+  sparePartId   String            @map("spare_part_id") @db.Uuid
+  type          StockMovementType
+  quantityDelta Int               @map("quantity_delta")
+  balanceAfter  Int               @map("balance_after")
+  referenceType String?           @map("reference_type") @db.VarChar(50)
+  referenceId   String?           @map("reference_id") @db.Uuid
+  notes         String?           @db.VarChar(255)
+  createdById   String            @map("created_by_id") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  sparePart SparePart @relation(fields: [sparePartId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([sparePartId])
+  @@index([referenceType, referenceId])
+  @@map("spare_part_stock_movements")
 }
 
 // Baris kebutuhan material pada satu Corrective Maintenance (MVP: cukup daftar

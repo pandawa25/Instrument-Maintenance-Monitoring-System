@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
+import { SparePartsRepository } from '../spare-parts/spare-parts.repository';
 
 interface MaterialRow {
   sparePartId: string;
@@ -26,7 +27,10 @@ const LIST_INCLUDE = {
  */
 @Injectable()
 export class MaintenanceRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sparePartsRepository: SparePartsRepository,
+  ) {}
 
   private buildWhere(query: QueryMaintenanceDto): Prisma.CorrectiveMaintenanceWhereInput {
     const where: Prisma.CorrectiveMaintenanceWhereInput = { deletedAt: null };
@@ -87,33 +91,42 @@ export class MaintenanceRepository {
 
   /**
    * Kurangi stock tiap spare part yang dipakai (quantity dibulatkan ke integer
-   * terdekat — stock master dalam satuan bulat/pcs). Ditolak (BadRequestException)
-   * kalau stock tidak cukup, supaya tidak ada stock minus.
+   * terdekat — stock master dalam satuan bulat/pcs), lewat SparePartsRepository
+   * .recordMovement() supaya tercatat di ledger (tipe MAINTENANCE_USAGE) dan
+   * tetap atomic dalam `tx` yang sama dengan perubahan Corrective Maintenance.
+   * recordMovement() sendiri yang menolak (BadRequestException) kalau stock
+   * tidak cukup.
    */
-  private async decrementStock(tx: any, materials: MaterialRow[]) {
+  private async decrementStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
     for (const m of materials) {
       const qty = Math.round(Number(m.quantity));
       if (qty <= 0) continue;
 
-      const sparePart = await tx.sparePart.findUnique({ where: { id: m.sparePartId } });
-      if (!sparePart) continue; // sudah divalidasi di service — seharusnya tidak terjadi
-
-      if (sparePart.stock < qty) {
-        throw new BadRequestException(
-          `Stock spare part '${sparePart.kimap}' tidak cukup (tersedia ${sparePart.stock}, dibutuhkan ${qty})`,
-        );
-      }
-
-      await tx.sparePart.update({ where: { id: m.sparePartId }, data: { stock: { decrement: qty } } });
+      await this.sparePartsRepository.recordMovement(tx, {
+        sparePartId: m.sparePartId,
+        type: 'MAINTENANCE_USAGE',
+        quantityDelta: -qty,
+        referenceType: 'CORRECTIVE_MAINTENANCE',
+        referenceId: maintenanceId,
+        createdById: actorId,
+      });
     }
   }
 
   /** Kembalikan stock — dipakai saat material lama diganti (update) atau maintenance dihapus. */
-  private async restoreStock(tx: any, materials: MaterialRow[]) {
+  private async restoreStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
     for (const m of materials) {
       const qty = Math.round(Number(m.quantity));
       if (qty <= 0) continue;
-      await tx.sparePart.update({ where: { id: m.sparePartId }, data: { stock: { increment: qty } } });
+
+      await this.sparePartsRepository.recordMovement(tx, {
+        sparePartId: m.sparePartId,
+        type: 'MAINTENANCE_RETURN',
+        quantityDelta: qty,
+        referenceType: 'CORRECTIVE_MAINTENANCE',
+        referenceId: maintenanceId,
+        createdById: actorId,
+      });
     }
   }
 
@@ -150,14 +163,14 @@ export class MaintenanceRepository {
       });
 
       if (materials?.length) {
-        await this.decrementStock(tx, materials);
+        await this.decrementStock(tx, materials, created.id, createdById);
       }
 
       return tx.correctiveMaintenance.findFirst({ where: { id: created.id }, include: LIST_INCLUDE });
     });
   }
 
-  async update(id: string, dto: UpdateMaintenanceDto, areaId?: string) {
+  async update(id: string, dto: UpdateMaintenanceDto, actorId: string, areaId?: string) {
     const { maintenanceDate, completionDate, materials, ...rest } = dto;
     const resolvedCompletionDate = completionDate
       ? new Date(completionDate)
@@ -182,7 +195,7 @@ export class MaintenanceRepository {
         const oldMaterials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
           where: { correctiveMaintenanceId: id },
         });
-        await this.restoreStock(tx, oldMaterials);
+        await this.restoreStock(tx, oldMaterials, id, actorId);
 
         await tx.correctiveMaintenanceMaterial.deleteMany({ where: { correctiveMaintenanceId: id } });
 
@@ -195,7 +208,7 @@ export class MaintenanceRepository {
               remarks: m.remarks,
             })),
           });
-          await this.decrementStock(tx, materials);
+          await this.decrementStock(tx, materials, id, actorId);
         }
       }
 
@@ -203,13 +216,13 @@ export class MaintenanceRepository {
     });
   }
 
-  softDelete(id: string) {
+  softDelete(id: string, actorId: string) {
     return this.prisma.$transaction(async (tx: any) => {
       // Maintenance dibatalkan/dihapus — kebutuhan material ikut batal, jadi stock dikembalikan.
       const materials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
         where: { correctiveMaintenanceId: id },
       });
-      await this.restoreStock(tx, materials);
+      await this.restoreStock(tx, materials, id, actorId);
 
       return tx.correctiveMaintenance.update({ where: { id }, data: { deletedAt: new Date() } });
     });
