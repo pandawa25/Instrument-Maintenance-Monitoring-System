@@ -1,11 +1,10 @@
 import { api } from '@/lib/axios';
-import type { PaginatedResult } from '@/lib/types';
 import type { EquipmentRef } from '../types/maintenance.types';
 
 // Lookup ringan untuk dropdown Equipment di form Corrective Maintenance.
+// Pakai endpoint dropdown khusus (bukan /equipment yang berpaginasi dengan limit
+// maks 100) supaya semua equipment aktif ikut termuat, berapa pun jumlahnya.
 export async function fetchEquipmentForDropdown() {
-  const { data } = await api.get<PaginatedResult<EquipmentRef & { tagNumber: string }>>('/equipment', {
-    params: { limit: 100, sortBy: 'tagNumber', sortOrder: 'asc' },
-  });
+  const { data } = await api.get<{ data: EquipmentRef[] }>('/equipment/dropdown');
   return data.data;
 }

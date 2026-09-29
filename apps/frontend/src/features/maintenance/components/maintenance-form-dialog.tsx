@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/use-maintenance';
 import { useEquipmentLookup, useTechniciansLookup } from '../hooks/use-maintenance-lookups';
@@ -106,21 +107,20 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
 
           <div>
             <Label htmlFor="equipmentId">Equipment</Label>
-            <Select
+            <SearchableSelect
               id="equipmentId"
               value={form.equipmentId}
-              onChange={(e) => setForm({ ...form, equipmentId: e.target.value })}
+              onChange={(equipmentId) => setForm({ ...form, equipmentId })}
+              options={(equipmentOptions ?? []).map((item) => ({
+                value: item.id,
+                label: item.tagNumber,
+                sublabel: item.service,
+              }))}
+              placeholder="Pilih equipment..."
+              searchPlaceholder="Cari tag number / service..."
+              emptyText="Tidak ada equipment yang cocok."
               required
-            >
-              <option value="" disabled>
-                Pilih equipment...
-              </option>
-              {equipmentOptions?.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.tagNumber} — {item.service}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
 
           <div>
