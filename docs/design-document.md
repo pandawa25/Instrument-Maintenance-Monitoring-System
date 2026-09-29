@@ -53,9 +53,6 @@ GET /resource?page=1&limit=20&search=&sortBy=createdAt&sortOrder=desc
 }
 ```
 
-## Roadmap Modul Berikutnya
+## Roadmap
 
-1. Module Instrument (mengikuti pola Module Area)
-2. Module Corrective Maintenance (dengan sinkronisasi `area_id` di service layer)
-3. Dashboard (summary cards + 3 chart + latest maintenance table)
-4. Phase 2 (di luar MVP): audit log terpisah, refresh-token rotation, granular permission, attachment evidence, tabel `plants` di atas `areas`, notifikasi.
+MVP awal (Instrument, Corrective Maintenance, Dashboard) sudah selesai, begitu juga Preventive Maintenance, Vendor, Spare Part/Material. Roadmap lanjutan (technical debt & risk register + Phase 2–6) ada di `docs/roadmap.md` — dokumen ini tidak lagi menjadi sumber roadmap, hanya keputusan desain awal.
