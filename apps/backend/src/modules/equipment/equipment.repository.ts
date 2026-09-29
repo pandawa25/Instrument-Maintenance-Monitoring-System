@@ -80,8 +80,18 @@ export class EquipmentRepository {
     });
   }
 
+  /**
+   * Cari equipment AKTIF dengan tag_number yang sama (case-insensitive).
+   * Case-insensitive supaya tetap menangkap data lama yang mungkin belum tersimpan
+   * dalam bentuk ternormalisasi (lihat normalizeTag() di @shared-utils), bukan cuma
+   * data baru yang sudah pasti uppercase. Constraint uniqueness yang sesungguhnya ada
+   * di DB (partial unique index UPPER(tag_number) WHERE deleted_at IS NULL) — pre-check
+   * di sini hanya untuk pesan error 409 yang lebih ramah daripada P2002 mentah.
+   */
   findByTagNumber(tagNumber: string) {
-    return this.prisma.equipment.findFirst({ where: { tagNumber, deletedAt: null } });
+    return this.prisma.equipment.findFirst({
+      where: { tagNumber: { equals: tagNumber, mode: 'insensitive' }, deletedAt: null },
+    });
   }
 
   create(dto: CreateEquipmentDto) {
@@ -111,5 +121,49 @@ export class EquipmentRepository {
 
   countMaintenance(equipmentId: string) {
     return this.prisma.correctiveMaintenance.count({ where: { equipmentId, deletedAt: null } });
+  }
+
+  /**
+   * Preload semua tag_number equipment AKTIF (uppercase) untuk EquipmentImportService —
+   * satu query di awal preview, bukan findByTagNumber per baris (hindari N+1 untuk
+   * sampai 1000 baris). Tag yang sudah soft-deleted sengaja TIDAK ikut, sejalan dengan
+   * partial unique index equipment_tag_number_active_key.
+   */
+  async findAllActiveTagNumbersUpper(): Promise<Set<string>> {
+    const rows = await this.prisma.equipment.findMany({
+      where: { deletedAt: null },
+      select: { tagNumber: true },
+    });
+    return new Set(rows.map((r: { tagNumber: string }) => r.tagNumber.toUpperCase()));
+  }
+
+  /** Sama seperti findAllActiveTagNumbersUpper(), untuk cek duplikat serial_number (WARNING, bukan ERROR). */
+  async findAllActiveSerialNumbersUpper(): Promise<Set<string>> {
+    const rows = await this.prisma.equipment.findMany({
+      where: { deletedAt: null, serialNumber: { not: null } },
+      select: { serialNumber: true },
+    });
+    return new Set(rows.map((r: { serialNumber: string | null }) => (r.serialNumber as string).toUpperCase()));
+  }
+
+  /**
+   * Insert banyak equipment sekaligus dalam SATU transaksi interaktif, di-chunk per
+   * `chunkSize` baris (default 500) supaya statement tidak terlalu besar. Kalau ada baris
+   * yang gagal (mis. race condition tag di-create bersamaan dari tempat lain), Prisma
+   * otomatis rollback SELURUH transaksi — sesuai desain create-only all-or-nothing.
+   */
+  async createManyInTransaction(
+    rows: Prisma.EquipmentCreateManyInput[],
+    chunkSize = 500,
+  ): Promise<void> {
+    await this.prisma.$transaction(
+      async (tx) => {
+        for (let i = 0; i < rows.length; i += chunkSize) {
+          const chunk = rows.slice(i, i + chunkSize);
+          await tx.equipment.createMany({ data: chunk });
+        }
+      },
+      { timeout: 30_000 },
+    );
   }
 }

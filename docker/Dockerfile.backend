@@ -19,6 +19,11 @@ FROM deps AS build
 COPY packages ./packages
 COPY apps/backend ./apps/backend
 RUN npm run prisma:generate --workspace=apps/backend
+# shared-utils dikonsumsi backend sebagai compiled package (dist/ + .d.ts), bukan raw TS —
+# rootDir backend (./src) tidak mengizinkan tsc meng-compile file .ts di luar apps/backend/src,
+# jadi shared-utils harus di-build lebih dulu supaya backend hanya melihat .js + .d.ts-nya
+# lewat resolusi node_modules biasa (symlink npm workspaces), bukan lewat path-mapping ke source.
+RUN npm run build --workspace=packages/shared-utils
 RUN npm run build --workspace=apps/backend
 # Diagnostic — pastikan dist/main.js benar-benar ada sebelum lanjut ke stage runtime.
 # Kalau baris ini gagal, build logs akan langsung tunjukkan isi folder dist yang sebenarnya.
@@ -43,6 +48,12 @@ ENV NODE_ENV=production
 # npm workspaces meng-hoist semua dependency ke node_modules di ROOT repo,
 # bukan ke apps/backend/node_modules — copy dari sana, bukan dari path per-workspace.
 COPY --from=build /app/node_modules ./node_modules
+# node_modules/@imms/shared-utils adalah SYMLINK npm workspace ke ../../packages/shared-utils
+# (relatif terhadap /app) — tanpa baris ini symlink-nya putus di runtime image dan container
+# gagal start dengan "Cannot find module '@imms/shared-utils'". Cukup dist/ + package.json,
+# tidak perlu source .ts-nya.
+COPY --from=build /app/packages/shared-utils/dist ./packages/shared-utils/dist
+COPY --from=build /app/packages/shared-utils/package.json ./packages/shared-utils/package.json
 COPY --from=build /app/apps/backend/dist ./dist
 COPY --from=build /app/apps/backend/prisma ./prisma
 COPY --from=build /app/apps/backend/package.json ./package.json

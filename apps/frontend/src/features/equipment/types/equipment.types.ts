@@ -55,17 +55,35 @@ export interface EquipmentFormValues {
   remarks?: string;
 }
 
-export interface BulkUploadRowError {
-  row: number;
-  message: string;
+export type ImportRowSeverity = 'OK' | 'WARNING' | 'ERROR';
+export type ImportBatchStatus = 'VALIDATED' | 'COMMITTED' | 'FAILED' | 'EXPIRED';
+
+// Tahap 1 (preview) — belum ada yang disimpan ke equipment. batchId dipakai untuk
+// lihat baris & commit di tahap 2.
+export interface ImportPreviewResult {
+  batchId: string;
+  filename: string;
+  totalRows: number;
+  okRows: number;
+  warningRows: number;
+  errorRows: number;
+  expiresAt: string;
+  canCommit: boolean;
 }
 
-export interface BulkUploadResult {
-  totalRows: number;
-  created: number;
-  updated: number;
-  failed: number;
-  errors: BulkUploadRowError[];
+export interface ImportBatchRow {
+  rowNumber: number;
+  severity: ImportRowSeverity;
+  messages: string[];
+  raw: Record<string, unknown>;
+}
+
+// Tahap 2 (commit) — hasil akhir setelah insert benar-benar terjadi.
+export interface ImportCommitResult {
+  batchId: string;
+  status: ImportBatchStatus;
+  createdCount: number;
+  committedAt: string;
 }
 
 export interface EquipmentQueryParams {

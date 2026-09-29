@@ -1,10 +1,13 @@
 import { api } from '@/lib/axios';
 import type { PaginatedResult } from '@/lib/types';
 import type {
-  BulkUploadResult,
   Equipment,
   EquipmentFormValues,
   EquipmentQueryParams,
+  ImportBatchRow,
+  ImportCommitResult,
+  ImportPreviewResult,
+  ImportRowSeverity,
 } from '../types/equipment.types';
 
 export async function fetchEquipment(params: EquipmentQueryParams) {
@@ -50,12 +53,29 @@ export async function downloadBulkUploadTemplate() {
   window.URL.revokeObjectURL(url);
 }
 
-export async function uploadBulkEquipment(file: File) {
+// Tahap 1: upload + validasi (create-only, maks 1000 baris). Belum menyimpan apa pun ke
+// equipment — cuma menghasilkan batchId untuk ditinjau, lalu di-commit terpisah.
+export async function previewBulkEquipment(file: File) {
   const formData = new FormData();
   formData.append('file', file);
-  // Endpoint single-resource -> dibungkus ResponseTransformInterceptor jadi { data: BulkUploadResult }.
-  const { data } = await api.post<{ data: BulkUploadResult }>('/equipment/bulk-upload', formData, {
+  const { data } = await api.post<{ data: ImportPreviewResult }>('/equipment/bulk-upload/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return data.data;
+}
+
+export async function fetchImportBatchRows(
+  batchId: string,
+  params: { severity?: ImportRowSeverity; page: number; limit: number },
+) {
+  const { data } = await api.get<PaginatedResult<ImportBatchRow>>(`/equipment/bulk-upload/${batchId}/rows`, {
+    params,
+  });
+  return data;
+}
+
+// Tahap 2: commit batch yang sudah di-preview. Ditolak backend kalau masih ada baris ERROR.
+export async function commitBulkImport(batchId: string) {
+  const { data } = await api.post<{ data: ImportCommitResult }>(`/equipment/bulk-upload/${batchId}/commit`);
   return data.data;
 }

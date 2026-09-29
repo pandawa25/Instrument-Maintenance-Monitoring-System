@@ -73,6 +73,11 @@ export class AreasService {
     return this.repository.findByCode(areaCode);
   }
 
+  // Dipakai EquipmentImportService — lihat catatan di AreasRepository.findAllActive().
+  findAllActive() {
+    return this.repository.findAllActive();
+  }
+
   async remove(id: string) {
     await this.findOne(id);
 
