@@ -87,6 +87,10 @@ export class EquipmentService {
     return this.toListItem(equipment as EquipmentWithRelations);
   }
 
+  findAllForDropdown() {
+    return this.repository.findAllForDropdown();
+  }
+
   async create(dto: CreateEquipmentDto) {
     // Selalu normalisasi tag_number (trim, rapikan spasi, uppercase) sebelum dicek atau
     // disimpan — harus konsisten dengan constraint DB (partial unique index case-insensitive

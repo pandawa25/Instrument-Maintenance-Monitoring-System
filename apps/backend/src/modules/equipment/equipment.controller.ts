@@ -106,6 +106,12 @@ export class EquipmentController {
     return this.bulkUploadService.commitBatch(batchId);
   }
 
+  @Get('dropdown')
+  @ApiOperation({ summary: 'Dropdown ringan semua equipment aktif (tanpa batas limit paginasi) — mis. multi-select PM Program' })
+  findAllForDropdown() {
+    return this.equipmentService.findAllForDropdown();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detail satu equipment' })
   findOne(@Param('id', ParseUuidPipe) id: string) {

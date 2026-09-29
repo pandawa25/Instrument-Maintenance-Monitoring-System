@@ -8,11 +8,9 @@ export interface EquipmentOption {
 }
 
 // Dipakai untuk checkbox multi-select equipment di form PM Program.
-// Endpoint /equipment memang untuk list berpaginasi, jadi di sini kita minta
-// limit besar sekali panggilan saja (jumlah equipment realistis masih kecil untuk MVP).
+// Pakai endpoint dropdown khusus (bukan /equipment yang berpaginasi dengan limit
+// maks 100) supaya semua equipment aktif selalu ikut termuat, berapa pun jumlahnya.
 export async function fetchEquipmentOptions() {
-  const { data } = await api.get<{ data: EquipmentOption[] }>('/equipment', {
-    params: { page: 1, limit: 1000, sortBy: 'tagNumber', sortOrder: 'asc' },
-  });
+  const { data } = await api.get<{ data: EquipmentOption[] }>('/equipment/dropdown');
   return data.data;
 }

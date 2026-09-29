@@ -81,6 +81,23 @@ export class EquipmentRepository {
   }
 
   /**
+   * Dropdown ringan (tanpa batas limit paginasi) — dipakai mis. untuk multi-select
+   * equipment di form PM Program. Sengaja tidak include semua relasi seperti findMany().
+   */
+  findAllForDropdown() {
+    return this.prisma.equipment.findMany({
+      where: { deletedAt: null },
+      orderBy: { tagNumber: 'asc' },
+      select: {
+        id: true,
+        tagNumber: true,
+        service: true,
+        area: { select: { areaCode: true } },
+      },
+    });
+  }
+
+  /**
    * Cari equipment AKTIF dengan tag_number yang sama (case-insensitive).
    * Case-insensitive supaya tetap menangkap data lama yang mungkin belum tersimpan
    * dalam bentuk ternormalisasi (lihat normalizeTag() di @shared-utils), bukan cuma
