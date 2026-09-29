@@ -15,8 +15,8 @@ export async function fetchVendorById(id: string) {
 }
 
 export async function fetchVendorsForDropdown() {
-  const { data } = await api.get<Vendor[]>('/vendors/dropdown');
-  return data;
+  const { data } = await api.get<{ data: Vendor[] }>('/vendors/dropdown');
+  return data.data;
 }
 
 export async function createVendor(payload: VendorFormValues) {

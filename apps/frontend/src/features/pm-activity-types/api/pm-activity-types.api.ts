@@ -17,8 +17,8 @@ export async function fetchPmActivityTypeById(id: string) {
 }
 
 export async function fetchPmActivityTypesForDropdown() {
-  const { data } = await api.get<PmActivityType[]>('/pm-activity-types/dropdown');
-  return data;
+  const { data } = await api.get<{ data: PmActivityType[] }>('/pm-activity-types/dropdown');
+  return data.data;
 }
 
 export async function createPmActivityType(payload: PmActivityTypeFormValues) {
