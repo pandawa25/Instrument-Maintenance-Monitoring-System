@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ClipboardEdit, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { usePmPeriodDetail, useDeletePmPeriod } from '../hooks/use-pm-periods';
+import { PmBulkExecutionFormDialog } from './pm-bulk-execution-form-dialog';
 import type { PmPeriodListItem } from '../types/pm-period.types';
 
 interface Props {
@@ -100,16 +101,48 @@ function PmPeriodExecutionsPanel({
   onFillExecution: (executionId: string) => void;
 }) {
   const { data: detail, isLoading } = usePmPeriodDetail(periodId);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   if (isLoading || !detail) {
     return <p className="border-t border-border p-4 text-sm text-text-muted">Memuat eksekusi...</p>;
   }
 
+  const allSelected = detail.executions.length > 0 && selectedIds.size === detail.executions.length;
+  const selectedExecutions = detail.executions.filter((exec) => selectedIds.has(exec.id));
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(detail!.executions.map((exec) => exec.id)));
+  }
+
+  function toggleOne(id: string) {
+    setSelectedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <div className="border-t border-border">
+      {canEdit && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between border-b border-border bg-primary-tint/40 px-4 py-2">
+          <span className="text-sm text-text">{selectedIds.size} equipment dipilih</span>
+          <Button size="sm" onClick={() => setBulkDialogOpen(true)}>
+            <ClipboardList className="h-4 w-4" />
+            Isi Massal
+          </Button>
+        </div>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+            {canEdit && (
+              <th className="w-8 px-4 py-2">
+                <input type="checkbox" className="h-4 w-4 rounded border-border" checked={allSelected} onChange={toggleAll} />
+              </th>
+            )}
             <th className="px-4 py-2 font-medium">Tag Number</th>
             <th className="px-4 py-2 font-medium">Service</th>
             <th className="px-4 py-2 font-medium">Tgl Aktual</th>
@@ -122,6 +155,16 @@ function PmPeriodExecutionsPanel({
         <tbody>
           {detail.executions.map((exec) => (
             <tr key={exec.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+              {canEdit && (
+                <td className="px-4 py-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border"
+                    checked={selectedIds.has(exec.id)}
+                    onChange={() => toggleOne(exec.id)}
+                  />
+                </td>
+              )}
               <td className="px-4 py-2 font-mono text-xs text-text">{exec.equipment.tagNumber}</td>
               <td className="px-4 py-2 text-text-muted">{exec.equipment.service}</td>
               <td className="px-4 py-2 text-text-muted">
@@ -143,6 +186,17 @@ function PmPeriodExecutionsPanel({
           ))}
         </tbody>
       </table>
+
+      {canEdit && (
+        <PmBulkExecutionFormDialog
+          open={bulkDialogOpen}
+          onOpenChange={(open) => {
+            setBulkDialogOpen(open);
+            if (!open) setSelectedIds(new Set());
+          }}
+          executions={selectedExecutions}
+        />
+      )}
     </div>
   );
 }
