@@ -1,10 +1,38 @@
-import { ComingSoonPage } from '@/components/shared/coming-soon-page';
+import { useDashboardCharts, useDashboardRecent, useDashboardSummary } from '../hooks/use-dashboard';
+import { SummaryCards } from '../components/summary-cards';
+import {
+  MaintenanceByAreaChart,
+  MaintenanceByCategoryChart,
+  MaintenanceTrendChart,
+  PmComplianceChart,
+} from '../components/dashboard-charts';
+import { LatestMaintenanceTable, UpcomingPmList } from '../components/dashboard-recent';
 
 export function DashboardPage() {
+  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
+  const { data: charts, isLoading: chartsLoading } = useDashboardCharts();
+  const { data: recent, isLoading: recentLoading } = useDashboardRecent();
+
   return (
-    <ComingSoonPage
-      title="Dashboard"
-      note="Summary cards, chart maintenance per bulan/area/kategori, dan tabel 10 maintenance terbaru — dibangun setelah Module Corrective Maintenance selesai (butuh data untuk agregat)."
-    />
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-text">Dashboard</h2>
+        <p className="text-sm text-text-muted">Ringkasan kondisi maintenance instrumentasi terkini.</p>
+      </div>
+
+      <SummaryCards summary={summary} isLoading={summaryLoading} />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <MaintenanceTrendChart data={charts?.maintenanceByMonth} isLoading={chartsLoading} />
+        <MaintenanceByAreaChart data={charts?.maintenanceByArea} isLoading={chartsLoading} />
+        <MaintenanceByCategoryChart data={charts?.maintenanceByFailureCategory} isLoading={chartsLoading} />
+        <PmComplianceChart data={charts?.pmCompliance} isLoading={chartsLoading} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <LatestMaintenanceTable items={recent?.latestMaintenance} isLoading={recentLoading} />
+        <UpcomingPmList items={recent?.upcomingPmPeriods} isLoading={recentLoading} />
+      </div>
+    </div>
   );
 }
