@@ -13,6 +13,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { PmActivityTypesModule } from './modules/pm-activity-types/pm-activity-types.module';
 import { PmProgramsModule } from './modules/pm-programs/pm-programs.module';
 import { PmPeriodsModule } from './modules/pm-periods/pm-periods.module';
+import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
 // DashboardModule ditunda sesuai permintaan — pasang lagi saat siap upload module Dashboard.
 // import { DashboardModule } from './modules/dashboard/dashboard.module';
 
@@ -31,6 +32,7 @@ import { PmPeriodsModule } from './modules/pm-periods/pm-periods.module';
     PmActivityTypesModule,
     PmProgramsModule,
     PmPeriodsModule,
+    SparePartsModule,
     // DashboardModule, // ditunda — lihat catatan import di atas
   ],
 })

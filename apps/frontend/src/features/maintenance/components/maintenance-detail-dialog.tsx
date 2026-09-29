@@ -44,6 +44,25 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance }: Pro
     },
     { label: 'Dicatat Oleh', value: maintenance.createdBy.fullName },
     { label: 'Remarks', value: maintenance.remarks, fullWidth: true },
+    {
+      label: 'Butuh Spare Part / Material',
+      value: maintenance.needsSparePart ? 'Ya' : 'Tidak',
+    },
+    {
+      label: 'Kebutuhan Material',
+      fullWidth: true,
+      value:
+        maintenance.needsSparePart && maintenance.materials.length > 0 ? (
+          <ul className="list-inside list-disc space-y-0.5">
+            {maintenance.materials.map((m) => (
+              <li key={m.id}>
+                {m.sparePart.kimap} — {m.sparePart.name} : {m.quantity} {m.sparePart.unit}
+                {m.remarks ? ` (${m.remarks})` : ''}
+              </li>
+            ))}
+          </ul>
+        ) : null,
+    },
     { label: 'Dibuat Pada', value: new Date(maintenance.createdAt).toLocaleString('id-ID') },
     { label: 'Terakhir Diubah', value: new Date(maintenance.updatedAt).toLocaleString('id-ID') },
   ];

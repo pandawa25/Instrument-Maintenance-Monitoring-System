@@ -12,6 +12,7 @@ import { VendorListPage } from '@/features/vendors/pages/vendor-list-page';
 import { PmActivityTypeListPage } from '@/features/pm-activity-types/pages/pm-activity-type-list-page';
 import { PmProgramListPage } from '@/features/pm-programs/pages/pm-program-list-page';
 import { PmProgramDetailPage } from '@/features/pm-programs/pages/pm-program-detail-page';
+import { SparePartListPage } from '@/features/spare-parts/pages/spare-part-list-page';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
       {
         element: <DashboardLayout title="Master PM Activity Type" />,
         children: [{ path: '/pm-activity-types', element: <PmActivityTypeListPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Master Spare Part / Material" />,
+        children: [{ path: '/spare-parts', element: <SparePartListPage /> }],
       },
       {
         element: <DashboardLayout title="Preventive Maintenance" />,

@@ -6,6 +6,8 @@ import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
 import { EquipmentService } from '../equipment/equipment.service';
 import { UsersService } from '../users/users.service';
+import { SparePartsService } from '../spare-parts/spare-parts.service';
+import { MaterialInputDto } from './dto/material-input.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
 
 type MaintenanceWithRelations = CorrectiveMaintenance & {
@@ -13,6 +15,12 @@ type MaintenanceWithRelations = CorrectiveMaintenance & {
   area: { id: string; areaCode: string; areaName: string };
   technician: { id: string; fullName: string };
   createdBy: { id: string; fullName: string };
+  materials: {
+    id: string;
+    quantity: unknown;
+    remarks: string | null;
+    sparePart: { id: string; kimap: string; name: string; unit: string };
+  }[];
 };
 
 @Injectable()
@@ -21,6 +29,7 @@ export class MaintenanceService {
     private readonly repository: MaintenanceRepository,
     private readonly equipmentService: EquipmentService,
     private readonly usersService: UsersService,
+    private readonly sparePartsService: SparePartsService,
   ) {}
 
   private toListItem(row: MaintenanceWithRelations) {
@@ -39,9 +48,31 @@ export class MaintenanceService {
       completionDate: row.completionDate,
       createdBy: row.createdBy,
       remarks: row.remarks,
+      needsSparePart: row.needsSparePart,
+      materials: (row.materials ?? []).map((m) => ({
+        id: m.id,
+        quantity: m.quantity,
+        remarks: m.remarks,
+        sparePart: m.sparePart,
+      })),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  /**
+   * Validasi setiap sparePartId yang dikirim client benar-benar ada & belum
+   * dihapus — pola yang sama dengan resolveAreaId/validateTechnician di bawah.
+   */
+  private async validateMaterials(materials?: MaterialInputDto[]) {
+    if (!materials?.length) return;
+    for (const material of materials) {
+      try {
+        await this.sparePartsService.findOne(material.sparePartId);
+      } catch {
+        throw new BadRequestException(`Spare part dengan id '${material.sparePartId}' tidak ditemukan`);
+      }
+    }
   }
 
   /**
@@ -82,6 +113,7 @@ export class MaintenanceService {
 
   async create(dto: CreateMaintenanceDto, createdById: string) {
     await this.validateTechnician(dto.technicianId);
+    await this.validateMaterials(dto.materials);
     const areaId = await this.resolveAreaId(dto.equipmentId);
 
     const created = await this.repository.create(dto, areaId, createdById);
@@ -94,6 +126,7 @@ export class MaintenanceService {
     if (dto.technicianId) {
       await this.validateTechnician(dto.technicianId);
     }
+    await this.validateMaterials(dto.materials);
 
     let areaId: string | undefined;
     if (dto.equipmentId) {

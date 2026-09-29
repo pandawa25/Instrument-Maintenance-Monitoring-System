@@ -26,6 +26,20 @@ export interface TechnicianRef {
   fullName: string;
 }
 
+export interface SparePartRef {
+  id: string;
+  kimap: string;
+  name: string;
+  unit: string;
+}
+
+export interface MaintenanceMaterial {
+  id: string;
+  quantity: string | number;
+  remarks: string | null;
+  sparePart: SparePartRef;
+}
+
 export interface Maintenance {
   id: string;
   maintenanceDate: string;
@@ -41,8 +55,16 @@ export interface Maintenance {
   completionDate: string | null;
   createdBy: TechnicianRef;
   remarks: string | null;
+  needsSparePart: boolean;
+  materials: MaintenanceMaterial[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MaterialFormItem {
+  sparePartId: string;
+  quantity: number | string;
+  remarks?: string;
 }
 
 export interface MaintenanceFormValues {
@@ -57,6 +79,8 @@ export interface MaintenanceFormValues {
   status: MaintenanceStatus;
   completionDate?: string;
   remarks?: string;
+  needsSparePart: boolean;
+  materials: MaterialFormItem[];
 }
 
 export interface MaintenanceQueryParams {

@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { FailureCategory, MaintenanceStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -12,7 +14,9 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { MaterialInputDto } from './material-input.dto';
 
 // Catatan: tidak ada field areaId di sini secara sengaja — area_id di record
 // corrective_maintenance didenormalisasi dari instrument.area_id, dan disinkronkan
@@ -76,4 +80,20 @@ export class CreateMaintenanceDto {
   @IsString()
   @MaxLength(500)
   remarks?: string;
+
+  @ApiProperty({ default: false, required: false, description: 'Apakah maintenance ini butuh spare part / material' })
+  @IsOptional()
+  @IsBoolean()
+  needsSparePart?: boolean;
+
+  @ApiProperty({
+    type: [MaterialInputDto],
+    required: false,
+    description: 'Daftar kebutuhan material — hanya relevan bila needsSparePart = true',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MaterialInputDto)
+  materials?: MaterialInputDto[];
 }

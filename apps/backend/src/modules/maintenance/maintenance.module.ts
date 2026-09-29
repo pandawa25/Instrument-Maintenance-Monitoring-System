@@ -4,9 +4,10 @@ import { MaintenanceService } from './maintenance.service';
 import { MaintenanceRepository } from './maintenance.repository';
 import { EquipmentModule } from '../equipment/equipment.module';
 import { UsersModule } from '../users/users.module';
+import { SparePartsModule } from '../spare-parts/spare-parts.module';
 
 @Module({
-  imports: [EquipmentModule, UsersModule], // dipakai untuk validasi equipmentId & technicianId + sinkronisasi areaId
+  imports: [EquipmentModule, UsersModule, SparePartsModule], // dipakai untuk validasi equipmentId, technicianId & sparePartId + sinkronisasi areaId
   controllers: [MaintenanceController],
   providers: [MaintenanceService, MaintenanceRepository],
 })

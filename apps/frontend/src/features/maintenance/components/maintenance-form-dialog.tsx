@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +8,12 @@ import { Select } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/use-maintenance';
-import { useEquipmentLookup, useTechniciansLookup } from '../hooks/use-maintenance-lookups';
-import type { Maintenance, MaintenanceFormValues } from '../types/maintenance.types';
+import {
+  useEquipmentLookup,
+  useSparePartsLookupForMaintenance,
+  useTechniciansLookup,
+} from '../hooks/use-maintenance-lookups';
+import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
 
 const EMPTY_FORM: MaintenanceFormValues = {
   maintenanceDate: '',
@@ -22,6 +27,8 @@ const EMPTY_FORM: MaintenanceFormValues = {
   status: 'OPEN',
   completionDate: '',
   remarks: '',
+  needsSparePart: false,
+  materials: [],
 };
 
 interface Props {
@@ -37,6 +44,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
   const updateMutation = useUpdateMaintenance();
   const { data: equipmentOptions } = useEquipmentLookup();
   const { data: technicians } = useTechniciansLookup();
+  const { data: sparePartOptions } = useSparePartsLookupForMaintenance();
   const isEdit = Boolean(maintenance);
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -56,6 +64,12 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               status: maintenance.status,
               completionDate: maintenance.completionDate?.slice(0, 10) ?? '',
               remarks: maintenance.remarks ?? '',
+              needsSparePart: maintenance.needsSparePart,
+              materials: maintenance.materials.map((m) => ({
+                sparePartId: m.sparePart.id,
+                quantity: m.quantity,
+                remarks: m.remarks ?? undefined,
+              })),
             }
           : EMPTY_FORM,
       );
@@ -63,9 +77,30 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
     }
   }, [open, maintenance]);
 
+  function addMaterialRow() {
+    setForm((f) => ({ ...f, materials: [...f.materials, { sparePartId: '', quantity: 1, remarks: '' }] }));
+  }
+
+  function removeMaterialRow(index: number) {
+    setForm((f) => ({ ...f, materials: f.materials.filter((_, i) => i !== index) }));
+  }
+
+  function updateMaterialRow(index: number, patch: Partial<MaterialFormItem>) {
+    setForm((f) => ({
+      ...f,
+      materials: f.materials.map((m, i) => (i === index ? { ...m, ...patch } : m)),
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (form.needsSparePart && form.materials.some((m) => !m.sparePartId)) {
+      setError('Pilih spare part untuk setiap baris material, atau hapus baris yang kosong');
+      return;
+    }
+
     try {
       const payload: MaintenanceFormValues = {
         ...form,
@@ -74,6 +109,13 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
         rootCause: form.rootCause || undefined,
         actionTaken: form.actionTaken || undefined,
         remarks: form.remarks || undefined,
+        materials: form.needsSparePart
+          ? form.materials.map((m) => ({
+              sparePartId: m.sparePartId,
+              quantity: Number(m.quantity) || 0,
+              remarks: m.remarks || undefined,
+            }))
+          : [],
       };
       if (isEdit && maintenance) {
         await updateMutation.mutateAsync({ id: maintenance.id, payload });
@@ -226,6 +268,63 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               value={form.completionDate}
               onChange={(e) => setForm({ ...form, completionDate: e.target.value })}
             />
+          </div>
+
+          <div className="col-span-2 rounded-md border border-border p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-text">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={form.needsSparePart}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    needsSparePart: e.target.checked,
+                    materials: e.target.checked && f.materials.length === 0 ? [{ sparePartId: '', quantity: 1, remarks: '' }] : f.materials,
+                  }))
+                }
+              />
+              Butuh Spare Part / Material?
+            </label>
+
+            {form.needsSparePart && (
+              <div className="mt-3 space-y-2">
+                {form.materials.map((material, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <SearchableSelect
+                        value={material.sparePartId}
+                        onChange={(sparePartId) => updateMaterialRow(index, { sparePartId })}
+                        options={(sparePartOptions ?? []).map((sp) => ({
+                          value: sp.id,
+                          label: sp.kimap,
+                          sublabel: `${sp.name} (stock: ${sp.stock} ${sp.unit})`,
+                        }))}
+                        placeholder="Pilih spare part..."
+                        searchPlaceholder="Cari KIMAP / nama material..."
+                        emptyText="Tidak ada spare part yang cocok."
+                      />
+                    </div>
+                    <Input
+                      type="number"
+                      min={0.01}
+                      step="0.01"
+                      className="w-24"
+                      placeholder="Qty"
+                      value={material.quantity}
+                      onChange={(e) => updateMaterialRow(index, { quantity: e.target.value })}
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialRow(index)} title="Hapus baris">
+                      <Trash2 className="h-4 w-4 text-danger" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addMaterialRow}>
+                  <Plus className="h-4 w-4" />
+                  Tambah Material
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="col-span-2">

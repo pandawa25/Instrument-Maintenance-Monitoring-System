@@ -73,6 +73,11 @@ enum PmExecutionStatus {
   COMPLETED
 }
 
+enum SparePartStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Role {
   id          String    @id @default(uuid()) @db.Uuid
   name        String    @unique @db.VarChar(50)
@@ -363,6 +368,7 @@ model CorrectiveMaintenance {
   technicianId       String            @map("technician_id") @db.Uuid
   status             MaintenanceStatus @default(OPEN)
   completionDate     DateTime?         @map("completion_date") @db.Date
+  needsSparePart     Boolean           @default(false) @map("needs_spare_part")
   createdById        String            @map("created_by_id") @db.Uuid
   remarks            String?           @db.VarChar(500)
   createdAt          DateTime          @default(now()) @map("created_at")
@@ -373,6 +379,7 @@ model CorrectiveMaintenance {
   area       Area       @relation(fields: [areaId], references: [id])
   technician User       @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
   createdBy  User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
+  materials  CorrectiveMaintenanceMaterial[]
 
   @@index([maintenanceDate])
   @@index([equipmentId])
@@ -380,6 +387,44 @@ model CorrectiveMaintenance {
   @@index([status])
   @@index([areaId, maintenanceDate])
   @@map("corrective_maintenance")
+}
+
+// Master Spare Part / Material — "kimap" adalah nama field untuk kode/nomor part
+// sesuai istilah yang dipakai user (bukan "Part Number" generik).
+model SparePart {
+  id        String          @id @default(uuid()) @db.Uuid
+  kimap     String          @unique @db.VarChar(50)
+  name      String          @db.VarChar(150)
+  unit      String          @db.VarChar(20)
+  stock     Int             @default(0)
+  status    SparePartStatus @default(ACTIVE)
+  remarks   String?         @db.VarChar(500)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  deletedAt DateTime?       @map("deleted_at")
+
+  materials CorrectiveMaintenanceMaterial[]
+
+  @@index([status])
+  @@map("spare_parts")
+}
+
+// Baris kebutuhan material pada satu Corrective Maintenance (MVP: cukup daftar
+// kebutuhan, tanpa tracking status pemenuhan per item — lihat design-document.md).
+model CorrectiveMaintenanceMaterial {
+  id                     String   @id @default(uuid()) @db.Uuid
+  correctiveMaintenanceId String  @map("corrective_maintenance_id") @db.Uuid
+  sparePartId            String   @map("spare_part_id") @db.Uuid
+  quantity               Decimal  @db.Decimal(10, 2)
+  remarks                String?  @db.VarChar(255)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  correctiveMaintenance CorrectiveMaintenance @relation(fields: [correctiveMaintenanceId], references: [id], onDelete: Cascade)
+  sparePart             SparePart             @relation(fields: [sparePartId], references: [id])
+
+  @@index([correctiveMaintenanceId])
+  @@index([sparePartId])
+  @@map("corrective_maintenance_materials")
 }
 
 // ===== Bulk Import (mulai dari Module Equipment; entityType siap dipakai modul lain nanti) =====

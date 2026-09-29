@@ -10,6 +10,9 @@ const LIST_INCLUDE = {
   area: { select: { id: true, areaCode: true, areaName: true } },
   technician: { select: { id: true, fullName: true } },
   createdBy: { select: { id: true, fullName: true } },
+  materials: {
+    include: { sparePart: { select: { id: true, kimap: true, name: true, unit: true } } },
+  },
 } satisfies Prisma.CorrectiveMaintenanceInclude;
 
 /**
@@ -78,7 +81,7 @@ export class MaintenanceRepository {
   }
 
   create(dto: CreateMaintenanceDto, areaId: string, createdById: string) {
-    const { maintenanceDate, completionDate, status, ...rest } = dto;
+    const { maintenanceDate, completionDate, status, materials, ...rest } = dto;
     const resolvedStatus = status ?? 'OPEN';
     // Kalau status langsung diisi COMPLETED tapi completionDate kosong,
     // default-kan ke hari ini — cukup untuk kelengkapan data tanpa memaksa
@@ -94,26 +97,56 @@ export class MaintenanceRepository {
         status: resolvedStatus,
         areaId,
         createdById,
+        materials: materials?.length
+          ? {
+              createMany: {
+                data: materials.map((m) => ({
+                  sparePartId: m.sparePartId,
+                  quantity: m.quantity,
+                  remarks: m.remarks,
+                })),
+              },
+            }
+          : undefined,
       },
+      include: LIST_INCLUDE,
     });
   }
 
-  update(id: string, dto: UpdateMaintenanceDto, areaId?: string) {
-    const { maintenanceDate, completionDate, ...rest } = dto;
+  async update(id: string, dto: UpdateMaintenanceDto, areaId?: string) {
+    const { maintenanceDate, completionDate, materials, ...rest } = dto;
     const resolvedCompletionDate = completionDate
       ? new Date(completionDate)
       : dto.status === 'COMPLETED'
         ? new Date()
         : undefined;
 
-    return this.prisma.correctiveMaintenance.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(areaId ? { areaId } : {}),
-        maintenanceDate: maintenanceDate ? new Date(maintenanceDate) : undefined,
-        completionDate: resolvedCompletionDate,
-      },
+    return this.prisma.$transaction(async (tx: any) => {
+      await tx.correctiveMaintenance.update({
+        where: { id },
+        data: {
+          ...rest,
+          ...(areaId ? { areaId } : {}),
+          maintenanceDate: maintenanceDate ? new Date(maintenanceDate) : undefined,
+          completionDate: resolvedCompletionDate,
+        },
+      });
+
+      if (materials) {
+        await tx.correctiveMaintenanceMaterial.deleteMany({ where: { correctiveMaintenanceId: id } });
+        if (materials.length) {
+          await tx.correctiveMaintenanceMaterial.createMany({
+            data: materials.map((m: { sparePartId: string; quantity: number; remarks?: string }) => ({
+              correctiveMaintenanceId: id,
+              sparePartId: m.sparePartId,
+              quantity: m.quantity,
+              remarks: m.remarks,
+            })),
+          });
+        }
+      }
+
+      return tx.correctiveMaintenance.findFirst({ where: { id }, include: LIST_INCLUDE });
     });
   }
 

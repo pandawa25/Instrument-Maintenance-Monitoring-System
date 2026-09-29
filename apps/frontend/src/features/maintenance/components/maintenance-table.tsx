@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, PackageSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { Maintenance } from '../types/maintenance.types';
@@ -57,7 +57,14 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
             <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
             <td className="px-4 py-2.5 text-text-muted">{FAILURE_CATEGORY_LABEL[item.failureCategory]}</td>
             <td className="max-w-xs truncate px-4 py-2.5 text-text-muted" title={item.problemDescription}>
-              {item.problemDescription}
+              <span className="inline-flex items-center gap-1.5">
+                {item.needsSparePart && (
+                  <span title="Butuh spare part / material">
+                    <PackageSearch className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  </span>
+                )}
+                {item.problemDescription}
+              </span>
             </td>
             <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
             <td className="px-4 py-2.5">
