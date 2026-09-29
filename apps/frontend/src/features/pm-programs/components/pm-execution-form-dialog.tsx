@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { usePmPeriodExecution, useUpdatePmPeriodExecution } from '../hooks/use-pm-period-executions';
 import type { PmChecklistResult, PmExecutionResult, PmExecutionStatus } from '../types/pm-period.types';
 
@@ -34,9 +35,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   executionId: string | null;
+  canEdit: boolean;
 }
 
-export function PmExecutionFormDialog({ open, onOpenChange, executionId }: Props) {
+export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,6 +205,8 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId }: Props
                 </div>
               </div>
             )}
+
+            <AttachmentsSection entityType="PM_PERIOD_EXECUTION" entityId={executionId ?? undefined} canEdit={canEdit} />
 
             {error && <p className="text-sm text-danger">{error}</p>}
 

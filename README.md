@@ -78,6 +78,15 @@ npm run dev:frontend   # http://localhost:5173
 docker compose -f docker/docker-compose.yml up --build
 ```
 
+### Lampiran Evidence (Attachment)
+
+Foto/PDF evidence Corrective Maintenance & PM Execution disimpan sebagai file di
+disk (`UPLOAD_DIR`, default `./uploads`), bukan di database. Di Railway, **wajib**
+tambahkan [Volume](https://docs.railway.app/reference/volumes) yang di-mount ke
+path yang sama dengan `UPLOAD_DIR` (mis. `/data/uploads`) — tanpa Volume, semua
+file lampiran akan hilang setiap kali service di-redeploy (filesystem container
+Railway bersifat ephemeral).
+
 ## Default Login (hasil seed)
 
 | Email | Password | Role |
@@ -110,4 +119,7 @@ chore: update dependency
 - [x] Module Corrective Maintenance (backend + frontend) — termasuk lookup Technician (`GET /users`, read-only)
 - [x] Dashboard — summary cards, chart maintenance per bulan/area/failure category (Recharts), tabel 10 maintenance terbaru
 - [x] Module Manage User (backend + frontend, Admin only) — CRUD user, assign role, reset password; proteksi self-lockout (tidak bisa nonaktifkan/hapus akun sendiri)
+- [x] Module Spare Part / Material + integrasi kebutuhan material di Corrective Maintenance
+- [x] Stock Movement Ledger (Phase 2) — audit trail lengkap perubahan stock, restock/adjustment manual
+- [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)

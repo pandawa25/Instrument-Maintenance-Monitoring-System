@@ -12,5 +12,6 @@ import { PmProgramsModule } from '../pm-programs/pm-programs.module';
   imports: [PmProgramsModule],
   controllers: [PmPeriodsController, PmPeriodController, PmPeriodExecutionsController],
   providers: [PmPeriodsService, PmPeriodExecutionsService, PmPeriodsRepository, PmPeriodExecutionsRepository],
+  exports: [PmPeriodExecutionsService], // dipakai AttachmentsModule untuk validasi entityId
 })
 export class PmPeriodsModule {}

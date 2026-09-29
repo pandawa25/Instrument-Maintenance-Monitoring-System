@@ -113,7 +113,12 @@ export function PmProgramDetailPage() {
         />
       )}
 
-      <PmExecutionFormDialog open={Boolean(executionId)} onOpenChange={(open) => !open && setExecutionId(null)} executionId={executionId} />
+      <PmExecutionFormDialog
+        open={Boolean(executionId)}
+        onOpenChange={(open) => !open && setExecutionId(null)}
+        executionId={executionId}
+        canEdit={canEdit}
+      />
     </div>
   );
 }

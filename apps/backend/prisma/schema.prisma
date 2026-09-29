@@ -115,6 +115,7 @@ model User {
   maintenanceCreated CorrectiveMaintenance[] @relation("CreatedByMaintenance")
   importBatches      ImportBatch[]
   stockMovements     SparePartStockMovement[]
+  attachments        Attachment[]
 
   @@index([roleId])
   @@map("users")
@@ -540,4 +541,37 @@ model ImportBatchRow {
   @@unique([batchId, rowNumber])
   @@index([batchId, severity])
   @@map("import_batch_rows")
+}
+
+// Entity yang boleh punya lampiran evidence — tambah value baru di sini kalau ada
+// modul lain yang butuh attachment nanti (polymorphic, bukan FK terpisah per modul).
+enum AttachmentEntityType {
+  CORRECTIVE_MAINTENANCE
+  PM_PERIOD_EXECUTION
+}
+
+// Lampiran foto/dokumen evidence (bukti pengerjaan) untuk Corrective Maintenance
+// & PM Period Execution. File fisik disimpan di Railway Volume (disk lokal,
+// lihat UPLOAD_DIR di app.config.ts) — tabel ini hanya menyimpan metadata +
+// path relatif. Tidak ada FK langsung ke corrective_maintenance/pm_period_executions
+// (polymorphic by design) — validasi entity ada di AttachmentsService.
+model Attachment {
+  id           String               @id @default(uuid()) @db.Uuid
+  entityType   AttachmentEntityType @map("entity_type")
+  entityId     String               @map("entity_id") @db.Uuid
+  fileName     String               @map("file_name") @db.VarChar(255)
+  // Path relatif terhadap UPLOAD_DIR, mis. "2026/09/<uuid>.jpg" — bukan nama asli,
+  // supaya tidak ada risiko collision/path traversal dari nama file upload user.
+  storedPath   String               @map("stored_path") @db.VarChar(255)
+  mimeType     String               @map("mime_type") @db.VarChar(100)
+  fileSize     Int                  @map("file_size")
+  uploadedById String               @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  deletedAt    DateTime?            @map("deleted_at")
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("attachments")
 }

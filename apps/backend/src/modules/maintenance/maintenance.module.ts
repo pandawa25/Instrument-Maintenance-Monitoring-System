@@ -10,5 +10,6 @@ import { SparePartsModule } from '../spare-parts/spare-parts.module';
   imports: [EquipmentModule, UsersModule, SparePartsModule], // dipakai untuk validasi equipmentId, technicianId & sparePartId + sinkronisasi areaId
   controllers: [MaintenanceController],
   providers: [MaintenanceService, MaintenanceRepository],
+  exports: [MaintenanceService], // dipakai AttachmentsModule untuk validasi entityId
 })
 export class MaintenanceModule {}

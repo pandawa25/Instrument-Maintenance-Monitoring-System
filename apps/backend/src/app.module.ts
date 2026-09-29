@@ -15,6 +15,7 @@ import { PmProgramsModule } from './modules/pm-programs/pm-programs.module';
 import { PmPeriodsModule } from './modules/pm-periods/pm-periods.module';
 import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AttachmentsModule } from './modules/attachments/attachments.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     PmPeriodsModule,
     SparePartsModule,
     DashboardModule,
+    AttachmentsModule,
   ],
 })
 export class AppModule {}

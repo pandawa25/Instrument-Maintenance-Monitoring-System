@@ -17,6 +17,9 @@ apps/frontend/.env
 # Prisma
 apps/backend/prisma/*.db
 
+# Uploaded evidence files (local dev — di Railway disimpan di Volume, bukan repo)
+apps/backend/uploads/
+
 # Logs
 *.log
 npm-debug.log*

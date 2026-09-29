@@ -1,5 +1,6 @@
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import type { Maintenance } from '../types/maintenance.types';
 
 const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
@@ -16,9 +17,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   maintenance: Maintenance | null;
+  canEdit: boolean;
 }
 
-export function MaintenanceDetailDialog({ open, onOpenChange, maintenance }: Props) {
+export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEdit }: Props) {
   if (!maintenance) return null;
 
   const fields: DetailField[] = [
@@ -73,6 +75,10 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance }: Pro
       onOpenChange={onOpenChange}
       title={`Detail Corrective Maintenance — ${maintenance.equipment.tagNumber}`}
       fields={fields}
-    />
+    >
+      <div className="mt-4">
+        <AttachmentsSection entityType="CORRECTIVE_MAINTENANCE" entityId={maintenance.id} canEdit={canEdit} />
+      </div>
+    </DetailDialog>
   );
 }

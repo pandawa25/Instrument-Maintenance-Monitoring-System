@@ -161,6 +161,7 @@ export function MaintenanceListPage() {
         open={Boolean(viewingItem)}
         onOpenChange={(open) => !open && setViewingItem(null)}
         maintenance={viewingItem}
+        canEdit={canEdit}
       />
 
       <ConfirmDialog

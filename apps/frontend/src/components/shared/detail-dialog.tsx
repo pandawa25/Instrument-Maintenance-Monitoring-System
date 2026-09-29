@@ -13,11 +13,14 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   title: string;
   fields: DetailField[];
+  // Konten tambahan di bawah grid field — dipakai mis. untuk AttachmentsSection
+  // (Corrective Maintenance) yang tidak cocok direpresentasikan sebagai DetailField biasa.
+  children?: ReactNode;
 }
 
 // Dialog read-only generik untuk "View Detail" — dipakai semua modul (Area, Instrument,
 // Corrective Maintenance) supaya tampilannya konsisten dan terpisah dari form Create/Edit.
-export function DetailDialog({ open, onOpenChange, title, fields }: Props) {
+export function DetailDialog({ open, onOpenChange, title, fields, children }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -33,6 +36,8 @@ export function DetailDialog({ open, onOpenChange, title, fields }: Props) {
             </div>
           ))}
         </dl>
+
+        {children}
       </DialogContent>
     </Dialog>
   );
