@@ -40,7 +40,7 @@ export class ImportBatchRepository {
     const errorRows = params.rows.filter((r) => r.severity === 'ERROR').length;
 
     return this.prisma.$transaction(
-      async (tx) => {
+      async (tx: any) => {
         const batch = await tx.importBatch.create({
           data: {
             id: batchId,

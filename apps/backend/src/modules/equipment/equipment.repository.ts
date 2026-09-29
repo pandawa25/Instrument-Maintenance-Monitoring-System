@@ -157,7 +157,7 @@ export class EquipmentRepository {
     chunkSize = 500,
   ): Promise<void> {
     await this.prisma.$transaction(
-      async (tx) => {
+      async (tx: any) => {
         for (let i = 0; i < rows.length; i += chunkSize) {
           const chunk = rows.slice(i, i + chunkSize);
           await tx.equipment.createMany({ data: chunk });
