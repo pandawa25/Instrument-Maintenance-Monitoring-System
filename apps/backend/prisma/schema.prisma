@@ -40,6 +40,39 @@ enum MaintenanceStatus {
   COMPLETED
 }
 
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PmProgramStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PmFrequencyUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum PmExecutionResult {
+  OK
+  NOT_OK
+}
+
+enum PmChecklistResult {
+  OK
+  NOT_OK
+  NA
+}
+
+enum PmExecutionStatus {
+  PENDING
+  COMPLETED
+}
+
 model Role {
   id          String    @id @default(uuid()) @db.Uuid
   name        String    @unique @db.VarChar(50)
@@ -131,12 +164,170 @@ model Equipment {
   area           Area                    @relation(fields: [areaId], references: [id])
   instrumentName InstrumentName          @relation(fields: [instrumentNameId], references: [id])
   maintenance    CorrectiveMaintenance[]
+  pmPrograms     PmProgramEquipment[]
+  pmExecutions   PmPeriodExecution[]
 
   @@index([areaId])
   @@index([instrumentNameId])
   @@index([status])
   @@index([areaId, status])
   @@map("equipment")
+}
+
+// ================= Preventive Maintenance =================
+
+model Vendor {
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String       @db.VarChar(150)
+  contactPerson  String?      @map("contact_person") @db.VarChar(100)
+  phone          String?      @db.VarChar(30)
+  email          String?      @db.VarChar(150)
+  address        String?      @db.VarChar(255)
+  status         VendorStatus @default(ACTIVE)
+  remarks        String?      @db.VarChar(500)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  pmPrograms PmProgram[]
+
+  @@index([status])
+  @@map("vendors")
+}
+
+// Master jenis aktifitas PM (Cleaning, Calibration, Drift Test, dll) — dipakai
+// sebagai klasifikasi tiap checklist item pada PM Program.
+model PmActivityType {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(20)
+  name        String    @db.VarChar(100)
+  description String?   @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  checklistItems PmChecklistItem[]
+
+  @@map("pm_activity_types")
+}
+
+// "Modul PM" yang dibuat Admin di frontend — mis. "PM ATG 3 Bulanan" oleh PT A.
+model PmProgram {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @db.VarChar(150)
+  frequencyValue  Int              @map("frequency_value")
+  frequencyUnit   PmFrequencyUnit  @map("frequency_unit")
+  vendorId        String           @map("vendor_id") @db.Uuid
+  startDate       DateTime         @map("start_date") @db.Date
+  status          PmProgramStatus  @default(ACTIVE)
+  remarks         String?          @db.VarChar(500)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+
+  vendor         Vendor               @relation(fields: [vendorId], references: [id])
+  equipment      PmProgramEquipment[]
+  checklistItems PmChecklistItem[]
+  periods        PmPeriod[]
+
+  @@index([vendorId])
+  @@index([status])
+  @@map("pm_programs")
+}
+
+model PmProgramEquipment {
+  id          String   @id @default(uuid()) @db.Uuid
+  pmProgramId String   @map("pm_program_id") @db.Uuid
+  equipmentId String   @map("equipment_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  pmProgram PmProgram @relation(fields: [pmProgramId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@unique([pmProgramId, equipmentId])
+  @@index([equipmentId])
+  @@map("pm_program_equipment")
+}
+
+model PmChecklistItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  pmProgramId    String    @map("pm_program_id") @db.Uuid
+  activityTypeId String    @map("activity_type_id") @db.Uuid
+  description    String?   @db.VarChar(255)
+  sortOrder      Int       @default(0) @map("sort_order")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  pmProgram    PmProgram      @relation(fields: [pmProgramId], references: [id], onDelete: Cascade)
+  activityType PmActivityType @relation(fields: [activityTypeId], references: [id])
+
+  @@index([pmProgramId])
+  @@map("pm_checklist_items")
+}
+
+// Satu siklus/iterasi PM dalam sebuah Program — "Periode 1", "Periode 2", dst.
+model PmPeriod {
+  id          String    @id @default(uuid()) @db.Uuid
+  pmProgramId String    @map("pm_program_id") @db.Uuid
+  periodNumber Int      @map("period_number")
+  plannedDate DateTime  @map("planned_date") @db.Date
+  remarks     String?   @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  pmProgram  PmProgram           @relation(fields: [pmProgramId], references: [id], onDelete: Cascade)
+  executions PmPeriodExecution[]
+
+  @@unique([pmProgramId, periodNumber])
+  @@index([plannedDate])
+  @@map("pm_periods")
+}
+
+// Hasil eksekusi PM untuk 1 equipment dalam 1 Periode.
+model PmPeriodExecution {
+  id              String             @id @default(uuid()) @db.Uuid
+  pmPeriodId      String             @map("pm_period_id") @db.Uuid
+  equipmentId     String             @map("equipment_id") @db.Uuid
+  executionDate   DateTime?          @map("execution_date") @db.Date
+  result          PmExecutionResult?
+  findings        String?            @db.VarChar(1000)
+  actionTaken     String?            @map("action_taken") @db.VarChar(1000)
+  vendorPersonnel String?            @map("vendor_personnel") @db.VarChar(150)
+  status          PmExecutionStatus  @default(PENDING)
+  remarks         String?            @db.VarChar(500)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  deletedAt       DateTime?          @map("deleted_at")
+
+  pmPeriod         PmPeriod                      @relation(fields: [pmPeriodId], references: [id], onDelete: Cascade)
+  equipment        Equipment                     @relation(fields: [equipmentId], references: [id])
+  checklistResults PmExecutionChecklistResult[]
+
+  @@unique([pmPeriodId, equipmentId])
+  @@index([equipmentId])
+  @@index([status])
+  @@map("pm_period_executions")
+}
+
+// Snapshot hasil per checklist item saat eksekusi — nama activity type & deskripsi
+// disalin (bukan hanya FK) supaya histori tidak berubah kalau master diedit belakangan.
+model PmExecutionChecklistResult {
+  id                  String             @id @default(uuid()) @db.Uuid
+  pmPeriodExecutionId String             @map("pm_period_execution_id") @db.Uuid
+  activityTypeName    String             @map("activity_type_name") @db.VarChar(100)
+  description         String?            @db.VarChar(255)
+  result              PmChecklistResult  @default(NA)
+  notes               String?            @db.VarChar(500)
+  sortOrder           Int                @default(0) @map("sort_order")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  pmPeriodExecution PmPeriodExecution @relation(fields: [pmPeriodExecutionId], references: [id], onDelete: Cascade)
+
+  @@index([pmPeriodExecutionId])
+  @@map("pm_execution_checklist_results")
 }
 
 model CorrectiveMaintenance {

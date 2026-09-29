@@ -21,6 +21,25 @@ const INSTRUMENT_NAMES: Array<{ code: string; name: string }> = [
   { code: 'FC', name: 'Flow Computer' },
 ];
 
+const PM_ACTIVITY_TYPES: Array<{ code: string; name: string }> = [
+  { code: 'CLN', name: 'Cleaning' },
+  { code: 'VIS', name: 'Visual Check / Inspection' },
+  { code: 'CAL', name: 'Calibration' },
+  { code: 'DRT', name: 'Drift Test' },
+  { code: 'RSN', name: 'Replace Sensor' },
+  { code: 'ZSA', name: 'Zero & Span Adjustment' },
+  { code: 'FNT', name: 'Function Test' },
+  { code: 'LPC', name: 'Loop Check' },
+  { code: 'RBT', name: 'Replace Battery' },
+  { code: 'RCP', name: 'Replace Consumable Parts' },
+  { code: 'LUB', name: 'Lubrication' },
+  { code: 'TTC', name: 'Tightening / Torque Check' },
+  { code: 'WRC', name: 'Wiring & Connection Check' },
+  { code: 'FWU', name: 'Firmware/Software Update' },
+  { code: 'LKT', name: 'Leak Test' },
+  { code: 'COR', name: 'Corrosion Check / Painting' },
+];
+
 async function main() {
   console.log('Seeding roles...');
   const adminRole = await prisma.role.upsert({
@@ -38,6 +57,15 @@ async function main() {
   console.log('Seeding instrument names...');
   for (const item of INSTRUMENT_NAMES) {
     await prisma.instrumentName.upsert({
+      where: { code: item.code },
+      update: {},
+      create: item,
+    });
+  }
+
+  console.log('Seeding pm activity types...');
+  for (const item of PM_ACTIVITY_TYPES) {
+    await prisma.pmActivityType.upsert({
       where: { code: item.code },
       update: {},
       create: item,

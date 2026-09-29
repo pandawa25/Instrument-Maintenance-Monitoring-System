@@ -1,0 +1,222 @@
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { usePmPeriodExecution, useUpdatePmPeriodExecution } from '../hooks/use-pm-period-executions';
+import type { PmChecklistResult, PmExecutionResult, PmExecutionStatus } from '../types/pm-period.types';
+
+interface FormState {
+  executionDate: string;
+  result: PmExecutionResult | '';
+  findings: string;
+  actionTaken: string;
+  vendorPersonnel: string;
+  remarks: string;
+  status: PmExecutionStatus;
+  checklistResults: { id: string; result: PmChecklistResult; notes: string }[];
+}
+
+const EMPTY_FORM: FormState = {
+  executionDate: '',
+  result: '',
+  findings: '',
+  actionTaken: '',
+  vendorPersonnel: '',
+  remarks: '',
+  status: 'PENDING',
+  checklistResults: [],
+};
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  executionId: string | null;
+}
+
+export function PmExecutionFormDialog({ open, onOpenChange, executionId }: Props) {
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: execution, isLoading } = usePmPeriodExecution(executionId ?? undefined);
+  const updateMutation = useUpdatePmPeriodExecution();
+
+  useEffect(() => {
+    if (open && execution) {
+      setForm({
+        executionDate: execution.executionDate ? execution.executionDate.slice(0, 10) : '',
+        result: execution.result ?? '',
+        findings: execution.findings ?? '',
+        actionTaken: execution.actionTaken ?? '',
+        vendorPersonnel: execution.vendorPersonnel ?? '',
+        remarks: execution.remarks ?? '',
+        status: execution.status,
+        checklistResults: execution.checklistResults.map((c) => ({ id: c.id, result: c.result, notes: c.notes ?? '' })),
+      });
+      setError(null);
+    }
+  }, [open, execution]);
+
+  function updateChecklist(id: string, patch: Partial<{ result: PmChecklistResult; notes: string }>) {
+    setForm((f) => ({
+      ...f,
+      checklistResults: f.checklistResults.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!executionId) return;
+    setError(null);
+    try {
+      await updateMutation.mutateAsync({
+        id: executionId,
+        payload: {
+          executionDate: form.executionDate || undefined,
+          result: form.result || undefined,
+          findings: form.findings || undefined,
+          actionTaken: form.actionTaken || undefined,
+          vendorPersonnel: form.vendorPersonnel || undefined,
+          remarks: form.remarks || undefined,
+          status: form.status,
+          checklistResults: form.checklistResults.map(({ id, result, notes }) => ({ id, result, notes: notes || undefined })),
+        },
+      });
+      onOpenChange(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Gagal menyimpan hasil eksekusi PM');
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            Isi Hasil PM {execution ? `— ${execution.equipment.tagNumber}` : ''}
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading || !execution ? (
+          <p className="py-8 text-center text-sm text-text-muted">Memuat data...</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="executionDate">Tanggal Eksekusi (Aktual)</Label>
+                <Input
+                  id="executionDate"
+                  type="date"
+                  value={form.executionDate}
+                  onChange={(e) => setForm({ ...form, executionDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="result">Hasil</Label>
+                <Select
+                  id="result"
+                  value={form.result}
+                  onChange={(e) => setForm({ ...form, result: e.target.value as PmExecutionResult })}
+                >
+                  <option value="">— Belum ditentukan —</option>
+                  <option value="OK">OK</option>
+                  <option value="NOT_OK">NOT OK</option>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="vendorPersonnel">Teknisi Vendor</Label>
+                <Input
+                  id="vendorPersonnel"
+                  value={form.vendorPersonnel}
+                  onChange={(e) => setForm({ ...form, vendorPersonnel: e.target.value })}
+                  maxLength={150}
+                />
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  id="status"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as PmExecutionStatus })}
+                >
+                  <option value="PENDING">Pending</option>
+                  <option value="COMPLETED">Completed</option>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="findings">Temuan</Label>
+                <Textarea
+                  id="findings"
+                  value={form.findings}
+                  onChange={(e) => setForm({ ...form, findings: e.target.value })}
+                  maxLength={1000}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="actionTaken">Tindakan yang Dilakukan</Label>
+                <Textarea
+                  id="actionTaken"
+                  value={form.actionTaken}
+                  onChange={(e) => setForm({ ...form, actionTaken: e.target.value })}
+                  maxLength={1000}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="remarks">Remarks</Label>
+                <Input id="remarks" value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} maxLength={500} />
+              </div>
+            </div>
+
+            {form.checklistResults.length > 0 && (
+              <div>
+                <Label>Checklist</Label>
+                <div className="space-y-2 rounded-md border border-border p-3">
+                  {execution.checklistResults.map((item) => {
+                    const value = form.checklistResults.find((c) => c.id === item.id);
+                    return (
+                      <div key={item.id} className="flex items-start gap-2 border-b border-border pb-2 last:border-0 last:pb-0">
+                        <div className="flex-1">
+                          <p className="text-sm text-text">{item.activityTypeName}</p>
+                          {item.description && <p className="text-xs text-text-muted">{item.description}</p>}
+                        </div>
+                        <Select
+                          className="w-28"
+                          value={value?.result ?? 'NA'}
+                          onChange={(e) => updateChecklist(item.id, { result: e.target.value as PmChecklistResult })}
+                        >
+                          <option value="OK">OK</option>
+                          <option value="NOT_OK">NOT OK</option>
+                          <option value="NA">N/A</option>
+                        </Select>
+                        <Input
+                          className="w-40"
+                          placeholder="Catatan"
+                          value={value?.notes ?? ''}
+                          onChange={(e) => updateChecklist(item.id, { notes: e.target.value })}
+                          maxLength={500}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {error && <p className="text-sm text-danger">{error}</p>}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

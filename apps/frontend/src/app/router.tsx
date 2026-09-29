@@ -8,6 +8,10 @@ import { EquipmentListPage } from '@/features/equipment/pages/equipment-list-pag
 import { InstrumentNameListPage } from '@/features/instrument-names/pages/instrument-name-list-page';
 import { MaintenanceListPage } from '@/features/maintenance/pages/maintenance-list-page';
 import { UserManagementPage } from '@/features/users/pages/user-management-page';
+import { VendorListPage } from '@/features/vendors/pages/vendor-list-page';
+import { PmActivityTypeListPage } from '@/features/pm-activity-types/pages/pm-activity-type-list-page';
+import { PmProgramListPage } from '@/features/pm-programs/pages/pm-program-list-page';
+import { PmProgramDetailPage } from '@/features/pm-programs/pages/pm-program-detail-page';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -34,6 +38,21 @@ export const router = createBrowserRouter([
       {
         element: <DashboardLayout title="Corrective Maintenance" />,
         children: [{ path: '/maintenance', element: <MaintenanceListPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Master Vendor" />,
+        children: [{ path: '/vendors', element: <VendorListPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Master PM Activity Type" />,
+        children: [{ path: '/pm-activity-types', element: <PmActivityTypeListPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Preventive Maintenance" />,
+        children: [
+          { path: '/pm-programs', element: <PmProgramListPage /> },
+          { path: '/pm-programs/:id', element: <PmProgramDetailPage /> },
+        ],
       },
       {
         element: <RequireRole roles={['Admin']} />,

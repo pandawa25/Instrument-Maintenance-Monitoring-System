@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, MapPinned, Gauge, Tag, Wrench, Users, Boxes } from 'lucide-react';
+import { LayoutDashboard, MapPinned, Gauge, Tag, Wrench, Users, Boxes, CalendarClock, Building2, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
@@ -25,7 +25,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Kegiatan Maintenance',
-    items: [{ to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, roles: ['Admin', 'Viewer'] }],
+    items: [
+      { to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, roles: ['Admin', 'Viewer'] },
+      { to: '/pm-programs', label: 'Preventive Maintenance', icon: CalendarClock, roles: ['Admin', 'Viewer'] },
+    ],
   },
   {
     label: 'Master Data',
@@ -33,6 +36,8 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/areas', label: 'Area', icon: MapPinned, roles: ['Admin', 'Viewer'] },
       { to: '/equipment', label: 'Equipment', icon: Gauge, roles: ['Admin', 'Viewer'] },
       { to: '/instrument-names', label: 'Instrument Name', icon: Tag, roles: ['Admin', 'Viewer'] },
+      { to: '/vendors', label: 'Vendor', icon: Building2, roles: ['Admin', 'Viewer'] },
+      { to: '/pm-activity-types', label: 'PM Activity Type', icon: ListChecks, roles: ['Admin', 'Viewer'] },
     ],
   },
   {

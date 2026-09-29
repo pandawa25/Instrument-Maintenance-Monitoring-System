@@ -9,6 +9,10 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { VendorsModule } from './modules/vendors/vendors.module';
+import { PmActivityTypesModule } from './modules/pm-activity-types/pm-activity-types.module';
+import { PmProgramsModule } from './modules/pm-programs/pm-programs.module';
+import { PmPeriodsModule } from './modules/pm-periods/pm-periods.module';
 // DashboardModule ditunda sesuai permintaan — pasang lagi saat siap upload module Dashboard.
 // import { DashboardModule } from './modules/dashboard/dashboard.module';
 
@@ -23,6 +27,10 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     RolesModule,
     UsersModule,
     MaintenanceModule,
+    VendorsModule,
+    PmActivityTypesModule,
+    PmProgramsModule,
+    PmPeriodsModule,
     // DashboardModule, // ditunda — lihat catatan import di atas
   ],
 })
