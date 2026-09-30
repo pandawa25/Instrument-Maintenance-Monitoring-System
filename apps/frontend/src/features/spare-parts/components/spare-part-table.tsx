@@ -1,6 +1,8 @@
-import { Pencil, Trash2, Eye, PackagePlus } from 'lucide-react';
+import { Pencil, Trash2, Eye, PackagePlus, PackageSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import type { SparePart } from '../types/spare-part.types';
 
 interface Props {
@@ -15,11 +17,11 @@ interface Props {
 
 export function SparePartTable({ items, isLoading, canEdit, onEdit, onDelete, onView, onStockMovement }: Props) {
   if (isLoading) {
-    return <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>;
+    return <LoadingState />;
   }
 
   if (items.length === 0) {
-    return <div className="p-8 text-center text-sm text-text-muted">Belum ada data spare part / material.</div>;
+    return <EmptyState icon={PackageSearch} message="Belum ada data spare part / material." />;
   }
 
   return (

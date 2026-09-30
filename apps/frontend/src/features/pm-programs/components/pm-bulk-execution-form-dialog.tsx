@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,13 +64,11 @@ interface Props {
 
 export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Props) {
   const [form, setForm] = useState<FormState>(() => buildInitialForm(executions));
-  const [error, setError] = useState<string | null>(null);
   const updateMutation = useUpdatePmPeriodExecution();
 
   useEffect(() => {
     if (open) {
       setForm(buildInitialForm(executions));
-      setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -89,10 +88,9 @@ export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Pr
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (!hasAnyFieldSelected) {
-      setError('Centang minimal 1 field yang mau diterapkan ke semua equipment terpilih');
+      toast.error('Centang minimal 1 field yang mau diterapkan ke semua equipment terpilih');
       return;
     }
 
@@ -122,9 +120,10 @@ export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Pr
           });
         }),
       );
+      toast.success(`Hasil eksekusi berhasil diterapkan ke ${executions.length} equipment`);
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan sebagian atau semua eksekusi');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan sebagian atau semua eksekusi');
     }
   }
 
@@ -249,8 +248,6 @@ export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Pr
               </div>
             </div>
           )}
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

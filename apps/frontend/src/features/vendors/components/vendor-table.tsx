@@ -1,6 +1,8 @@
-import { Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import type { Vendor } from '../types/vendor.types';
 
 interface Props {
@@ -14,11 +16,11 @@ interface Props {
 
 export function VendorTable({ vendors, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
   if (isLoading) {
-    return <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>;
+    return <LoadingState />;
   }
 
   if (vendors.length === 0) {
-    return <div className="p-8 text-center text-sm text-text-muted">Belum ada data vendor.</div>;
+    return <EmptyState icon={Building2} message="Belum ada data vendor." />;
   }
 
   return (

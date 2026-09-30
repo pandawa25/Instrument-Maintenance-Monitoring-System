@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,6 @@ interface Props {
 
 export function AreaFormDialog({ open, onOpenChange, area }: Props) {
   const [form, setForm] = useState<AreaFormValues>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateArea();
   const updateMutation = useUpdateArea();
   const isEdit = Boolean(area);
@@ -35,22 +35,22 @@ export function AreaFormDialog({ open, onOpenChange, area }: Props) {
             }
           : EMPTY_FORM,
       );
-      setError(null);
     }
   }, [open, area]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     try {
       if (isEdit && area) {
         await updateMutation.mutateAsync({ id: area.id, payload: form });
+        toast.success('Area berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(form);
+        toast.success('Area berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan area');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan area');
     }
   }
 
@@ -107,8 +107,6 @@ export function AreaFormDialog({ open, onOpenChange, area }: Props) {
               <option value="INACTIVE">Inactive</option>
             </Select>
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

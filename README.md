@@ -129,7 +129,7 @@ chore: update dependency
 - [x] KPI Dashboard (Phase 3b) — MTTR, MTBF, PM Compliance Rate: overall, per Area, per Instrument, dengan filter rentang bulan
 - [x] Instrument Health Index (Phase 3c) — skor komposit 0-100 per instrument dari MTTR/MTBF/failure frequency (percentile relatif antar instrument) + penyesuaian criticality
 - [x] UI/UX Refresh — Foundation (Phase 4a) — design token CSS-variable + dark mode, sidebar collapsible, avatar dropdown menu, toast notification, redesign halaman Login
-- [ ] UI/UX Refresh — penerapan ke seluruh modul (Phase 4b, menyusul setelah foundation direview)
+- [x] UI/UX Refresh — Rollout ke seluruh modul (Phase 4b) — PageHeader/EmptyState/LoadingState konsisten + toast notification di semua form, diterapkan ke 9 modul (Area, Equipment, Instrument Name, Vendor, PM Activity Type, Spare Part, Corrective Maintenance, PM Programs, User Management)
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -214,4 +214,15 @@ Rollout dikerjakan bertahap: tahap ini membangun fondasi (design system, layout,
 - **Halaman Login**: didesain ulang jadi split-panel — panel kiri brand (gradient primary, pola SVG abstrak garis/instrument loop buatan sendiri, highlight fitur) hanya tampil di layar lebar (`lg:`), panel kanan form dengan password show/hide toggle dan error via toast (bukan lagi teks statis).
 - **Dashboard charts**: `dashboard-charts.tsx` sebelumnya pakai hex warna literal (tidak ikut dark mode) — sekarang baca warna lewat hook `use-chart-colors.ts` yang resolve CSS variable saat itu juga (Recharts butuh string warna literal, tidak bisa pakai class Tailwind langsung).
 - **Dependency baru**: `@radix-ui/react-dropdown-menu`, `@radix-ui/react-tooltip`, `sonner`.
-- **Belum dikerjakan** (menyusul Phase 4b): polish visual per-modul (Area/Instrument/CM/PM/Vendor/Spare Part/User Management/PM Programs detail), konversi sisa form-error inline ke toast, icon audit menyeluruh per-modul, kemungkinan redesign `detail-dialog.tsx` generik.
+- **Belum dikerjakan di Phase 4a** (dikerjakan di Phase 4b): polish visual per-modul, konversi sisa form-error inline ke toast — lihat bagian Phase 4b di bawah.
+
+### UI/UX Refresh — Rollout ke Seluruh Modul (Phase 4b)
+
+Melanjutkan Phase 4a dengan menerapkan 3 komponen shared baru secara konsisten ke 9 modul (Area, Equipment, Instrument Name, Vendor, PM Activity Type, Spare Part, Corrective Maintenance, PM Programs — termasuk halaman detailnya, User Management):
+
+- **`components/shared/page-header.tsx`** (`PageHeader`) — menggantikan blok header (judul + deskripsi + tombol create) yang sebelumnya di-copy-paste manual dan identik di tiap list page. Sekarang setiap modul punya icon representatif di header (mis. Equipment → `Gauge`, Vendor → `Building2`, Corrective Maintenance → `Wrench`), sama dengan icon di sidebar supaya konsisten.
+- **`components/shared/empty-state.tsx`** / **`loading-state.tsx`** — menggantikan teks polos "Memuat data..."/"Belum ada data..." yang sebelumnya ditulis ulang di tiap komponen Table, sekarang pakai icon + spinner yang konsisten.
+- **Toast menggantikan inline error text** di semua form dialog single-record (create/update): `const [error, setError] = useState(...)` dan `{error && <p>...}</p>}` dihapus total, diganti `toast.error(...)` (`sonner`, sudah dipasang global sejak Phase 4a) — plus **toast sukses baru** yang sebelumnya tidak ada sama sekali (dialog cuma menutup diam-diam setelah create/update/delete berhasil, sekarang ada konfirmasi eksplisit "X berhasil ditambahkan/diperbarui/dihapus").
+- **Pengecualian yang disengaja — dialog multi-step tetap pakai inline error di step tertentu**: `equipment-bulk-upload-dialog.tsx` (upload→preview→commit) dan pola serupa — error dari tahap **parsing/preview awal** tetap ditampilkan inline (user perlu melihatnya sambil membaca preview data dan memperbaiki file), sementara error dari **commit/submit final** dikonversi ke toast. Ini keputusan sadar, bukan kelalaian: toast otomatis hilang dan tidak cocok untuk error yang perlu terus terlihat selagi user bekerja di dalam dialog yang sama.
+- **`pm-program-detail-page.tsx`** — satu-satunya halaman detail yang bukan dialog (punya route sendiri `/pm-programs/:id`) — diberi `PageHeader` yang sama (title = nama program, description = ringkasan vendor/frekuensi/tanggal mulai, action = status badge), summary stat card di bawahnya dipisah dari header supaya tidak tercampur.
+- **Tidak ada perubahan logika bisnis/validasi/struktur data** — murni lapisan presentasi. Verifikasi: `tsc --noEmit` bersih di semua modul, `npm run build` frontend clean, backend test tetap 45/45 (tidak disentuh).

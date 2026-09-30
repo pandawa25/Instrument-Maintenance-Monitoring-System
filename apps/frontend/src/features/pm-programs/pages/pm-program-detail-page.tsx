@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { PageHeader } from '@/components/shared/page-header';
+import { LoadingState } from '@/components/shared/loading-state';
 import { useAuthStore } from '@/store/auth.store';
 import { usePmProgramDetail } from '../hooks/use-pm-programs';
 import { usePmPeriods } from '../hooks/use-pm-periods';
@@ -42,7 +44,7 @@ export function PmProgramDetailPage() {
   }, [program, periods]);
 
   if (isLoadingProgram || !program) {
-    return <p className="p-8 text-center text-sm text-text-muted">Memuat data...</p>;
+    return <LoadingState />;
   }
 
   return (
@@ -54,20 +56,17 @@ export function PmProgramDetailPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border/70 bg-surface p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-text">{program.name}</h2>
-            <p className="text-sm text-text-muted">
-              Vendor: {program.vendor.name} · Frekuensi: {program.frequencyValue}{' '}
-              {FREQUENCY_UNIT_LABEL[program.frequencyUnit] ?? program.frequencyUnit} · Mulai{' '}
-              {new Date(program.startDate).toLocaleDateString('id-ID')}
-            </p>
-          </div>
-          <StatusBadge value={program.status} />
-        </div>
+      <PageHeader
+        icon={CalendarClock}
+        title={program.name}
+        description={`Vendor: ${program.vendor.name} · Frekuensi: ${program.frequencyValue} ${
+          FREQUENCY_UNIT_LABEL[program.frequencyUnit] ?? program.frequencyUnit
+        } · Mulai ${new Date(program.startDate).toLocaleDateString('id-ID')}`}
+        action={<StatusBadge value={program.status} />}
+      />
 
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="rounded-xl border border-border/70 bg-surface p-5 shadow-sm">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <SummaryStat label="Total Equipment" value={program.equipment.length} />
           <SummaryStat label="Total Periode" value={program.totalPeriod} />
           <SummaryStat label="Checklist Item" value={program.checklistItems.length} />
@@ -98,7 +97,7 @@ export function PmProgramDetailPage() {
       </div>
 
       {isLoadingPeriods ? (
-        <p className="text-sm text-text-muted">Memuat periode...</p>
+        <LoadingState message="Memuat periode..." />
       ) : (
         <PmPeriodList periods={periods ?? []} canEdit={canEdit} onFillExecution={setExecutionId} />
       )}

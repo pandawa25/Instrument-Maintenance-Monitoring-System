@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { LoadingState } from '@/components/shared/loading-state';
 import { useVendorsLookup } from '@/features/vendors/hooks/use-vendors';
 import { usePmActivityTypesLookup } from '@/features/pm-activity-types/hooks/use-pm-activity-types';
 import { useCreatePmProgram, usePmProgramDetail, useUpdatePmProgram } from '../hooks/use-pm-programs';
@@ -32,7 +34,6 @@ interface Props {
 export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
   const [form, setForm] = useState<PmProgramFormValues>(EMPTY_FORM);
   const [equipmentSearch, setEquipmentSearch] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const isEdit = Boolean(programId);
 
@@ -67,7 +68,6 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
           : EMPTY_FORM,
       );
       setEquipmentSearch('');
-      setError(null);
     }
   }, [open, program, isEdit]);
 
@@ -107,10 +107,9 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (form.equipmentIds.length === 0) {
-      setError('Pilih minimal 1 equipment yang dicakup program ini');
+      toast.error('Pilih minimal 1 equipment yang dicakup program ini');
       return;
     }
 
@@ -124,12 +123,14 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
       };
       if (isEdit && programId) {
         await updateMutation.mutateAsync({ id: programId, payload });
+        toast.success('PM Program berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success('PM Program berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan PM Program');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan PM Program');
     }
   }
 
@@ -141,7 +142,7 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
         </DialogHeader>
 
         {isEdit && isLoadingDetail ? (
-          <p className="py-8 text-center text-sm text-text-muted">Memuat data...</p>
+          <LoadingState />
         ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
@@ -299,8 +300,6 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
               ))}
             </div>
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

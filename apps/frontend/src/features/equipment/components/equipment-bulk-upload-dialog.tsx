@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Download, TriangleAlert, UploadCloud, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,7 +64,7 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
     try {
       await downloadBulkUploadTemplate();
     } catch {
-      setError('Gagal mengunduh template. Coba lagi.');
+      toast.error('Gagal mengunduh template. Coba lagi.');
     } finally {
       setIsDownloading(false);
     }
@@ -88,12 +89,12 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
 
   async function handleCommit() {
     if (!preview) return;
-    setError(null);
     try {
-      await commitMutation.mutateAsync(preview.batchId);
+      const result = await commitMutation.mutateAsync(preview.batchId);
+      toast.success(`${result?.createdCount ?? 0} equipment berhasil diimpor`);
       setStep('done');
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal commit — coba upload & preview ulang');
+      toast.error(err?.response?.data?.message ?? 'Gagal commit — coba upload & preview ulang');
     }
   }
 
@@ -246,8 +247,6 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
                 </Button>
               </div>
             )}
-
-            {error && <p className="text-sm text-danger">{error}</p>}
           </div>
         )}
 

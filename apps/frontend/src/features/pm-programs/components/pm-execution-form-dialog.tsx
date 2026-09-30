@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { LoadingState } from '@/components/shared/loading-state';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { usePmPeriodExecution, useUpdatePmPeriodExecution } from '../hooks/use-pm-period-executions';
 import type { PmChecklistResult, PmExecutionResult, PmExecutionStatus } from '../types/pm-period.types';
@@ -46,7 +48,6 @@ interface Props {
 
 export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
 
   const { data: execution, isLoading } = usePmPeriodExecution(executionId ?? undefined);
   const updateMutation = useUpdatePmPeriodExecution();
@@ -66,7 +67,6 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
         workOrderStatus: execution.workOrderStatus ?? '',
         checklistResults: execution.checklistResults.map((c) => ({ id: c.id, result: c.result, notes: c.notes ?? '' })),
       });
-      setError(null);
     }
   }, [open, execution]);
 
@@ -80,7 +80,6 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!executionId) return;
-    setError(null);
     try {
       await updateMutation.mutateAsync({
         id: executionId,
@@ -98,9 +97,10 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
           checklistResults: form.checklistResults.map(({ id, result, notes }) => ({ id, result, notes: notes || undefined })),
         },
       });
+      toast.success('Hasil eksekusi PM berhasil disimpan');
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan hasil eksekusi PM');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan hasil eksekusi PM');
     }
   }
 
@@ -114,7 +114,7 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
         </DialogHeader>
 
         {isLoading || !execution ? (
-          <p className="py-8 text-center text-sm text-text-muted">Memuat data...</p>
+          <LoadingState />
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
@@ -255,8 +255,6 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
             )}
 
             <AttachmentsSection entityType="PM_PERIOD_EXECUTION" entityId={executionId ?? undefined} canEdit={canEdit} />
-
-            {error && <p className="text-sm text-danger">{error}</p>}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

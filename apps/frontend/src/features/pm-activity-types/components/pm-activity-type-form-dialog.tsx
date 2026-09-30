@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,6 @@ interface Props {
 
 export function PmActivityTypeFormDialog({ open, onOpenChange, activityType }: Props) {
   const [form, setForm] = useState<PmActivityTypeFormValues>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreatePmActivityType();
   const updateMutation = useUpdatePmActivityType();
   const isEdit = Boolean(activityType);
@@ -29,23 +29,23 @@ export function PmActivityTypeFormDialog({ open, onOpenChange, activityType }: P
           ? { code: activityType.code, name: activityType.name, description: activityType.description ?? '' }
           : EMPTY_FORM,
       );
-      setError(null);
     }
   }, [open, activityType]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     try {
       const payload: PmActivityTypeFormValues = { ...form, description: form.description || undefined };
       if (isEdit && activityType) {
         await updateMutation.mutateAsync({ id: activityType.id, payload });
+        toast.success('Activity type berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success('Activity type berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan activity type');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan activity type');
     }
   }
 
@@ -90,8 +90,6 @@ export function PmActivityTypeFormDialog({ open, onOpenChange, activityType }: P
               maxLength={255}
             />
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

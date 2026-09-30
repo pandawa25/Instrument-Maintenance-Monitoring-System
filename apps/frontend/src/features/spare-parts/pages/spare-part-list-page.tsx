@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { PackageSearch, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useSpareParts, useDeleteSparePart } from '../hooks/use-spare-parts';
 import { SparePartTable } from '../components/spare-part-table';
 import { SparePartFormDialog } from '../components/spare-part-form-dialog';
@@ -41,24 +43,30 @@ export function SparePartListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Spare part "${deletingItem.name}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus spare part / material');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master Spare Part / Material</h2>
-          <p className="text-sm text-text-muted">Kelola master spare part / material untuk kebutuhan Corrective Maintenance.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Spare Part
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={PackageSearch}
+        title="Master Spare Part / Material"
+        description="Kelola master spare part / material untuk kebutuhan Corrective Maintenance."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Spare Part
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

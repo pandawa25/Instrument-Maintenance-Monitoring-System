@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -24,7 +25,12 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger">
+              <TriangleAlert className="h-5 w-5" />
+            </div>
+            <DialogTitle className="pt-1.5">{title}</DialogTitle>
+          </div>
         </DialogHeader>
         <p className="text-sm text-text-muted">{description}</p>
         <DialogFooter>

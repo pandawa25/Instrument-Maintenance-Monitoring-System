@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,6 @@ interface Props {
 
 export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props) {
   const [form, setForm] = useState<MaintenanceFormValues>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateMaintenance();
   const updateMutation = useUpdateMaintenance();
   const { data: equipmentOptions } = useEquipmentLookup();
@@ -87,7 +87,6 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
             }
           : EMPTY_FORM,
       );
-      setError(null);
     }
   }, [open, maintenance]);
 
@@ -117,10 +116,9 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (form.needsSparePart && form.materials.some((m) => !m.sparePartId)) {
-      setError('Pilih spare part untuk setiap baris material, atau hapus baris yang kosong');
+      toast.error('Pilih spare part untuk setiap baris material, atau hapus baris yang kosong');
       return;
     }
 
@@ -151,12 +149,14 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
       };
       if (isEdit && maintenance) {
         await updateMutation.mutateAsync({ id: maintenance.id, payload });
+        toast.success('Data maintenance berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success('Data maintenance berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan data maintenance');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan data maintenance');
     }
   }
 
@@ -454,8 +454,6 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               maxLength={500}
             />
           </div>
-
-          {error && <p className="col-span-2 text-sm text-danger">{error}</p>}
 
           <DialogFooter className="col-span-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

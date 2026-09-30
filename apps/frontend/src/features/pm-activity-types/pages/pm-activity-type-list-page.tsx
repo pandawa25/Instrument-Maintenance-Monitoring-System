@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ListChecks, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { usePmActivityTypeList, useDeletePmActivityType } from '../hooks/use-pm-activity-types';
 import { PmActivityTypeTable } from '../components/pm-activity-type-table';
 import { PmActivityTypeFormDialog } from '../components/pm-activity-type-form-dialog';
@@ -38,24 +40,30 @@ export function PmActivityTypeListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Activity type "${deletingItem.name}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus activity type');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master PM Activity Type</h2>
-          <p className="text-sm text-text-muted">Kelola jenis aktifitas PM (Cleaning, Calibration, dst) untuk checklist PM Program.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Activity Type
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={ListChecks}
+        title="Master PM Activity Type"
+        description="Kelola jenis aktifitas PM (Cleaning, Calibration, dst) untuk checklist PM Program."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Activity Type
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

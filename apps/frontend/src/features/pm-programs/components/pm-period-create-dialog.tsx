@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,6 @@ interface Props {
 export function PmPeriodCreateDialog({ open, onOpenChange, programId, suggestedDate, nextPeriodNumber }: Props) {
   const [plannedDate, setPlannedDate] = useState(suggestedDate);
   const [remarks, setRemarks] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const createMutation = useCreatePmPeriod(programId);
 
@@ -24,18 +24,17 @@ export function PmPeriodCreateDialog({ open, onOpenChange, programId, suggestedD
     if (open) {
       setPlannedDate(suggestedDate);
       setRemarks('');
-      setError(null);
     }
   }, [open, suggestedDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     try {
       await createMutation.mutateAsync({ plannedDate, remarks: remarks || undefined });
+      toast.success('Periode berhasil ditambahkan');
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menambah periode');
+      toast.error(err?.response?.data?.message ?? 'Gagal menambah periode');
     }
   }
 
@@ -63,8 +62,6 @@ export function PmPeriodCreateDialog({ open, onOpenChange, programId, suggestedD
             <Label htmlFor="remarks">Remarks</Label>
             <Input id="remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={500} />
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

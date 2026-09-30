@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Building2, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useVendors, useDeleteVendor } from '../hooks/use-vendors';
 import { VendorTable } from '../components/vendor-table';
 import { VendorFormDialog } from '../components/vendor-form-dialog';
@@ -39,24 +41,30 @@ export function VendorListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Vendor "${deletingItem.name}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus vendor');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master Vendor</h2>
-          <p className="text-sm text-text-muted">Kelola vendor pelaksana Preventive Maintenance.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Vendor
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={Building2}
+        title="Master Vendor"
+        description="Kelola vendor pelaksana Preventive Maintenance."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Vendor
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

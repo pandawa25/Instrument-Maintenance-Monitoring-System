@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus, UploadCloud } from 'lucide-react';
+import { Gauge, Plus, UploadCloud } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useEquipmentList, useDeleteEquipment } from '../hooks/use-equipment';
 import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-lookups';
 import { EquipmentTable } from '../components/equipment-table';
@@ -51,30 +53,36 @@ export function EquipmentListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Equipment "${deletingItem.tagNumber}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus equipment');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master Equipment</h2>
-          <p className="text-sm text-text-muted">Kelola data equipment/instrument pada seluruh area.</p>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-              <UploadCloud className="h-4 w-4" />
-              Bulk Upload
-            </Button>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              Tambah Equipment
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        icon={Gauge}
+        title="Master Equipment"
+        description="Kelola data equipment/instrument pada seluruh area."
+        action={
+          canEdit && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+                <UploadCloud className="h-4 w-4" />
+                Bulk Upload
+              </Button>
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4" />
+                Tambah Equipment
+              </Button>
+            </div>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

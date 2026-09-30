@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { CalendarClock, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useVendorsLookup } from '@/features/vendors/hooks/use-vendors';
 import { usePmProgramList, useDeletePmProgram } from '../hooks/use-pm-programs';
 import { PmProgramTable } from '../components/pm-program-table';
@@ -45,26 +47,30 @@ export function PmProgramListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`PM Program "${deletingItem.name}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus PM Program');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Preventive Maintenance Program</h2>
-          <p className="text-sm text-text-muted">
-            Kelola program PM (judul, periode, vendor, dan equipment yang dicakup).
-          </p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah PM Program
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={CalendarClock}
+        title="Preventive Maintenance Program"
+        description="Kelola program PM (judul, periode, vendor, dan equipment yang dicakup)."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah PM Program
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

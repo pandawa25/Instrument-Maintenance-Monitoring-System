@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Wrench } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useMaintenanceList, useDeleteMaintenance } from '../hooks/use-maintenance';
 import { useAreasLookup, useEquipmentLookup } from '../hooks/use-maintenance-lookups';
 import { MaintenanceTable } from '../components/maintenance-table';
@@ -52,24 +54,30 @@ export function MaintenanceListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Data maintenance untuk "${deletingItem.equipment.tagNumber}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus data maintenance');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Corrective Maintenance</h2>
-          <p className="text-sm text-text-muted">Riwayat perbaikan dan gangguan equipment di seluruh area.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Maintenance
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={Wrench}
+        title="Corrective Maintenance"
+        description="Riwayat perbaikan dan gangguan equipment di seluruh area."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Maintenance
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">

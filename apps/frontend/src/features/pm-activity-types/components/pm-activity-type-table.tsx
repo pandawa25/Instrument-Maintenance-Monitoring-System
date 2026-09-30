@@ -1,5 +1,7 @@
-import { Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import type { PmActivityType } from '../types/pm-activity-type.types';
 
 interface Props {
@@ -13,11 +15,11 @@ interface Props {
 
 export function PmActivityTypeTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
   if (isLoading) {
-    return <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>;
+    return <LoadingState />;
   }
 
   if (items.length === 0) {
-    return <div className="p-8 text-center text-sm text-text-muted">Belum ada data activity type.</div>;
+    return <EmptyState icon={ListChecks} message="Belum ada data activity type." />;
   }
 
   return (

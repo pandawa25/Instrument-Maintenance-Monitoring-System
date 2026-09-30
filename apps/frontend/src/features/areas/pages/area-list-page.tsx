@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { MapPinned, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useAreas, useDeleteArea } from '../hooks/use-areas';
 import { AreaTable } from '../components/area-table';
 import { AreaFormDialog } from '../components/area-form-dialog';
@@ -39,24 +41,30 @@ export function AreaListPage() {
 
   async function confirmDelete() {
     if (!deletingArea) return;
-    await deleteMutation.mutateAsync(deletingArea.id);
-    setDeletingArea(null);
+    try {
+      await deleteMutation.mutateAsync(deletingArea.id);
+      toast.success(`Area "${deletingArea.areaName}" berhasil dihapus`);
+      setDeletingArea(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus area');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master Area</h2>
-          <p className="text-sm text-text-muted">Kelola area/unit proses pada fasilitas.</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Area
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={MapPinned}
+        title="Master Area"
+        description="Kelola area/unit proses pada fasilitas."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Area
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

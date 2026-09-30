@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useInstrumentNameList, useDeleteInstrumentName } from '../hooks/use-instrument-names';
 import { InstrumentNameTable } from '../components/instrument-name-table';
 import { InstrumentNameFormDialog } from '../components/instrument-name-form-dialog';
@@ -38,24 +40,30 @@ export function InstrumentNameListPage() {
 
   async function confirmDelete() {
     if (!deletingItem) return;
-    await deleteMutation.mutateAsync(deletingItem.id);
-    setDeletingItem(null);
+    try {
+      await deleteMutation.mutateAsync(deletingItem.id);
+      toast.success(`Instrument name "${deletingItem.name}" berhasil dihapus`);
+      setDeletingItem(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus instrument name');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">Master Instrument Name</h2>
-          <p className="text-sm text-text-muted">Kelola master data jenis instrument (dipakai di form Equipment).</p>
-        </div>
-        {canEdit && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            Tambah Instrument Name
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={Tag}
+        title="Master Instrument Name"
+        description="Kelola master data jenis instrument (dipakai di form Equipment)."
+        action={
+          canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Tambah Instrument Name
+            </Button>
+          )
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/shared/pagination';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import { useCreateStockMovement, useStockMovements } from '../hooks/use-spare-parts';
 import type { CreateStockMovementPayload, ManualStockMovementType, SparePart } from '../types/spare-part.types';
 
@@ -24,7 +27,6 @@ interface Props {
 export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, onSparePartUpdated }: Props) {
   const [page, setPage] = useState(1);
   const [form, setForm] = useState<CreateStockMovementPayload>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useStockMovements(sparePart?.id, { page, limit: 10 });
   const createMutation = useCreateStockMovement();
@@ -33,15 +35,14 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     const qty = Number(form.quantityDelta);
     if (!qty) {
-      setError('Jumlah tidak boleh 0');
+      toast.error('Jumlah tidak boleh 0');
       return;
     }
     if (form.type === 'RESTOCK' && qty <= 0) {
-      setError('RESTOCK harus bernilai positif');
+      toast.error('RESTOCK harus bernilai positif');
       return;
     }
 
@@ -53,8 +54,9 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
       onSparePartUpdated?.(updated);
       setForm(EMPTY_FORM);
       setPage(1);
+      toast.success('Pergerakan stock berhasil dicatat');
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal mencatat pergerakan stock');
+      toast.error(err?.response?.data?.message ?? 'Gagal mencatat pergerakan stock');
     }
   }
 
@@ -109,8 +111,6 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
               </div>
             </div>
 
-            {error && <p className="text-sm text-danger">{error}</p>}
-
             <div className="flex justify-end">
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Menyimpan...' : 'Catat Pergerakan'}
@@ -123,9 +123,9 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
           <div className="border-b border-border px-4 py-2 text-sm font-medium text-text">Riwayat Pergerakan Stock</div>
           <div className="max-h-72 overflow-y-auto">
             {isLoading ? (
-              <div className="p-6 text-center text-sm text-text-muted">Memuat...</div>
+              <LoadingState />
             ) : !data?.data.length ? (
-              <div className="p-6 text-center text-sm text-text-muted">Belum ada pergerakan stock.</div>
+              <EmptyState message="Belum ada pergerakan stock." />
             ) : (
               <table className="w-full text-sm">
                 <thead>

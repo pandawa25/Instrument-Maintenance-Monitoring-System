@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,32 +16,30 @@ interface Props {
 export function ChangePasswordDialog({ open, onOpenChange, user }: Props) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const mutation = useChangeUserPassword();
 
   useEffect(() => {
     if (open) {
       setNewPassword('');
       setConfirmPassword('');
-      setError(null);
     }
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (newPassword !== confirmPassword) {
-      setError('Konfirmasi password tidak cocok');
+      toast.error('Konfirmasi password tidak cocok');
       return;
     }
 
     if (!user) return;
     try {
       await mutation.mutateAsync({ id: user.id, newPassword });
+      toast.success('Password berhasil diganti');
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal mengganti password');
+      toast.error(err?.response?.data?.message ?? 'Gagal mengganti password');
     }
   }
 
@@ -77,8 +76,6 @@ export function ChangePasswordDialog({ open, onOpenChange, user }: Props) {
               required
             />
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

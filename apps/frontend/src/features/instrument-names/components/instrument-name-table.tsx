@@ -1,5 +1,7 @@
-import { Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import type { InstrumentName } from '../types/instrument-name.types';
 
 interface Props {
@@ -13,11 +15,11 @@ interface Props {
 
 export function InstrumentNameTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
   if (isLoading) {
-    return <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>;
+    return <LoadingState />;
   }
 
   if (items.length === 0) {
-    return <div className="p-8 text-center text-sm text-text-muted">Belum ada data instrument name.</div>;
+    return <EmptyState icon={Tag} message="Belum ada data instrument name." />;
   }
 
   return (

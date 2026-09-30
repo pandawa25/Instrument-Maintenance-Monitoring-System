@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,6 @@ interface Props {
 
 export function InstrumentNameFormDialog({ open, onOpenChange, instrumentName }: Props) {
   const [form, setForm] = useState<InstrumentNameFormValues>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateInstrumentName();
   const updateMutation = useUpdateInstrumentName();
   const isEdit = Boolean(instrumentName);
@@ -33,23 +33,23 @@ export function InstrumentNameFormDialog({ open, onOpenChange, instrumentName }:
             }
           : EMPTY_FORM,
       );
-      setError(null);
     }
   }, [open, instrumentName]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     try {
       const payload: InstrumentNameFormValues = { ...form, description: form.description || undefined };
       if (isEdit && instrumentName) {
         await updateMutation.mutateAsync({ id: instrumentName.id, payload });
+        toast.success('Instrument name berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success('Instrument name berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan instrument name');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan instrument name');
     }
   }
 
@@ -94,8 +94,6 @@ export function InstrumentNameFormDialog({ open, onOpenChange, instrumentName }:
               maxLength={255}
             />
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

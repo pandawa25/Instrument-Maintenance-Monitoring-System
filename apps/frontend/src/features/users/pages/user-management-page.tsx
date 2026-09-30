@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Users as UsersIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { PageHeader } from '@/components/shared/page-header';
 import { useUsersList, useDeleteUser } from '../hooks/use-users';
 import { useRolesLookup } from '../hooks/use-roles-lookup';
 import { UserTable } from '../components/user-table';
@@ -46,22 +48,28 @@ export function UserManagementPage() {
 
   async function confirmDelete() {
     if (!deletingUser) return;
-    await deleteMutation.mutateAsync(deletingUser.id);
-    setDeletingUser(null);
+    try {
+      await deleteMutation.mutateAsync(deletingUser.id);
+      toast.success(`User "${deletingUser.fullName}" berhasil dihapus`);
+      setDeletingUser(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus user');
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-text">User Management</h2>
-          <p className="text-sm text-text-muted">Kelola akun user dan role akses ke sistem.</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Tambah User
-        </Button>
-      </div>
+      <PageHeader
+        icon={UsersIcon}
+        title="User Management"
+        description="Kelola akun user dan role akses ke sistem."
+        action={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Tambah User
+          </Button>
+        }
+      />
 
       <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">

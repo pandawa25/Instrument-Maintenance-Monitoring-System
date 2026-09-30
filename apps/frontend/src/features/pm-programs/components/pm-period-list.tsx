@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import { usePmPeriodDetail, useDeletePmPeriod } from '../hooks/use-pm-periods';
 import { PmBulkExecutionFormDialog } from './pm-bulk-execution-form-dialog';
 import type { PmPeriodListItem } from '../types/pm-period.types';
@@ -20,16 +23,21 @@ export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
 
   if (periods.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-text-muted">
-        Belum ada periode. Klik "Tambah Periode" untuk memulai.
+      <div className="rounded-xl border border-dashed border-border">
+        <EmptyState icon={CalendarClock} message='Belum ada periode. Klik "Tambah Periode" untuk memulai.' />
       </div>
     );
   }
 
   async function confirmDelete() {
     if (!deletingId) return;
-    await deleteMutation.mutateAsync(deletingId);
-    setDeletingId(null);
+    try {
+      await deleteMutation.mutateAsync(deletingId);
+      toast.success('Periode berhasil dihapus');
+      setDeletingId(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Gagal menghapus periode');
+    }
   }
 
   return (
@@ -105,7 +113,11 @@ function PmPeriodExecutionsPanel({
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   if (isLoading || !detail) {
-    return <p className="border-t border-border p-4 text-sm text-text-muted">Memuat eksekusi...</p>;
+    return (
+      <div className="border-t border-border">
+        <LoadingState message="Memuat eksekusi..." />
+      </div>
+    );
   }
 
   const allSelected = detail.executions.length > 0 && selectedIds.size === detail.executions.length;

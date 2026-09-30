@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,6 @@ interface Props {
 
 export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
   const [form, setForm] = useState<VendorFormValues>(EMPTY_FORM);
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateVendor();
   const updateMutation = useUpdateVendor();
   const isEdit = Boolean(vendor);
@@ -46,22 +46,22 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             }
           : EMPTY_FORM,
       );
-      setError(null);
     }
   }, [open, vendor]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     try {
       if (isEdit && vendor) {
         await updateMutation.mutateAsync({ id: vendor.id, payload: form });
+        toast.success('Vendor berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(form);
+        toast.success('Vendor berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan vendor');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan vendor');
     }
   }
 
@@ -133,8 +133,6 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
             <Label htmlFor="remarks">Remarks</Label>
             <Input id="remarks" value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} maxLength={500} />
           </div>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

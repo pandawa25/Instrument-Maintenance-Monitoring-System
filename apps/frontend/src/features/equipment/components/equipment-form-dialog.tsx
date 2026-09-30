@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +50,6 @@ function stripAreaPrefix(tagNumber: string, areaCode?: string): string {
 export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
   const [form, setForm] = useState<EquipmentFormValues>(EMPTY_FORM);
   const [tagSuffix, setTagSuffix] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const createMutation = useCreateEquipment();
   const updateMutation = useUpdateEquipment();
   const { data: areas } = useAreasLookup();
@@ -85,7 +85,6 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
         setForm(EMPTY_FORM);
         setTagSuffix('');
       }
-      setError(null);
     }
   }, [open, equipment]);
 
@@ -95,10 +94,9 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (!selectedArea) {
-      setError('Pilih area terlebih dahulu');
+      toast.error('Pilih area terlebih dahulu');
       return;
     }
 
@@ -115,12 +113,14 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
       };
       if (isEdit && equipment) {
         await updateMutation.mutateAsync({ id: equipment.id, payload });
+        toast.success('Equipment berhasil diperbarui');
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success('Equipment berhasil ditambahkan');
       }
       onOpenChange(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menyimpan equipment');
+      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan equipment');
     }
   }
 
@@ -327,8 +327,6 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
               maxLength={500}
             />
           </div>
-
-          {error && <p className="col-span-2 text-sm text-danger">{error}</p>}
 
           <DialogFooter className="col-span-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
