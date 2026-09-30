@@ -1,3 +1,4 @@
+import { Wrench } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
@@ -92,7 +93,9 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail Corrective Maintenance — ${maintenance.equipment.tagNumber}`}
+      icon={Wrench}
+      title="Detail Corrective Maintenance"
+      subtitle={maintenance.equipment.tagNumber}
       fields={fields}
     >
       <div className="mt-4">

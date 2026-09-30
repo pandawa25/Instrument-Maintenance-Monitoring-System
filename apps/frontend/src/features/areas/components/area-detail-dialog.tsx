@@ -1,3 +1,4 @@
+import { MapPinned } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { Area } from '../types/area.types';
@@ -21,5 +22,14 @@ export function AreaDetailDialog({ open, onOpenChange, area }: Props) {
     { label: 'Terakhir Diubah', value: new Date(area.updatedAt).toLocaleString('id-ID') },
   ];
 
-  return <DetailDialog open={open} onOpenChange={onOpenChange} title={`Detail Area — ${area.areaCode}`} fields={fields} />;
+  return (
+    <DetailDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={MapPinned}
+      title="Detail Area"
+      subtitle={area.areaCode}
+      fields={fields}
+    />
+  );
 }

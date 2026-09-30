@@ -1,3 +1,4 @@
+import { PackageSearch } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { SparePart } from '../types/spare-part.types';
@@ -26,7 +27,9 @@ export function SparePartDetailDialog({ open, onOpenChange, sparePart }: Props) 
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail Spare Part / Material — ${sparePart.kimap}`}
+      icon={PackageSearch}
+      title="Detail Spare Part / Material"
+      subtitle={sparePart.kimap}
       fields={fields}
     />
   );

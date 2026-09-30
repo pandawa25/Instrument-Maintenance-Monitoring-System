@@ -1,3 +1,4 @@
+import { Building2 } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { Vendor } from '../types/vendor.types';
@@ -24,5 +25,14 @@ export function VendorDetailDialog({ open, onOpenChange, vendor }: Props) {
     { label: 'Terakhir Diubah', value: new Date(vendor.updatedAt).toLocaleString('id-ID') },
   ];
 
-  return <DetailDialog open={open} onOpenChange={onOpenChange} title={`Detail Vendor — ${vendor.name}`} fields={fields} />;
+  return (
+    <DetailDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Building2}
+      title="Detail Vendor"
+      subtitle={vendor.name}
+      fields={fields}
+    />
+  );
 }

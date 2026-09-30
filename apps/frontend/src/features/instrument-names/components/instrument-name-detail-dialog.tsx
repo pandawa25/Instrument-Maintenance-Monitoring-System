@@ -1,3 +1,4 @@
+import { Tag } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import type { InstrumentName } from '../types/instrument-name.types';
 
@@ -23,7 +24,9 @@ export function InstrumentNameDetailDialog({ open, onOpenChange, instrumentName 
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail Instrument Name — ${instrumentName.code}`}
+      icon={Tag}
+      title="Detail Instrument Name"
+      subtitle={instrumentName.code}
       fields={fields}
     />
   );

@@ -1,3 +1,4 @@
+import { ListChecks } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import type { PmActivityType } from '../types/pm-activity-type.types';
 
@@ -23,7 +24,9 @@ export function PmActivityTypeDetailDialog({ open, onOpenChange, activityType }:
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail PM Activity Type — ${activityType.code}`}
+      icon={ListChecks}
+      title="Detail PM Activity Type"
+      subtitle={activityType.code}
       fields={fields}
     />
   );

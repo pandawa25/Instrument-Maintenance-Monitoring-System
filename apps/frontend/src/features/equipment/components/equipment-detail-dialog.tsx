@@ -1,3 +1,4 @@
+import { Gauge } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { Equipment } from '../types/equipment.types';
@@ -45,7 +46,9 @@ export function EquipmentDetailDialog({ open, onOpenChange, equipment }: Props) 
     <DetailDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Detail Equipment — ${equipment.tagNumber}`}
+      icon={Gauge}
+      title="Detail Equipment"
+      subtitle={equipment.tagNumber}
       fields={fields}
     />
   );
