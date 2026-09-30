@@ -127,6 +127,7 @@ chore: update dependency
 - [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD
 - [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance
 - [x] KPI Dashboard (Phase 3b) — MTTR, MTBF, PM Compliance Rate: overall, per Area, per Instrument, dengan filter rentang bulan
+- [x] Instrument Health Index (Phase 3c) — skor komposit 0-100 per instrument dari MTTR/MTBF/failure frequency (percentile relatif antar instrument) + penyesuaian criticality
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -184,3 +185,17 @@ chore: update dependency
 - Endpoint: `GET /dashboard/kpi?months=12` — ditempatkan sebagai section baru di halaman Dashboard yang sudah ada (bukan menu/halaman terpisah), di bawah chart & tabel recent yang sudah ada.
 - Tabel "KPI per Instrument" punya search box client-side (filter by Tag Number/service) karena datanya bisa banyak baris — tidak ada pagination server-side untuk endpoint ini (dianggap cukup untuk skala saat ini, seluruh instrument dikirim sekaligus).
 - Unit test (`dashboard.service.spec.ts`) mencakup: perhitungan MTTR dengan/tanpa data null, MTBF dengan multiple interval, MTBF null untuk data <2 titik, PM compliance rate, pengelompokan per Area/Instrument terpisah dari overall, dan default rentang 12 bulan.
+
+### Instrument Health Index
+
+- **Formula**: skor 0-100 per instrument, dihitung dari 3 komponen yang dinormalisasi ke **percentile relatif antar instrument di plant yang sama** (bukan threshold absolut — belum ada angka acuan industri untuk plant ini):
+  - MTTR (bobot 35%) — makin rendah dari peer, skor makin tinggi
+  - MTBF (bobot 35%) — makin tinggi dari peer, skor makin tinggi
+  - Failure frequency / jumlah kejadian gagal (bobot 30%) — makin sedikit dari peer, skor makin tinggi
+  - Kalau MTBF tidak bisa dihitung (equipment cuma punya 1 kejadian gagal dalam periode), bobotnya didistribusikan ulang ke 2 komponen lain — bukan dianggap 0.
+- **Penyesuaian Criticality**: criticality **bukan** komponen skor terpisah, tapi pengali terhadap "kekurangan" (100 − base score) — instrument `HIGH` criticality kekurangannya dikalikan 1.2x (diperberat), `MEDIUM` 1.0x (netral), `LOW` 0.8x (diperingan). Efeknya: 2 instrument dengan reliability performance identik akan punya Health Score akhir berbeda — yang `HIGH` criticality akan terlihat lebih mendesak (skor lebih rendah).
+- **Equipment tanpa riwayat corrective maintenance dalam periode** = kategori `INSUFFICIENT_DATA`, **bukan** otomatis diberi skor tinggi — supaya instrument yang jarang dicek tidak disalahartikan sebagai instrument yang reliable (sesuai keputusan desain, karena data satu-satunya sumber "kesehatan" saat ini adalah riwayat corrective maintenance).
+- **Kategori**: `GOOD` (≥85), `FAIR` (70-84), `POOR` (50-69), `CRITICAL` (<50), `INSUFFICIENT_DATA` (tidak dihitung).
+- Endpoint: `GET /dashboard/health-index?months=12` — daftar diurutkan skor terendah dulu (paling mendesak di atas), plus ringkasan jumlah instrument per kategori.
+- **Keterbatasan yang disadari**: karena berbasis percentile relatif, skor akan bergeser kalau komposisi/jumlah instrument yang discoring berubah signifikan (mis. baru pertama kali dipakai dengan data sedikit) — ini bukan skor absolut yang bisa dibandingkan lintas periode/plant tanpa konteks. Cukup untuk MVP prioritisasi internal, belum untuk benchmarking eksternal.
+- 4 unit test baru mencakup: instrument tanpa riwayat → INSUFFICIENT_DATA, instrument performa buruk mendapat skor lebih rendah dari peer, criticality HIGH memperberat skor dibanding LOW untuk data identik, dan threshold kategori.

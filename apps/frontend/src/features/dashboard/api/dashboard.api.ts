@@ -1,5 +1,5 @@
 import { api } from '@/lib/axios';
-import type { DashboardCharts, DashboardKpi, DashboardRecent, DashboardSummary } from '../types/dashboard.types';
+import type { DashboardCharts, DashboardHealthIndex, DashboardKpi, DashboardRecent, DashboardSummary } from '../types/dashboard.types';
 
 // Endpoint ini mengembalikan objek biasa (bukan array), tapi tetap dibungkus
 // {data: ...} oleh ResponseTransformInterceptor backend — jadi tetap perlu
@@ -21,5 +21,10 @@ export async function fetchDashboardRecent() {
 
 export async function fetchDashboardKpi(months: number) {
   const { data } = await api.get<{ data: DashboardKpi }>('/dashboard/kpi', { params: { months } });
+  return data.data;
+}
+
+export async function fetchDashboardHealthIndex(months: number) {
+  const { data } = await api.get<{ data: DashboardHealthIndex }>('/dashboard/health-index', { params: { months } });
   return data.data;
 }

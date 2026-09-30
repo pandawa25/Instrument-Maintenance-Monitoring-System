@@ -21,6 +21,11 @@ const STATUS_STYLES: Record<string, string> = {
   MAINTENANCE_RETURN: 'bg-success/10 text-success border-success/30',
   RESTOCK: 'bg-success/10 text-success border-success/30',
   ADJUSTMENT: 'bg-warning/10 text-warning border-warning/30',
+  GOOD: 'bg-success/10 text-success border-success/30',
+  FAIR: 'bg-secondary/10 text-secondary border-secondary/30',
+  POOR: 'bg-warning/10 text-warning border-warning/30',
+  CRITICAL: 'bg-danger/10 text-danger border-danger/30',
+  INSUFFICIENT_DATA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
 };
 
 export function StatusBadge({ value }: { value: string }) {

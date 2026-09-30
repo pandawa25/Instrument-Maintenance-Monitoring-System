@@ -37,4 +37,11 @@ export class DashboardController {
   getKpi(@Query('months') months?: string) {
     return this.dashboardService.getKpi(months ? Number(months) : undefined);
   }
+
+  @Get('health-index')
+  @ApiOperation({ summary: 'Instrument Health Index — skor komposit dari MTTR/MTBF/failure frequency/criticality per instrument' })
+  @ApiQuery({ name: 'months', required: false, description: 'Rentang trailing bulan (default 12)', example: 12 })
+  getHealthIndex(@Query('months') months?: string) {
+    return this.dashboardService.getHealthIndex(months ? Number(months) : undefined);
+  }
 }

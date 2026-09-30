@@ -8,6 +8,7 @@ import {
 } from '../components/dashboard-charts';
 import { LatestMaintenanceTable, UpcomingPmList } from '../components/dashboard-recent';
 import { KpiSection } from '../components/kpi-section';
+import { HealthIndexSection } from '../components/health-index-section';
 
 export function DashboardPage() {
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
@@ -37,6 +38,10 @@ export function DashboardPage() {
 
       <div className="border-t border-border pt-4">
         <KpiSection />
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <HealthIndexSection />
       </div>
     </div>
   );

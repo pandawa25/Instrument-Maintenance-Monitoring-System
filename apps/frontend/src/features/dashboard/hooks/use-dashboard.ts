@@ -1,5 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchDashboardCharts, fetchDashboardKpi, fetchDashboardRecent, fetchDashboardSummary } from '../api/dashboard.api';
+import {
+  fetchDashboardCharts,
+  fetchDashboardHealthIndex,
+  fetchDashboardKpi,
+  fetchDashboardRecent,
+  fetchDashboardSummary,
+} from '../api/dashboard.api';
 
 // staleTime pendek — dashboard mestinya cukup up-to-date tiap dibuka, tapi tidak
 // perlu refetch terus-menerus selagi dilihat.
@@ -21,6 +27,14 @@ export function useDashboardKpi(months: number) {
   return useQuery({
     queryKey: ['dashboard', 'kpi', months],
     queryFn: () => fetchDashboardKpi(months),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useDashboardHealthIndex(months: number) {
+  return useQuery({
+    queryKey: ['dashboard', 'health-index', months],
+    queryFn: () => fetchDashboardHealthIndex(months),
     staleTime: STALE_TIME,
   });
 }

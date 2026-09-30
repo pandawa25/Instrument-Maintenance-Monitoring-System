@@ -88,3 +88,34 @@ export interface DashboardKpi {
   byArea: KpiByArea[];
   byInstrument: KpiByInstrument[];
 }
+
+export type HealthCategory = 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL' | 'INSUFFICIENT_DATA';
+
+export interface HealthIndexItem {
+  equipmentId: string;
+  tagNumber: string;
+  service: string;
+  areaCode: string;
+  areaName?: string;
+  criticality: 'HIGH' | 'MEDIUM' | 'LOW';
+  mttr: number | null;
+  mtbf: number | null;
+  totalFailures: number;
+  hasEnoughData: boolean;
+  healthScore: number | null;
+  category: HealthCategory;
+}
+
+export interface HealthIndexSummary {
+  good: number;
+  fair: number;
+  poor: number;
+  critical: number;
+  insufficientData: number;
+}
+
+export interface DashboardHealthIndex {
+  period: { months: number; from: string };
+  summary: HealthIndexSummary;
+  items: HealthIndexItem[];
+}

@@ -125,6 +125,13 @@ export class DashboardRepository {
     });
   }
 
+  async getActiveEquipmentForHealthIndex() {
+    return this.prisma.equipment.findMany({
+      where: { deletedAt: null },
+      select: { id: true, tagNumber: true, service: true, areaId: true, criticality: true },
+    });
+  }
+
   async getAreaLookup() {
     const areas = await this.prisma.area.findMany({ where: { deletedAt: null }, select: { id: true, areaCode: true, areaName: true } });
     return new Map(areas.map((a) => [a.id, a]));

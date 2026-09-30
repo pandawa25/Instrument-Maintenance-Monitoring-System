@@ -6,11 +6,13 @@ function buildRepository(opts: {
   failures?: any[];
   pmExecutions?: any[];
   areaLookup?: Map<string, { id: string; areaCode: string; areaName: string }>;
+  equipmentList?: any[];
 }) {
   return {
     getFailuresInPeriod: jest.fn().mockResolvedValue(opts.failures ?? []),
     getPmExecutionsInPeriod: jest.fn().mockResolvedValue(opts.pmExecutions ?? []),
     getAreaLookup: jest.fn().mockResolvedValue(opts.areaLookup ?? new Map()),
+    getActiveEquipmentForHealthIndex: jest.fn().mockResolvedValue(opts.equipmentList ?? []),
   };
 }
 
@@ -179,5 +181,122 @@ describe('DashboardService.getKpi', () => {
     const result = await service.getKpi();
 
     expect(result.period.months).toBe(12);
+  });
+});
+
+describe('DashboardService.getHealthIndex', () => {
+  const eqReliable = { id: 'eq-good', tagNumber: 'PT-GOOD', service: 'Pressure', areaId: AREA_A.id, criticality: 'MEDIUM' };
+  const eqPoor = { id: 'eq-poor', tagNumber: 'PT-POOR', service: 'Pressure', areaId: AREA_A.id, criticality: 'MEDIUM' };
+  const eqIdle = { id: 'eq-idle', tagNumber: 'PT-IDLE', service: 'Pressure', areaId: AREA_A.id, criticality: 'MEDIUM' };
+
+  it('equipment tanpa riwayat kegagalan ditandai INSUFFICIENT_DATA, bukan skor tinggi', async () => {
+    const repo = buildRepository({
+      equipmentList: [eqIdle],
+      failures: [],
+      areaLookup: new Map([[AREA_A.id, AREA_A]]),
+    });
+    const service = new DashboardService(repo as any);
+
+    const result = await service.getHealthIndex(12);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].category).toBe('INSUFFICIENT_DATA');
+    expect(result.items[0].healthScore).toBeNull();
+    expect(result.summary.insufficientData).toBe(1);
+  });
+
+  it('equipment dengan MTTR & failure count lebih buruk dari peer mendapat skor lebih rendah', async () => {
+    const failures = [
+      // eq-good: 1 kejadian, downtime kecil
+      {
+        maintenanceDate: new Date('2026-01-05'),
+        downtimeHours: 1,
+        equipmentId: 'eq-good',
+        equipment: { tagNumber: 'PT-GOOD', service: 'Pressure', areaId: AREA_A.id },
+      },
+      // eq-poor: 3 kejadian, downtime besar
+      {
+        maintenanceDate: new Date('2026-01-05'),
+        downtimeHours: 10,
+        equipmentId: 'eq-poor',
+        equipment: { tagNumber: 'PT-POOR', service: 'Pressure', areaId: AREA_A.id },
+      },
+      {
+        maintenanceDate: new Date('2026-02-05'),
+        downtimeHours: 12,
+        equipmentId: 'eq-poor',
+        equipment: { tagNumber: 'PT-POOR', service: 'Pressure', areaId: AREA_A.id },
+      },
+      {
+        maintenanceDate: new Date('2026-03-05'),
+        downtimeHours: 9,
+        equipmentId: 'eq-poor',
+        equipment: { tagNumber: 'PT-POOR', service: 'Pressure', areaId: AREA_A.id },
+      },
+    ];
+    const repo = buildRepository({
+      equipmentList: [eqReliable, eqPoor],
+      failures,
+      areaLookup: new Map([[AREA_A.id, AREA_A]]),
+    });
+    const service = new DashboardService(repo as any);
+
+    const result = await service.getHealthIndex(12);
+
+    const good = result.items.find((i) => i.equipmentId === 'eq-good')!;
+    const poor = result.items.find((i) => i.equipmentId === 'eq-poor')!;
+
+    expect(good.hasEnoughData).toBe(true);
+    expect(poor.hasEnoughData).toBe(true);
+    expect(good.healthScore!).toBeGreaterThan(poor.healthScore!);
+    // Item terurut dari skor paling rendah (paling urgent) dulu
+    expect(result.items[0].equipmentId).toBe('eq-poor');
+  });
+
+  it('criticality HIGH memperberat skor akhir dibanding LOW untuk performa reliability yang identik', async () => {
+    const failuresFor = (equipmentId: string) => [
+      { maintenanceDate: new Date('2026-01-01'), downtimeHours: 5, equipmentId, equipment: { tagNumber: equipmentId, service: 'X', areaId: AREA_A.id } },
+      { maintenanceDate: new Date('2026-02-01'), downtimeHours: 5, equipmentId, equipment: { tagNumber: equipmentId, service: 'X', areaId: AREA_A.id } },
+    ];
+    const eqHigh = { id: 'eq-high', tagNumber: 'eq-high', service: 'X', areaId: AREA_A.id, criticality: 'HIGH' };
+    const eqLow = { id: 'eq-low', tagNumber: 'eq-low', service: 'X', areaId: AREA_A.id, criticality: 'LOW' };
+
+    const repo = buildRepository({
+      equipmentList: [eqHigh, eqLow],
+      failures: [...failuresFor('eq-high'), ...failuresFor('eq-low')],
+      areaLookup: new Map([[AREA_A.id, AREA_A]]),
+    });
+    const service = new DashboardService(repo as any);
+
+    const result = await service.getHealthIndex(12);
+
+    const high = result.items.find((i) => i.equipmentId === 'eq-high')!;
+    const low = result.items.find((i) => i.equipmentId === 'eq-low')!;
+
+    // Base reliability score sama persis (data identik) tapi HIGH criticality
+    // harus menghasilkan skor akhir <= LOW criticality kalau base score < 100.
+    expect(high.healthScore!).toBeLessThanOrEqual(low.healthScore!);
+  });
+
+  it('kategori mengikuti threshold skor (GOOD/FAIR/POOR/CRITICAL)', async () => {
+    // Satu-satunya equipment scorable -> otomatis jadi percentile terbaik (skor 100)
+    const repo = buildRepository({
+      equipmentList: [eqReliable],
+      failures: [
+        {
+          maintenanceDate: new Date('2026-01-01'),
+          downtimeHours: 1,
+          equipmentId: 'eq-good',
+          equipment: { tagNumber: 'PT-GOOD', service: 'Pressure', areaId: AREA_A.id },
+        },
+      ],
+      areaLookup: new Map([[AREA_A.id, AREA_A]]),
+    });
+    const service = new DashboardService(repo as any);
+
+    const result = await service.getHealthIndex(12);
+
+    expect(result.items[0].category).toBe('GOOD');
+    expect(result.items[0].healthScore).toBe(100);
   });
 });

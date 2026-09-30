@@ -46,6 +46,60 @@ function round1(value: number | null): number | null {
   return value === null ? null : Math.round(value * 10) / 10;
 }
 
+type HealthCategory = 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL';
+
+interface HealthIndexItem {
+  equipmentId: string;
+  tagNumber: string;
+  service: string;
+  areaCode: string;
+  areaName?: string;
+  criticality: 'HIGH' | 'MEDIUM' | 'LOW';
+  mttr: number | null;
+  mtbf: number | null;
+  totalFailures: number;
+  hasEnoughData: boolean;
+  healthScore: number | null;
+  category: HealthCategory | 'INSUFFICIENT_DATA';
+}
+
+// Criticality memperbesar/memperkecil dampak dari "kekurangan" reliability
+// terhadap skor akhir — bukan komponen skor terpisah. Instrument HIGH
+// criticality dengan performa sama seperti instrument LOW criticality akan
+// mendapat skor akhir lebih rendah (lebih mendesak untuk diperhatikan).
+const CRITICALITY_DEFICIT_FACTOR: Record<'HIGH' | 'MEDIUM' | 'LOW', number> = {
+  HIGH: 1.2,
+  MEDIUM: 1.0,
+  LOW: 0.8,
+};
+
+function categorize(score: number): HealthCategory {
+  if (score >= 85) return 'GOOD';
+  if (score >= 70) return 'FAIR';
+  if (score >= 50) return 'POOR';
+  return 'CRITICAL';
+}
+
+// Percentile rank sederhana (0 = terbaik di populasi, 1 = terburuk) dipakai
+// untuk menormalkan MTTR/MTBF/failure count ke skala 0-100 relatif terhadap
+// instrument lain di plant yang sama — karena kita belum punya angka acuan
+// industri baku untuk plant ini.
+function percentileScoreAscendingIsBad(values: number[], value: number): number {
+  // dipakai untuk metrik yang "makin besar makin buruk" (MTTR, failure count)
+  if (values.length <= 1) return 100;
+  const worseOrEqualCount = values.filter((v) => v <= value).length - 1; // exclude diri sendiri
+  const rank = worseOrEqualCount / (values.length - 1); // 0 = paling kecil/baik, 1 = paling besar/buruk
+  return Math.round((1 - rank) * 100);
+}
+
+function percentileScoreAscendingIsGood(values: number[], value: number): number {
+  // dipakai untuk metrik yang "makin besar makin baik" (MTBF)
+  if (values.length <= 1) return 100;
+  const worseOrEqualCount = values.filter((v) => v <= value).length - 1;
+  const rank = worseOrEqualCount / (values.length - 1); // 0 = paling kecil/buruk, 1 = paling besar/baik
+  return Math.round(rank * 100);
+}
+
 function finalizeKpi(acc: KpiAccumulator): KpiResult {
   const sortedDates = [...acc.failureDates].sort((a, b) => a.getTime() - b.getTime());
   return {
@@ -209,6 +263,129 @@ export class DashboardService {
       byInstrument: Array.from(byEquipmentAcc.values())
         .map((acc) => ({ tagNumber: acc.label, service: acc.sublabel, ...finalizeKpi(acc) }))
         .sort((a, b) => b.totalFailures - a.totalFailures),
+    };
+  }
+
+  async getHealthIndex(months?: number) {
+    const rangeMonths = months && months > 0 ? months : DEFAULT_KPI_MONTHS;
+    const since = new Date();
+    since.setDate(1);
+    since.setHours(0, 0, 0, 0);
+    since.setMonth(since.getMonth() - (rangeMonths - 1));
+
+    const [equipmentList, failures, areaLookup] = await Promise.all([
+      this.repository.getActiveEquipmentForHealthIndex(),
+      this.repository.getFailuresInPeriod(since),
+      this.repository.getAreaLookup(),
+    ]);
+
+    // Kumpulkan raw stats per equipment dari riwayat kegagalan dalam periode.
+    const statsByEquipment = new Map<string, { downtimeSum: number; downtimeCount: number; dates: Date[] }>();
+    for (const f of failures as any[]) {
+      let s = statsByEquipment.get(f.equipmentId);
+      if (!s) {
+        s = { downtimeSum: 0, downtimeCount: 0, dates: [] };
+        statsByEquipment.set(f.equipmentId, s);
+      }
+      s.dates.push(f.maintenanceDate);
+      if (f.downtimeHours !== null) {
+        s.downtimeSum += Number(f.downtimeHours);
+        s.downtimeCount += 1;
+      }
+    }
+
+    // Baris mentah per equipment — equipment tanpa kegagalan dalam periode
+    // tetap dimasukkan (sebagai "Belum Cukup Data"), bukan cuma yang punya riwayat.
+    const rows = (equipmentList as any[]).map((eq) => {
+      const s = statsByEquipment.get(eq.id);
+      const sortedDates = s ? [...s.dates].sort((a, b) => a.getTime() - b.getTime()) : [];
+      const area = areaLookup.get(eq.areaId);
+      return {
+        equipmentId: eq.id as string,
+        tagNumber: eq.tagNumber as string,
+        service: eq.service as string,
+        areaCode: area?.areaCode ?? '-',
+        areaName: area?.areaName ?? '-',
+        criticality: eq.criticality as 'HIGH' | 'MEDIUM' | 'LOW',
+        totalFailures: sortedDates.length,
+        mttr: round1(s && s.downtimeCount > 0 ? s.downtimeSum / s.downtimeCount : null),
+        mtbf: round1(computeMtbfDays(sortedDates)),
+      };
+    });
+
+    // "Cukup data" = minimal 1 kejadian gagal tercatat dalam periode (sesuai
+    // keputusan desain: equipment tanpa riwayat CM tidak dipaksa masuk skor,
+    // supaya idle tidak disalahartikan sebagai reliable).
+    const scorable = rows.filter((r) => r.totalFailures > 0);
+    const insufficient = rows.filter((r) => r.totalFailures === 0);
+
+    const mttrPeers = scorable.filter((r) => r.mttr !== null).map((r) => r.mttr as number);
+    const mtbfPeers = scorable.filter((r) => r.mtbf !== null).map((r) => r.mtbf as number);
+    const failurePeers = scorable.map((r) => r.totalFailures);
+
+    const items: HealthIndexItem[] = scorable.map((r) => {
+      const parts: { score: number; weight: number }[] = [];
+      if (r.mttr !== null) parts.push({ score: percentileScoreAscendingIsBad(mttrPeers, r.mttr), weight: 0.35 });
+      if (r.mtbf !== null) parts.push({ score: percentileScoreAscendingIsGood(mtbfPeers, r.mtbf), weight: 0.35 });
+      parts.push({ score: percentileScoreAscendingIsBad(failurePeers, r.totalFailures), weight: 0.3 });
+
+      const totalWeight = parts.reduce((sum, p) => sum + p.weight, 0);
+      const baseScore = parts.reduce((sum, p) => sum + p.score * p.weight, 0) / totalWeight;
+
+      const deficit = 100 - baseScore;
+      const adjusted = 100 - deficit * CRITICALITY_DEFICIT_FACTOR[r.criticality];
+      const healthScore = Math.round(Math.max(0, Math.min(100, adjusted)));
+
+      return {
+        equipmentId: r.equipmentId,
+        tagNumber: r.tagNumber,
+        service: r.service,
+        areaCode: r.areaCode,
+        areaName: r.areaName,
+        criticality: r.criticality,
+        mttr: r.mttr,
+        mtbf: r.mtbf,
+        totalFailures: r.totalFailures,
+        hasEnoughData: true,
+        healthScore,
+        category: categorize(healthScore),
+      };
+    });
+
+    const insufficientItems: HealthIndexItem[] = insufficient.map((r) => ({
+      equipmentId: r.equipmentId,
+      tagNumber: r.tagNumber,
+      service: r.service,
+      areaCode: r.areaCode,
+      areaName: r.areaName,
+      criticality: r.criticality,
+      mttr: null,
+      mtbf: null,
+      totalFailures: 0,
+      hasEnoughData: false,
+      healthScore: null,
+      category: 'INSUFFICIENT_DATA',
+    }));
+
+    const allItems = [...items, ...insufficientItems].sort((a, b) => {
+      if (a.healthScore === null && b.healthScore === null) return 0;
+      if (a.healthScore === null) return 1;
+      if (b.healthScore === null) return -1;
+      return a.healthScore - b.healthScore; // paling urgent (skor terendah) dulu
+    });
+
+    const summary = {
+      good: items.filter((i) => i.category === 'GOOD').length,
+      fair: items.filter((i) => i.category === 'FAIR').length,
+      poor: items.filter((i) => i.category === 'POOR').length,
+      critical: items.filter((i) => i.category === 'CRITICAL').length,
+      insufficientData: insufficientItems.length,
+    };
+
+    return {
+      period: { months: rangeMonths, from: since.toISOString() },
+      summary,
+      items: allItems,
     };
   }
 
