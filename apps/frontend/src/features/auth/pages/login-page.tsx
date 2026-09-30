@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Activity, Boxes, Eye, EyeOff, Gauge, Loader2, ShieldCheck, Wrench } from 'lucide-react';
+import { Activity, Eye, EyeOff, Loader2, ShieldCheck, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,9 +44,7 @@ export function LoginPage() {
         <BrandPattern />
 
         <div className="relative flex items-center gap-2.5 text-white">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 backdrop-blur">
-            <Boxes className="h-5 w-5" />
-          </div>
+          <img src="/brand/app-mark.png" alt="IMMS" className="h-9 w-9 rounded-lg shadow-sm" />
           <span className="text-sm font-semibold tracking-wide">IMMS</span>
         </div>
 
@@ -77,12 +75,7 @@ export function LoginPage() {
       {/* Panel kanan — form login */}
       <div className="flex w-full flex-1 flex-col justify-between px-6 py-8 sm:px-10 lg:w-[54%] lg:px-16">
         <div className="flex items-center justify-between lg:justify-end">
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
-              <Gauge className="h-5 w-5" />
-            </div>
-            <span className="text-sm font-semibold text-text">IMMS</span>
-          </div>
+          <img src="/brand/logo-icon-wordmark-h56.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-8 w-auto lg:hidden" />
           <ThemeToggle />
         </div>
 

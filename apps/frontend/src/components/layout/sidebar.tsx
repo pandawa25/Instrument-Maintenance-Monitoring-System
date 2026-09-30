@@ -7,7 +7,6 @@ import {
   Tag,
   Wrench,
   Users,
-  Boxes,
   CalendarClock,
   Building2,
   ListChecks,
@@ -108,14 +107,10 @@ export function Sidebar() {
       )}
     >
       <div className={cn('flex items-center gap-2.5 border-b border-border px-5 py-4', collapsed && 'justify-center px-3')}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
-          <Boxes className="h-5 w-5" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold leading-tight text-text">IMMS</div>
-            <div className="truncate text-[11px] leading-tight text-text-muted">Instrument Maintenance</div>
-          </div>
+        {collapsed ? (
+          <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 shrink-0 rounded-lg" />
+        ) : (
+          <img src="/brand/logo-icon-wordmark-h96.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-9 w-auto" />
         )}
       </div>
 
