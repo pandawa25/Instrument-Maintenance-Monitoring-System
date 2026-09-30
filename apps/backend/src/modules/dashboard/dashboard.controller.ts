@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -29,5 +29,12 @@ export class DashboardController {
   @ApiOperation({ summary: '10 corrective maintenance terbaru + periode PM yang masih pending' })
   getRecent() {
     return this.dashboardService.getRecent();
+  }
+
+  @Get('kpi')
+  @ApiOperation({ summary: 'KPI: MTTR, MTBF, PM Compliance Rate — overall, per Area, per Instrument' })
+  @ApiQuery({ name: 'months', required: false, description: 'Rentang trailing bulan (default 12)', example: 12 })
+  getKpi(@Query('months') months?: string) {
+    return this.dashboardService.getKpi(months ? Number(months) : undefined);
   }
 }

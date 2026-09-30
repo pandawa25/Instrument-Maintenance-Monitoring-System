@@ -63,3 +63,28 @@ export interface DashboardRecent {
   latestMaintenance: LatestMaintenanceItem[];
   upcomingPmPeriods: UpcomingPmPeriod[];
 }
+
+export interface KpiMetrics {
+  mttr: number | null; // jam, rata-rata per kejadian gagal
+  mtbf: number | null; // hari, rata-rata interval antar kegagalan
+  pmComplianceRate: number | null; // persen
+  totalFailures: number;
+  totalPmScheduled: number;
+}
+
+export interface KpiByArea extends KpiMetrics {
+  areaCode: string;
+  areaName?: string;
+}
+
+export interface KpiByInstrument extends KpiMetrics {
+  tagNumber: string;
+  service?: string;
+}
+
+export interface DashboardKpi {
+  period: { months: number; from: string };
+  overall: KpiMetrics;
+  byArea: KpiByArea[];
+  byInstrument: KpiByInstrument[];
+}

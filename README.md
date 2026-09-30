@@ -126,6 +126,7 @@ chore: update dependency
 - [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
 - [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD
 - [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance
+- [x] KPI Dashboard (Phase 3b) — MTTR, MTBF, PM Compliance Rate: overall, per Area, per Instrument, dengan filter rentang bulan
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -170,3 +171,16 @@ chore: update dependency
 - **Multi-technician** (Corrective Maintenance saja): tabel baru `corrective_maintenance_technicians` (many-to-many ke `users`) untuk technician **tambahan**. Field `technicianId` yang sudah ada tetap sebagai "technician utama" (PIC) — tidak breaking untuk laporan/filter yang sudah keyed ke `technicianId`. PM Period Execution tidak diubah untuk multi-technician — tetap pakai field free-text `vendorPersonnel` yang sudah ada, karena biasanya PM dikerjakan vendor eksternal, bukan technician internal terdaftar.
 - Update `additionalTechnicianIds` di backend pakai pola **replace-all** (hapus semua baris lama, insert ulang daftar baru) — sama seperti pola `materials` di Corrective Maintenance, konsisten dan sederhana untuk skala tim kecil (<20 user).
 - Belum ada kolom Work Order di tabel list (Maintenance List / PM Execution List) — info ini hanya tampil di form edit & detail dialog untuk menjaga tabel tetap ringkas; bisa ditambahkan sebagai kolom opsional kalau kebutuhan filter/reporting berdasarkan WO muncul nanti.
+
+### KPI Dashboard
+
+- **Definisi & rumus:**
+  - **MTTR** (Mean Time To Repair) = rata-rata `downtimeHours` dari seluruh Corrective Maintenance berstatus `COMPLETED` dalam periode. Kejadian tanpa `downtimeHours` (null) diabaikan dari perhitungan, bukan dianggap 0.
+  - **MTBF** (Mean Time Between Failures) = rata-rata interval **hari kalender** antar kejadian gagal berurutan per equipment. **Catatan penting**: ini calendar-based, bukan operating-hours-based (running hours meter belum ditrack di sistem) — jadi MTBF di sini mengukur "seberapa sering equipment gagal secara kalender", bukan MTBF klasik berbasis jam operasi. Equipment dengan <2 kejadian gagal dalam periode menghasilkan MTBF `null` (belum bisa dihitung), bukan 0.
+  - **PM Compliance Rate** = `COMPLETED` / total `PmPeriodExecution` yang dijadwalkan (berdasarkan `plannedDate` periode) dalam periode, dikali 100%.
+- **Level agregasi**: Overall (seluruh plant), per Area, per Instrument (Tag Number) — dihitung dalam satu request yang sama (bukan 3 endpoint terpisah), lalu di-drill-down di frontend.
+- **Rentang waktu**: trailing N bulan dari hari ini (pilihan 3/6/12/24 bulan di UI, default 12). Filter ini menentukan kejadian gagal & PM mana saja yang dihitung — bukan filter tampilan setelah data diambil.
+- **Pendekatan implementasi**: dihitung **on-the-fly** di `DashboardService.getKpi()` (agregasi di JS setelah 2 query Prisma) — bukan tabel agregat/materialized view maupun scheduled job. Cukup untuk skala 1 plant/<20 user; kalau dataset membesar signifikan, ini adalah titik pertama yang perlu dioptimasi (mis. pindah ke SQL `GROUP BY` langsung atau pre-agregasi berkala).
+- Endpoint: `GET /dashboard/kpi?months=12` — ditempatkan sebagai section baru di halaman Dashboard yang sudah ada (bukan menu/halaman terpisah), di bawah chart & tabel recent yang sudah ada.
+- Tabel "KPI per Instrument" punya search box client-side (filter by Tag Number/service) karena datanya bisa banyak baris — tidak ada pagination server-side untuk endpoint ini (dianggap cukup untuk skala saat ini, seluruh instrument dikirim sekaligus).
+- Unit test (`dashboard.service.spec.ts`) mencakup: perhitungan MTTR dengan/tanpa data null, MTBF dengan multiple interval, MTBF null untuk data <2 titik, PM compliance rate, pengelompokan per Area/Instrument terpisah dari overall, dan default rentang 12 bulan.

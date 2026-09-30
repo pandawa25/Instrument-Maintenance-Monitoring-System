@@ -98,6 +98,38 @@ export class DashboardRepository {
     });
   }
 
+  // --- KPI Dashboard (MTTR, MTBF, PM Compliance Rate) ---
+  // Dihitung on-the-fly dari data existing (bukan tabel agregat) — cukup untuk skala 1 plant/<20 user.
+
+  async getFailuresInPeriod(since: Date) {
+    return this.prisma.correctiveMaintenance.findMany({
+      where: { deletedAt: null, maintenanceDate: { gte: since }, status: 'COMPLETED' },
+      select: {
+        maintenanceDate: true,
+        downtimeHours: true,
+        equipmentId: true,
+        equipment: { select: { tagNumber: true, service: true, areaId: true } },
+      },
+      orderBy: { maintenanceDate: 'asc' },
+    });
+  }
+
+  async getPmExecutionsInPeriod(since: Date) {
+    return this.prisma.pmPeriodExecution.findMany({
+      where: { deletedAt: null, pmPeriod: { plannedDate: { gte: since } } },
+      select: {
+        status: true,
+        equipmentId: true,
+        equipment: { select: { tagNumber: true, service: true, areaId: true } },
+      },
+    });
+  }
+
+  async getAreaLookup() {
+    const areas = await this.prisma.area.findMany({ where: { deletedAt: null }, select: { id: true, areaCode: true, areaName: true } });
+    return new Map(areas.map((a) => [a.id, a]));
+  }
+
   // Periode PM yang masih punya eksekusi PENDING — urut yang paling mendesak (plannedDate terdekat) dulu.
   getUpcomingPmPeriods(take: number) {
     return this.prisma.pmPeriod.findMany({
