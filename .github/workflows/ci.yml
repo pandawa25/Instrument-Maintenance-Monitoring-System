@@ -15,7 +15,13 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install --workspace=apps/backend
+      # apps/backend depends on @imms/shared-utils (workspace package, dist/
+      # tidak di-commit ke git — lihat .gitignore) — install & build ketiganya
+      # bareng, urutan sama persis dengan docker/Dockerfile.backend yang sudah
+      # terbukti jalan di Railway. Tanpa ini, tsc gagal resolve
+      # '@imms/shared-utils' karena dist/-nya belum ada di checkout bersih.
+      - run: npm install --workspace=apps/backend --workspace=packages/shared-utils --workspace=packages/shared-types
+      - run: npm run build --workspace=packages/shared-utils
       - run: npm run prisma:generate --workspace=apps/backend
       - run: npm run build --workspace=apps/backend
 
