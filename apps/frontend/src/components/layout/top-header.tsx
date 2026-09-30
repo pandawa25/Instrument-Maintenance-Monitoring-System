@@ -1,6 +1,7 @@
 import { LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { logoutRequest } from '@/features/auth/api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
 
@@ -47,7 +48,14 @@ export function TopHeader({ title }: { title: string }) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => {
+          onClick={async () => {
+            // Cabut refresh token di server dulu (best-effort — logout lokal
+            // tetap jalan walau request ini gagal, mis. koneksi putus).
+            try {
+              await logoutRequest();
+            } catch {
+              // diabaikan — bukan alasan gagal logout di sisi client
+            }
             logout();
             navigate('/login');
           }}

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
@@ -15,6 +16,13 @@ async function bootstrap() {
   // Tambahkan app.enableVersioning() lagi nanti kalau memang dibutuhkan breaking change API.
   app.setGlobalPrefix('api');
 
+  // Dibutuhkan untuk baca cookie httpOnly refresh token di AuthController
+  // (req.cookies) — lihat modules/auth.
+  app.use(cookieParser());
+
+  // credentials:true WAJIB untuk refresh token cookie ikut terkirim
+  // cross-origin (frontend & backend beda subdomain Railway); origin TIDAK
+  // boleh '*' selama credentials true (browser menolaknya).
   app.enableCors({
     origin: config.get<string>('corsOrigin'),
     credentials: true,

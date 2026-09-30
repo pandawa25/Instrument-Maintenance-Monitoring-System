@@ -116,6 +116,8 @@ model User {
   importBatches      ImportBatch[]
   stockMovements     SparePartStockMovement[]
   attachments        Attachment[]
+  refreshTokens      RefreshToken[]
+  loginHistory       LoginHistory[]
 
   @@index([roleId])
   @@map("users")
@@ -574,4 +576,45 @@ model Attachment {
 
   @@index([entityType, entityId])
   @@map("attachments")
+}
+
+// Refresh token opaque (bukan JWT) — token mentah cuma dikirim sekali ke
+// client lewat httpOnly cookie, yang disimpan di sini SELALU hash SHA-256-nya
+// (sama seperti prinsip password hashing: kalau DB bocor, token tidak
+// langsung bisa dipakai). Rotation: setiap dipakai di POST /auth/refresh,
+// token ini di-revoke dan digantikan token baru (replacedById) — reuse
+// terhadap token yang sudah di-revoke dianggap tanda pencurian, memicu
+// revoke SEMUA refresh token milik user itu (lihat AuthService.refresh()).
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+  userAgent    String?   @map("user_agent") @db.VarChar(255)
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// Audit percobaan login — sukses maupun gagal, TAPI hanya untuk email yang
+// benar-benar terdaftar (menghindari noise dari email asal ketik/bot scan).
+// Berguna untuk deteksi percobaan brute-force pada 1 akun.
+model LoginHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  success   Boolean
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("login_history")
 }

@@ -122,4 +122,16 @@ chore: update dependency
 - [x] Module Spare Part / Material + integrasi kebutuhan material di Corrective Maintenance
 - [x] Stock Movement Ledger (Phase 2) — audit trail lengkap perubahan stock, restock/adjustment manual
 - [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
+- [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
+
+### Refresh Token & Session Hardening
+
+- Access token JWT (15 menit, `JWT_EXPIRES_IN`) tetap dikirim di response body & dipakai lewat header `Authorization: Bearer`.
+- Refresh token **opaque** (bukan JWT, random 64-byte hex), disimpan di DB hanya dalam bentuk hash SHA-256, dikirim ke client lewat cookie `httpOnly` (`imms_refresh_token`, scope path `/api/auth`, `expires` sesuai `JWT_REFRESH_EXPIRES_IN` default 7 hari).
+- Setiap `POST /auth/refresh` melakukan **rotation**: token lama langsung di-revoke, token baru diterbitkan — sekali pakai per token.
+- **Reuse detection**: kalau refresh token yang sudah pernah di-revoke dipakai lagi (indikasi dicuri/replay), seluruh refresh token milik user tersebut langsung dicabut, memaksa login ulang di semua device.
+- `COOKIE_SECURE` mengikuti `NODE_ENV` (production = `true`, otomatis `Secure` + `SameSite=None`, dibutuhkan karena frontend & backend beda subdomain di Railway). Untuk docker-compose lokal (HTTP, bukan HTTPS) di-override eksplisit `COOKIE_SECURE=false` supaya cookie tetap terkirim.
+- `CORS_ORIGIN` di backend **wajib** diisi origin frontend yang eksak (bukan `*`) — browser menolak cookie cross-origin kalau `Access-Control-Allow-Origin` wildcard sementara `credentials: true`.
+- Login history (tabel `login_history`) mencatat sukses & gagal, **hanya untuk email yang terdaftar** (email yang sama sekali tidak ada di sistem tidak dicatat, menghindari noise dari salah ketik/bot scan).
+- Belum ada UI admin untuk browse/revoke session aktif — baru kemampuan backend (rotation otomatis + revoke saat logout).

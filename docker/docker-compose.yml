@@ -31,8 +31,12 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-imms_user}:${POSTGRES_PASSWORD:-change_me}@db:5432/${POSTGRES_DB:-imms_db}?schema=public
       JWT_SECRET: ${JWT_SECRET:-change_me_to_a_long_random_string}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      # HTTP polos di lokal (bukan di belakang HTTPS seperti Railway) — cookie
+      # refresh token tidak bisa Secure+SameSite=None di sini, lihat app.config.ts.
+      COOKIE_SECURE: "false"
       UPLOAD_DIR: /data/uploads
     ports:
       - "3000:3000"
