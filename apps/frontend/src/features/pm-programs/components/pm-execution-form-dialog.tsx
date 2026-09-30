@@ -17,6 +17,9 @@ interface FormState {
   vendorPersonnel: string;
   remarks: string;
   status: PmExecutionStatus;
+  workOrderNumber: string;
+  workOrderDate: string;
+  workOrderStatus: string;
   checklistResults: { id: string; result: PmChecklistResult; notes: string }[];
 }
 
@@ -28,6 +31,9 @@ const EMPTY_FORM: FormState = {
   vendorPersonnel: '',
   remarks: '',
   status: 'PENDING',
+  workOrderNumber: '',
+  workOrderDate: '',
+  workOrderStatus: '',
   checklistResults: [],
 };
 
@@ -55,6 +61,9 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
         vendorPersonnel: execution.vendorPersonnel ?? '',
         remarks: execution.remarks ?? '',
         status: execution.status,
+        workOrderNumber: execution.workOrderNumber ?? '',
+        workOrderDate: execution.workOrderDate ? execution.workOrderDate.slice(0, 10) : '',
+        workOrderStatus: execution.workOrderStatus ?? '',
         checklistResults: execution.checklistResults.map((c) => ({ id: c.id, result: c.result, notes: c.notes ?? '' })),
       });
       setError(null);
@@ -83,6 +92,9 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
           vendorPersonnel: form.vendorPersonnel || undefined,
           remarks: form.remarks || undefined,
           status: form.status,
+          workOrderNumber: form.workOrderNumber || undefined,
+          workOrderDate: form.workOrderDate || undefined,
+          workOrderStatus: form.workOrderStatus || undefined,
           checklistResults: form.checklistResults.map(({ id, result, notes }) => ({ id, result, notes: notes || undefined })),
         },
       });
@@ -168,6 +180,42 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
               <div className="col-span-2">
                 <Label htmlFor="remarks">Remarks</Label>
                 <Input id="remarks" value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} maxLength={500} />
+              </div>
+            </div>
+
+            <div className="rounded-md border border-border p-3">
+              <p className="mb-3 text-sm font-medium text-text">Informasi Work Order (ERP)</p>
+              <p className="mb-3 text-xs text-text-muted">
+                Diisi manual sebagai referensi setelah WO diterbitkan di sistem ERP (mis. SAP PM). Opsional.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="workOrderNumber">No. Work Order</Label>
+                  <Input
+                    id="workOrderNumber"
+                    value={form.workOrderNumber}
+                    onChange={(e) => setForm({ ...form, workOrderNumber: e.target.value })}
+                    maxLength={50}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="workOrderDate">Tanggal WO</Label>
+                  <Input
+                    id="workOrderDate"
+                    type="date"
+                    value={form.workOrderDate}
+                    onChange={(e) => setForm({ ...form, workOrderDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="workOrderStatus">Status WO</Label>
+                  <Input
+                    id="workOrderStatus"
+                    value={form.workOrderStatus}
+                    onChange={(e) => setForm({ ...form, workOrderStatus: e.target.value })}
+                    maxLength={50}
+                  />
+                </div>
               </div>
             </div>
 

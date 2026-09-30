@@ -39,6 +39,9 @@ export interface PmPeriodExecutionItem {
   vendorPersonnel: string | null;
   remarks: string | null;
   status: PmExecutionStatus;
+  workOrderNumber: string | null;
+  workOrderDate: string | null;
+  workOrderStatus: string | null;
   checklistResults: PmChecklistResultItem[];
 }
 
@@ -65,5 +68,8 @@ export interface UpdatePmPeriodExecutionPayload {
   vendorPersonnel?: string;
   remarks?: string;
   status?: PmExecutionStatus;
+  workOrderNumber?: string;
+  workOrderDate?: string;
+  workOrderStatus?: string;
   checklistResults?: { id: string; result: PmChecklistResult; notes?: string }[];
 }

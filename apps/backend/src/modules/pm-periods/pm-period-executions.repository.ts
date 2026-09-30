@@ -18,12 +18,16 @@ export class PmPeriodExecutionsRepository {
   }
 
   async update(id: string, dto: UpdatePmPeriodExecutionDto) {
-    const { checklistResults, executionDate, ...rest } = dto;
+    const { checklistResults, executionDate, workOrderDate, ...rest } = dto;
 
     return this.prisma.$transaction(async (tx: any) => {
       await tx.pmPeriodExecution.update({
         where: { id },
-        data: { ...rest, executionDate: executionDate ? new Date(executionDate) : undefined },
+        data: {
+          ...rest,
+          executionDate: executionDate ? new Date(executionDate) : undefined,
+          workOrderDate: workOrderDate ? new Date(workOrderDate) : undefined,
+        },
       });
 
       if (checklistResults?.length) {

@@ -44,6 +44,26 @@ export class UpdatePmPeriodExecutionDto {
   @IsEnum(PmExecutionStatus)
   status?: PmExecutionStatus;
 
+  // --- Referensi Work Order dari ERP (mis. SAP PM) — diisi manual setelah
+  // diterbitkan di sana, opsional & free-text. ---
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Nomor Work Order dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  workOrderNumber?: string;
+
+  @ApiProperty({ required: false, example: '2026-04-01' })
+  @IsOptional()
+  @IsDateString()
+  workOrderDate?: string;
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Status Work Order dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  workOrderStatus?: string;
+
   @ApiProperty({ type: [ChecklistResultInputDto], required: false })
   @IsOptional()
   @IsArray()

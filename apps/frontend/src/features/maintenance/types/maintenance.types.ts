@@ -51,12 +51,19 @@ export interface Maintenance {
   actionTaken: string | null;
   downtimeHours: string | number | null;
   technician: TechnicianRef;
+  additionalTechnicians: TechnicianRef[];
   status: MaintenanceStatus;
   completionDate: string | null;
   createdBy: TechnicianRef;
   remarks: string | null;
   needsSparePart: boolean;
   materials: MaintenanceMaterial[];
+  notificationNumber: string | null;
+  notificationDate: string | null;
+  notificationStatus: string | null;
+  workOrderNumber: string | null;
+  workOrderDate: string | null;
+  workOrderStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,11 +83,18 @@ export interface MaintenanceFormValues {
   actionTaken?: string;
   downtimeHours?: number | string;
   technicianId: string;
+  additionalTechnicianIds: string[];
   status: MaintenanceStatus;
   completionDate?: string;
   remarks?: string;
   needsSparePart: boolean;
   materials: MaterialFormItem[];
+  notificationNumber?: string;
+  notificationDate?: string;
+  notificationStatus?: string;
+  workOrderNumber?: string;
+  workOrderDate?: string;
+  workOrderStatus?: string;
 }
 
 export interface MaintenanceQueryParams {

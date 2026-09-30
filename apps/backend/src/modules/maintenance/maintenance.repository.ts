@@ -19,6 +19,9 @@ const LIST_INCLUDE = {
   materials: {
     include: { sparePart: { select: { id: true, kimap: true, name: true, unit: true } } },
   },
+  additionalTechnicians: {
+    include: { user: { select: { id: true, fullName: true } } },
+  },
 } satisfies Prisma.CorrectiveMaintenanceInclude;
 
 /**
@@ -131,7 +134,16 @@ export class MaintenanceRepository {
   }
 
   create(dto: CreateMaintenanceDto, areaId: string, createdById: string) {
-    const { maintenanceDate, completionDate, status, materials, ...rest } = dto;
+    const {
+      maintenanceDate,
+      completionDate,
+      notificationDate,
+      workOrderDate,
+      status,
+      materials,
+      additionalTechnicianIds,
+      ...rest
+    } = dto;
     const resolvedStatus = status ?? 'OPEN';
     // Kalau status langsung diisi COMPLETED tapi completionDate kosong,
     // default-kan ke hari ini — cukup untuk kelengkapan data tanpa memaksa
@@ -145,6 +157,8 @@ export class MaintenanceRepository {
           ...rest,
           maintenanceDate: new Date(maintenanceDate),
           completionDate: resolvedCompletionDate,
+          notificationDate: notificationDate ? new Date(notificationDate) : undefined,
+          workOrderDate: workOrderDate ? new Date(workOrderDate) : undefined,
           status: resolvedStatus,
           areaId,
           createdById,
@@ -159,6 +173,9 @@ export class MaintenanceRepository {
                 },
               }
             : undefined,
+          additionalTechnicians: additionalTechnicianIds?.length
+            ? { createMany: { data: additionalTechnicianIds.map((userId) => ({ userId })) } }
+            : undefined,
         },
       });
 
@@ -171,7 +188,8 @@ export class MaintenanceRepository {
   }
 
   async update(id: string, dto: UpdateMaintenanceDto, actorId: string, areaId?: string) {
-    const { maintenanceDate, completionDate, materials, ...rest } = dto;
+    const { maintenanceDate, completionDate, notificationDate, workOrderDate, materials, additionalTechnicianIds, ...rest } =
+      dto;
     const resolvedCompletionDate = completionDate
       ? new Date(completionDate)
       : dto.status === 'COMPLETED'
@@ -186,6 +204,8 @@ export class MaintenanceRepository {
           ...(areaId ? { areaId } : {}),
           maintenanceDate: maintenanceDate ? new Date(maintenanceDate) : undefined,
           completionDate: resolvedCompletionDate,
+          notificationDate: notificationDate ? new Date(notificationDate) : undefined,
+          workOrderDate: workOrderDate ? new Date(workOrderDate) : undefined,
         },
       });
 
@@ -209,6 +229,18 @@ export class MaintenanceRepository {
             })),
           });
           await this.decrementStock(tx, materials, id, actorId);
+        }
+      }
+
+      if (additionalTechnicianIds) {
+        // Replace-all — pola sama dengan materials di atas (lebih sederhana,
+        // tidak ada efek samping seperti stock yang perlu di-restore dulu).
+        await tx.correctiveMaintenanceTechnician.deleteMany({ where: { correctiveMaintenanceId: id } });
+
+        if (additionalTechnicianIds.length) {
+          await tx.correctiveMaintenanceTechnician.createMany({
+            data: additionalTechnicianIds.map((userId: string) => ({ correctiveMaintenanceId: id, userId })),
+          });
         }
       }
 

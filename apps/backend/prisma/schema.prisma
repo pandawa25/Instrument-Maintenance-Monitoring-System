@@ -119,6 +119,7 @@ model User {
   refreshTokens      RefreshToken[]
   loginHistory       LoginHistory[]
   auditLogs          AuditLog[]
+  maintenanceAsAdditionalTech CorrectiveMaintenanceTechnician[]
 
   @@index([roleId])
   @@map("users")
@@ -334,6 +335,13 @@ model PmPeriodExecution {
   vendorPersonnel String?            @map("vendor_personnel") @db.VarChar(150)
   status          PmExecutionStatus  @default(PENDING)
   remarks         String?            @db.VarChar(500)
+  // Referensi Work Order dari ERP (mis. SAP PM) — dicatat manual setelah WO
+  // diterbitkan di sana, bukan dikelola sebagai workflow WO internal aplikasi
+  // ini. Semua nullable & free-text karena bisa diisi belakangan dan format
+  // status WO bervariasi antar ERP.
+  workOrderNumber String?            @map("work_order_number") @db.VarChar(50)
+  workOrderDate   DateTime?          @map("work_order_date") @db.Date
+  workOrderStatus String?            @map("work_order_status") @db.VarChar(50)
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
   deletedAt       DateTime?          @map("deleted_at")
@@ -383,15 +391,26 @@ model CorrectiveMaintenance {
   needsSparePart     Boolean           @default(false) @map("needs_spare_part")
   createdById        String            @map("created_by_id") @db.Uuid
   remarks            String?           @db.VarChar(500)
+  // Referensi Notifikasi & Work Order dari ERP (mis. SAP PM) — dicatat manual
+  // setelah diterbitkan di sana, bukan dikelola sebagai workflow internal
+  // aplikasi ini. Semua nullable & free-text (status WO/notifikasi bervariasi
+  // antar ERP, jadi tidak dipaksakan jadi enum).
+  notificationNumber String?           @map("notification_number") @db.VarChar(50)
+  notificationDate   DateTime?         @map("notification_date") @db.Date
+  notificationStatus String?           @map("notification_status") @db.VarChar(50)
+  workOrderNumber    String?           @map("work_order_number") @db.VarChar(50)
+  workOrderDate      DateTime?         @map("work_order_date") @db.Date
+  workOrderStatus    String?           @map("work_order_status") @db.VarChar(50)
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
   deletedAt          DateTime?         @map("deleted_at")
 
-  equipment  Equipment  @relation(fields: [equipmentId], references: [id])
-  area       Area       @relation(fields: [areaId], references: [id])
-  technician User       @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
-  createdBy  User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
-  materials  CorrectiveMaintenanceMaterial[]
+  equipment            Equipment  @relation(fields: [equipmentId], references: [id])
+  area                 Area       @relation(fields: [areaId], references: [id])
+  technician           User       @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
+  createdBy            User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
+  materials            CorrectiveMaintenanceMaterial[]
+  additionalTechnicians CorrectiveMaintenanceTechnician[]
 
   @@index([maintenanceDate])
   @@index([equipmentId])
@@ -462,6 +481,24 @@ model CorrectiveMaintenanceMaterial {
   @@index([correctiveMaintenanceId])
   @@index([sparePartId])
   @@map("corrective_maintenance_materials")
+}
+
+// Technician TAMBAHAN (anggota tim) selain `technician` utama di
+// CorrectiveMaintenance — technician utama tidak dipindah ke sini supaya
+// tidak breaking (laporan/filter existing yang pakai technicianId tetap
+// jalan apa adanya). Tabel ini murni untuk kasus butuh >1 orang.
+model CorrectiveMaintenanceTechnician {
+  id                      String   @id @default(uuid()) @db.Uuid
+  correctiveMaintenanceId String   @map("corrective_maintenance_id") @db.Uuid
+  userId                  String   @map("user_id") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  correctiveMaintenance CorrectiveMaintenance @relation(fields: [correctiveMaintenanceId], references: [id], onDelete: Cascade)
+  user                  User                  @relation(fields: [userId], references: [id])
+
+  @@unique([correctiveMaintenanceId, userId])
+  @@index([userId])
+  @@map("corrective_maintenance_technicians")
 }
 
 // ===== Bulk Import (mulai dari Module Equipment; entityType siap dipakai modul lain nanti) =====

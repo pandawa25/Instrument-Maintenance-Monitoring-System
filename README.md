@@ -125,6 +125,7 @@ chore: update dependency
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
 - [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
 - [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD
+- [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -160,3 +161,12 @@ chore: update dependency
 - Kegagalan menulis audit log **tidak pernah menggagalkan request aslinya** — di-catch & di-log lewat `Logger` saja (best-effort/observability, bukan bagian alur bisnis inti).
 - Tabel `audit_logs` sengaja **tidak** memakai pola `updated_at`/`deleted_at` standar tabel lain — log bersifat append-only/immutable, tidak pernah diupdate atau di-soft-delete.
 - Belum ada UI untuk melihat audit log — data bisa dicek lewat Prisma Studio / query langsung untuk saat ini (konsisten dengan keputusan session management sebelumnya: backend dulu, UI menyusul kalau dibutuhkan).
+
+### Referensi Notifikasi/Work Order ERP & Multi-Technician
+
+- **Keputusan desain (penting)**: ini **bukan** sistem Work Order internal (tidak ada entity `WorkOrder`, tidak ada workflow approval/assignment di dalam aplikasi). Work Order di lapangan diterbitkan dari sistem ERP eksternal (mis. SAP PM, dengan alur Notification → Work Order) — aplikasi ini hanya menyediakan field referensi yang **diisi manual** setelah Notifikasi/WO diterbitkan di ERP, sebagai jejak dokumentasi.
+- Field baru di **Corrective Maintenance**: `notificationNumber`, `notificationDate`, `notificationStatus`, `workOrderNumber`, `workOrderDate`, `workOrderStatus` — semua opsional & free-text (bukan enum/dropdown), karena vocabulary status ERP bervariasi antar implementasi dan Notifikasi/WO mungkin belum ada saat CM pertama kali dicatat.
+- Field baru di **PM Period Execution**: `workOrderNumber`, `workOrderDate`, `workOrderStatus` saja (tidak ada Notification — PM terjadwal, bukan by-exception seperti CM).
+- **Multi-technician** (Corrective Maintenance saja): tabel baru `corrective_maintenance_technicians` (many-to-many ke `users`) untuk technician **tambahan**. Field `technicianId` yang sudah ada tetap sebagai "technician utama" (PIC) — tidak breaking untuk laporan/filter yang sudah keyed ke `technicianId`. PM Period Execution tidak diubah untuk multi-technician — tetap pakai field free-text `vendorPersonnel` yang sudah ada, karena biasanya PM dikerjakan vendor eksternal, bukan technician internal terdaftar.
+- Update `additionalTechnicianIds` di backend pakai pola **replace-all** (hapus semua baris lama, insert ulang daftar baru) — sama seperti pola `materials` di Corrective Maintenance, konsisten dan sederhana untuk skala tim kecil (<20 user).
+- Belum ada kolom Work Order di tabel list (Maintenance List / PM Execution List) — info ini hanya tampil di form edit & detail dialog untuk menjaga tabel tetap ringkas; bisa ditambahkan sebagai kolom opsional kalau kebutuhan filter/reporting berdasarkan WO muncul nanti.

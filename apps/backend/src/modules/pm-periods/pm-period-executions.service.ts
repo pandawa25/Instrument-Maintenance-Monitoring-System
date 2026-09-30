@@ -17,6 +17,9 @@ export class PmPeriodExecutionsService {
       vendorPersonnel: row.vendorPersonnel,
       remarks: row.remarks,
       status: row.status,
+      workOrderNumber: row.workOrderNumber,
+      workOrderDate: row.workOrderDate,
+      workOrderStatus: row.workOrderStatus,
       checklistResults: row.checklistResults.map((c: any) => ({
         id: c.id,
         activityTypeName: c.activityTypeName,

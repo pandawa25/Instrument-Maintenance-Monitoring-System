@@ -32,6 +32,13 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
     { label: 'Area', value: `${maintenance.area.areaCode} — ${maintenance.area.areaName}` },
     { label: 'Failure Category', value: FAILURE_CATEGORY_LABEL[maintenance.failureCategory] },
     { label: 'Technician', value: maintenance.technician.fullName },
+    {
+      label: 'Technician Tambahan',
+      value:
+        maintenance.additionalTechnicians.length > 0
+          ? maintenance.additionalTechnicians.map((t) => t.fullName).join(', ')
+          : null,
+    },
     { label: 'Problem Description', value: maintenance.problemDescription, fullWidth: true },
     { label: 'Root Cause', value: maintenance.rootCause, fullWidth: true },
     { label: 'Action Taken', value: maintenance.actionTaken, fullWidth: true },
@@ -65,6 +72,18 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
           </ul>
         ) : null,
     },
+    { label: 'No. Notifikasi', value: maintenance.notificationNumber },
+    {
+      label: 'Tanggal Notifikasi',
+      value: maintenance.notificationDate ? new Date(maintenance.notificationDate).toLocaleDateString('id-ID') : null,
+    },
+    { label: 'Status Notifikasi', value: maintenance.notificationStatus },
+    { label: 'No. Work Order', value: maintenance.workOrderNumber },
+    {
+      label: 'Tanggal WO',
+      value: maintenance.workOrderDate ? new Date(maintenance.workOrderDate).toLocaleDateString('id-ID') : null,
+    },
+    { label: 'Status WO', value: maintenance.workOrderStatus },
     { label: 'Dibuat Pada', value: new Date(maintenance.createdAt).toLocaleString('id-ID') },
     { label: 'Terakhir Diubah', value: new Date(maintenance.updatedAt).toLocaleString('id-ID') },
   ];

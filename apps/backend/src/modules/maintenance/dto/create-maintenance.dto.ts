@@ -61,9 +61,19 @@ export class CreateMaintenanceDto {
   @Max(9999)
   downtimeHours?: number;
 
-  @ApiProperty({ description: 'UUID User (technician)' })
+  @ApiProperty({ description: 'UUID User (technician utama)' })
   @IsUUID()
   technicianId!: string;
+
+  @ApiProperty({
+    type: [String],
+    required: false,
+    description: 'UUID technician TAMBAHAN (anggota tim), selain technician utama di atas',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  additionalTechnicianIds?: string[];
 
   @ApiProperty({ enum: MaintenanceStatus, default: MaintenanceStatus.OPEN, required: false })
   @IsOptional()
@@ -96,4 +106,41 @@ export class CreateMaintenanceDto {
   @ValidateNested({ each: true })
   @Type(() => MaterialInputDto)
   materials?: MaterialInputDto[];
+
+  // --- Referensi Notifikasi & Work Order dari ERP (mis. SAP PM) — diisi
+  // manual setelah diterbitkan di sana, semua opsional & free-text. ---
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Nomor notifikasi dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  notificationNumber?: string;
+
+  @ApiProperty({ required: false, example: '2026-09-20' })
+  @IsOptional()
+  @IsDateString()
+  notificationDate?: string;
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Status notifikasi dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  notificationStatus?: string;
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Nomor Work Order dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  workOrderNumber?: string;
+
+  @ApiProperty({ required: false, example: '2026-09-21' })
+  @IsOptional()
+  @IsDateString()
+  workOrderDate?: string;
+
+  @ApiProperty({ required: false, maxLength: 50, description: 'Status Work Order dari ERP' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  workOrderStatus?: string;
 }

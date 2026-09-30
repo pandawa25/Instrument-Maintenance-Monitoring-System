@@ -24,11 +24,18 @@ const EMPTY_FORM: MaintenanceFormValues = {
   actionTaken: '',
   downtimeHours: '',
   technicianId: '',
+  additionalTechnicianIds: [],
   status: 'OPEN',
   completionDate: '',
   remarks: '',
   needsSparePart: false,
   materials: [],
+  notificationNumber: '',
+  notificationDate: '',
+  notificationStatus: '',
+  workOrderNumber: '',
+  workOrderDate: '',
+  workOrderStatus: '',
 };
 
 interface Props {
@@ -61,6 +68,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               actionTaken: maintenance.actionTaken ?? '',
               downtimeHours: maintenance.downtimeHours ?? '',
               technicianId: maintenance.technician.id,
+              additionalTechnicianIds: maintenance.additionalTechnicians.map((t) => t.id),
               status: maintenance.status,
               completionDate: maintenance.completionDate?.slice(0, 10) ?? '',
               remarks: maintenance.remarks ?? '',
@@ -70,6 +78,12 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
                 quantity: m.quantity,
                 remarks: m.remarks ?? undefined,
               })),
+              notificationNumber: maintenance.notificationNumber ?? '',
+              notificationDate: maintenance.notificationDate?.slice(0, 10) ?? '',
+              notificationStatus: maintenance.notificationStatus ?? '',
+              workOrderNumber: maintenance.workOrderNumber ?? '',
+              workOrderDate: maintenance.workOrderDate?.slice(0, 10) ?? '',
+              workOrderStatus: maintenance.workOrderStatus ?? '',
             }
           : EMPTY_FORM,
       );
@@ -92,6 +106,15 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
     }));
   }
 
+  function toggleAdditionalTechnician(technicianId: string, checked: boolean) {
+    setForm((f) => ({
+      ...f,
+      additionalTechnicianIds: checked
+        ? [...f.additionalTechnicianIds, technicianId]
+        : f.additionalTechnicianIds.filter((id) => id !== technicianId),
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -109,6 +132,15 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
         rootCause: form.rootCause || undefined,
         actionTaken: form.actionTaken || undefined,
         remarks: form.remarks || undefined,
+        // Jaga-jaga: technician utama tidak boleh nyempil di daftar tambahan
+        // (mis. sempat dipilih sebagai tambahan, lalu diganti jadi utama).
+        additionalTechnicianIds: form.additionalTechnicianIds.filter((id) => id !== form.technicianId),
+        notificationNumber: form.notificationNumber || undefined,
+        notificationDate: form.notificationDate || undefined,
+        notificationStatus: form.notificationStatus || undefined,
+        workOrderNumber: form.workOrderNumber || undefined,
+        workOrderDate: form.workOrderDate || undefined,
+        workOrderStatus: form.workOrderStatus || undefined,
         materials: form.needsSparePart
           ? form.materials.map((m) => ({
               sparePartId: m.sparePartId,
@@ -201,6 +233,29 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
                 </option>
               ))}
             </Select>
+          </div>
+
+          <div className="col-span-2">
+            <Label>Technician Tambahan (opsional)</Label>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-border p-3">
+              {technicians && technicians.length > 0 ? (
+                technicians
+                  .filter((tech) => tech.id !== form.technicianId)
+                  .map((tech) => (
+                    <label key={tech.id} className="flex items-center gap-2 text-sm text-text">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border"
+                        checked={form.additionalTechnicianIds.includes(tech.id)}
+                        onChange={(e) => toggleAdditionalTechnician(tech.id, e.target.checked)}
+                      />
+                      {tech.fullName}
+                    </label>
+                  ))
+              ) : (
+                <p className="text-sm text-text-muted">Tidak ada technician lain.</p>
+              )}
+            </div>
           </div>
 
           <div className="col-span-2">
@@ -325,6 +380,69 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="col-span-2 rounded-md border border-border p-3">
+            <p className="mb-3 text-sm font-medium text-text">Informasi Notifikasi & Work Order (ERP)</p>
+            <p className="mb-3 text-xs text-text-muted">
+              Diisi manual sebagai referensi setelah Notifikasi/WO diterbitkan di sistem ERP (mis. SAP PM). Opsional.
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="notificationNumber">No. Notifikasi</Label>
+                <Input
+                  id="notificationNumber"
+                  value={form.notificationNumber ?? ''}
+                  onChange={(e) => setForm({ ...form, notificationNumber: e.target.value })}
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <Label htmlFor="notificationDate">Tanggal Notifikasi</Label>
+                <Input
+                  id="notificationDate"
+                  type="date"
+                  value={form.notificationDate ?? ''}
+                  onChange={(e) => setForm({ ...form, notificationDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="notificationStatus">Status Notifikasi</Label>
+                <Input
+                  id="notificationStatus"
+                  value={form.notificationStatus ?? ''}
+                  onChange={(e) => setForm({ ...form, notificationStatus: e.target.value })}
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workOrderNumber">No. Work Order</Label>
+                <Input
+                  id="workOrderNumber"
+                  value={form.workOrderNumber ?? ''}
+                  onChange={(e) => setForm({ ...form, workOrderNumber: e.target.value })}
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workOrderDate">Tanggal WO</Label>
+                <Input
+                  id="workOrderDate"
+                  type="date"
+                  value={form.workOrderDate ?? ''}
+                  onChange={(e) => setForm({ ...form, workOrderDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="workOrderStatus">Status WO</Label>
+                <Input
+                  id="workOrderStatus"
+                  value={form.workOrderStatus ?? ''}
+                  onChange={(e) => setForm({ ...form, workOrderStatus: e.target.value })}
+                  maxLength={50}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="col-span-2">

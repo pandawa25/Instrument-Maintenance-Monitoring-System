@@ -21,6 +21,7 @@ type MaintenanceWithRelations = CorrectiveMaintenance & {
     remarks: string | null;
     sparePart: { id: string; kimap: string; name: string; unit: string };
   }[];
+  additionalTechnicians: { user: { id: string; fullName: string } }[];
 };
 
 @Injectable()
@@ -44,6 +45,7 @@ export class MaintenanceService {
       actionTaken: row.actionTaken,
       downtimeHours: row.downtimeHours,
       technician: row.technician,
+      additionalTechnicians: (row.additionalTechnicians ?? []).map((t) => t.user),
       status: row.status,
       completionDate: row.completionDate,
       createdBy: row.createdBy,
@@ -55,6 +57,12 @@ export class MaintenanceService {
         remarks: m.remarks,
         sparePart: m.sparePart,
       })),
+      notificationNumber: row.notificationNumber,
+      notificationDate: row.notificationDate,
+      notificationStatus: row.notificationStatus,
+      workOrderNumber: row.workOrderNumber,
+      workOrderDate: row.workOrderDate,
+      workOrderStatus: row.workOrderStatus,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -97,6 +105,14 @@ export class MaintenanceService {
     }
   }
 
+  /** Validasi technician TAMBAHAN — pola sama dengan validateTechnician di atas. */
+  private async validateAdditionalTechnicians(technicianIds?: string[]) {
+    if (!technicianIds?.length) return;
+    for (const technicianId of technicianIds) {
+      await this.validateTechnician(technicianId);
+    }
+  }
+
   async findAll(query: QueryMaintenanceDto): Promise<PaginatedResult<unknown>> {
     const { rows, total } = await this.repository.findMany(query);
     const data = rows.map((row: MaintenanceWithRelations) => this.toListItem(row));
@@ -113,6 +129,7 @@ export class MaintenanceService {
 
   async create(dto: CreateMaintenanceDto, createdById: string) {
     await this.validateTechnician(dto.technicianId);
+    await this.validateAdditionalTechnicians(dto.additionalTechnicianIds);
     await this.validateMaterials(dto.materials);
     const areaId = await this.resolveAreaId(dto.equipmentId);
 
@@ -126,6 +143,7 @@ export class MaintenanceService {
     if (dto.technicianId) {
       await this.validateTechnician(dto.technicianId);
     }
+    await this.validateAdditionalTechnicians(dto.additionalTechnicianIds);
     await this.validateMaterials(dto.materials);
 
     let areaId: string | undefined;
