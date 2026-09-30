@@ -19,6 +19,7 @@ import { QueryPmActivityTypeDto } from './dto/query-pm-activity-type.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('PM Activity Types')
@@ -48,6 +49,7 @@ export class PmActivityTypesController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('PmActivityType')
   @ApiOperation({ summary: 'Buat PM activity type baru (Admin only)' })
   create(@Body() dto: CreatePmActivityTypeDto) {
     return this.service.create(dto);
@@ -55,6 +57,7 @@ export class PmActivityTypesController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('PmActivityType')
   @ApiOperation({ summary: 'Update PM activity type (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmActivityTypeDto) {
     return this.service.update(id, dto);
@@ -62,6 +65,7 @@ export class PmActivityTypesController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('PmActivityType')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete PM activity type (Admin only) — ditolak jika masih dipakai checklist item' })
   remove(@Param('id', ParseUuidPipe) id: string) {

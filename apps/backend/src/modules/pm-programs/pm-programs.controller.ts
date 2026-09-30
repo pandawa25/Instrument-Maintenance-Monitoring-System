@@ -19,6 +19,7 @@ import { QueryPmProgramDto } from './dto/query-pm-program.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('PM Programs')
@@ -42,6 +43,7 @@ export class PmProgramsController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('PmProgram')
   @ApiOperation({ summary: 'Buat PM Program baru (Admin only)' })
   create(@Body() dto: CreatePmProgramDto) {
     return this.service.create(dto);
@@ -49,6 +51,7 @@ export class PmProgramsController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('PmProgram')
   @ApiOperation({ summary: 'Update PM Program — equipment & checklist item di-replace seluruhnya (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmProgramDto) {
     return this.service.update(id, dto);
@@ -56,6 +59,7 @@ export class PmProgramsController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('PmProgram')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete PM Program (Admin only) — ditolak jika sudah ada periode' })
   remove(@Param('id', ParseUuidPipe) id: string) {

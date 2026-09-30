@@ -5,6 +5,7 @@ import { UpdatePmPeriodDto } from './dto/update-pm-period.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 // Akses langsung by id (tidak perlu tahu programId): /pm-periods/:id
@@ -23,6 +24,7 @@ export class PmPeriodController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('PmPeriod')
   @ApiOperation({ summary: 'Update tanggal rencana / remarks periode (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmPeriodDto) {
     return this.service.update(id, dto);
@@ -30,6 +32,7 @@ export class PmPeriodController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('PmPeriod')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete periode (Admin only) — ditolak jika sudah ada eksekusi selesai' })
   remove(@Param('id', ParseUuidPipe) id: string) {

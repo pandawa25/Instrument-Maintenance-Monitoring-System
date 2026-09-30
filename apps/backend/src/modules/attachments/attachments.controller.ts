@@ -25,6 +25,7 @@ import { attachmentMulterOptions } from './attachments.multer.config';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -43,6 +44,7 @@ export class AttachmentsController {
 
   @Post('upload')
   @Roles('Admin')
+  @AuditLog('Attachment')
   @UseInterceptors(FileInterceptor('file', attachmentMulterOptions))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -73,6 +75,7 @@ export class AttachmentsController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('Attachment')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Hapus lampiran (Admin only) — soft delete, file fisik tetap disimpan' })
   remove(@Param('id', ParseUuidPipe) id: string) {

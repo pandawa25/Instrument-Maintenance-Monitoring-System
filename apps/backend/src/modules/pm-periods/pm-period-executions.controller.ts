@@ -5,6 +5,7 @@ import { UpdatePmPeriodExecutionDto } from './dto/update-pm-period-execution.dto
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('PM Period Executions')
@@ -22,6 +23,7 @@ export class PmPeriodExecutionsController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('PmPeriodExecution')
   @ApiOperation({ summary: 'Isi/update hasil eksekusi PM untuk 1 equipment + hasil checklist (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmPeriodExecutionDto) {
     return this.service.update(id, dto);

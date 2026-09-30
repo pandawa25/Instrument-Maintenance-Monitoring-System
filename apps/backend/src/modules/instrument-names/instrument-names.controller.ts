@@ -19,6 +19,7 @@ import { QueryInstrumentNameDto } from './dto/query-instrument-name.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('Instrument Names')
@@ -48,6 +49,7 @@ export class InstrumentNamesController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('InstrumentName')
   @ApiOperation({ summary: 'Buat Instrument Name baru (Admin only)' })
   create(@Body() dto: CreateInstrumentNameDto) {
     return this.instrumentNamesService.create(dto);
@@ -55,6 +57,7 @@ export class InstrumentNamesController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('InstrumentName')
   @ApiOperation({ summary: 'Update Instrument Name (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateInstrumentNameDto) {
     return this.instrumentNamesService.update(id, dto);
@@ -62,6 +65,7 @@ export class InstrumentNamesController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('InstrumentName')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Soft delete Instrument Name (Admin only) — ditolak jika masih dipakai equipment aktif',

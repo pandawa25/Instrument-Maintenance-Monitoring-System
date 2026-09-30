@@ -30,6 +30,7 @@ import { ImportCommitResultDto } from './dto/import-commit-result.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -96,6 +97,7 @@ export class EquipmentController {
 
   @Post('bulk-upload/:batchId/commit')
   @Roles('Admin')
+  @AuditLog('Equipment')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
@@ -120,6 +122,7 @@ export class EquipmentController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('Equipment')
   @ApiOperation({ summary: 'Buat equipment baru (Admin only)' })
   create(@Body() dto: CreateEquipmentDto) {
     return this.equipmentService.create(dto);
@@ -127,6 +130,7 @@ export class EquipmentController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('Equipment')
   @ApiOperation({ summary: 'Update equipment (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateEquipmentDto) {
     return this.equipmentService.update(id, dto);
@@ -134,6 +138,7 @@ export class EquipmentController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('Equipment')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Soft delete equipment (Admin only) — ditolak jika masih ada riwayat maintenance',

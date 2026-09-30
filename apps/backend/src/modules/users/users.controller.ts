@@ -8,6 +8,7 @@ import { QueryUserDto } from './dto/query-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -42,6 +43,7 @@ export class UsersController {
 
   @Post('admin')
   @Roles('Admin')
+  @AuditLog('User')
   @ApiOperation({ summary: 'Buat user baru (Admin only)' })
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
@@ -49,13 +51,19 @@ export class UsersController {
 
   @Patch('admin/:id')
   @Roles('Admin')
+  @AuditLog('User')
   @ApiOperation({ summary: 'Update profil/role/status user (Admin only) — tidak bisa nonaktifkan akun sendiri' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: AuthenticatedUser) {
     return this.usersService.update(id, dto, user.id);
   }
 
+  // Body-nya cuma { newPassword } — payload di audit_logs otomatis di-redact
+  // jadi '[REDACTED]' (lihat redact-sensitive.util.ts), password ASLI tidak
+  // pernah tersimpan di audit trail. Tetap dicatat: siapa reset password
+  // siapa & kapan.
   @Patch('admin/:id/password')
   @Roles('Admin')
+  @AuditLog('User')
   @ApiOperation({ summary: 'Reset password user (Admin only)' })
   changePassword(@Param('id', ParseUuidPipe) id: string, @Body() dto: ChangePasswordDto) {
     return this.usersService.changePassword(id, dto);
@@ -63,6 +71,7 @@ export class UsersController {
 
   @Delete('admin/:id')
   @Roles('Admin')
+  @AuditLog('User')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete user (Admin only) — tidak bisa hapus akun sendiri' })
   remove(@Param('id', ParseUuidPipe) id: string, @CurrentUser() user: AuthenticatedUser) {

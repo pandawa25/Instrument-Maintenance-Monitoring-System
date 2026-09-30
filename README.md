@@ -124,6 +124,7 @@ chore: update dependency
 - [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
 - [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
+- [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -147,3 +148,15 @@ chore: update dependency
 - Semua test memakai mock (Prisma, bcrypt, JwtService) — tidak butuh database sungguhan, cepat dijalankan di CI.
 - Terpasang sebagai step di `.github/workflows/ci.yml` (job `backend`) — PR/push ke `main`/`develop` otomatis gagal kalau ada test yang merah.
 - Belum ada e2e test (butuh test database) maupun test frontend (Vitest) — menyusul di iterasi berikutnya sesuai kebutuhan.
+
+### Audit Log Terpusat
+
+- Mekanisme: 1 interceptor global (`AuditLogInterceptor`, didaftarkan di `main.ts`) yang aktif hanya untuk endpoint yang eksplisit ditandai `@AuditLog('EntityName')` — bukan Prisma middleware yang mencatat SEMUA query (termasuk yang tidak relevan, mis. update `lastLoginAt` saat login), dan bukan pula kode manual di tiap service (lebih rapi & tidak berulang, cukup 1 baris decorator per endpoint controller).
+- Action (`CREATE`/`UPDATE`/`DELETE`) diturunkan otomatis dari HTTP method (POST/PATCH-PUT/DELETE) — tidak perlu disebutkan manual.
+- Yang dicatat per baris: `userId` (dari JWT, endpoint yang diaudit selalu di belakang `JwtAuthGuard`), `action`, `entityType`, `entityId` (dari `:id` di URL atau dari `id` hasil response untuk `create`), `payload` (snapshot request body — **bukan** before/after diff, lihat catatan desain di bawah), `ipAddress`, `userAgent`, `createdAt`.
+- **Redaksi otomatis**: field yang namanya mengandung `password`/`token`/`secret` (case-insensitive, rekursif ke object/array bersarang) diganti `[REDACTED]` sebelum disimpan — lihat `common/utils/redact-sensitive.util.ts`. Penting untuk endpoint seperti reset password user (`PATCH /users/admin/:id/password`) yang body-nya berisi password baru.
+- **Cakupan**: semua modul CRUD — Area, Equipment (Instrument), Corrective Maintenance, Spare Part, Vendor, PM Program/Period/Period Execution, PM Activity Type, Instrument Name, Manage User, Attachment. **Sengaja tidak** mencakup: `/auth/*` (sudah punya `login_history` sendiri, lebih relevan untuk percobaan login), dan `POST /spare-parts/:id/stock-movements` (sudah punya `SparePartStockMovement` ledger sendiri yang lebih detail — quantityDelta, balanceAfter, type — mencatat lagi ke audit_logs generik hanya duplikasi yang membingungkan).
+- **Keputusan desain (MVP)**: snapshot body, bukan before/after diff — cukup untuk jejak "siapa mengubah apa kapan" tanpa menambah 1 query baca sebelum tiap mutasi. Diff lengkap bisa menyusul kalau kebutuhan investigasi butuh nilai SEBELUM perubahan.
+- Kegagalan menulis audit log **tidak pernah menggagalkan request aslinya** — di-catch & di-log lewat `Logger` saja (best-effort/observability, bukan bagian alur bisnis inti).
+- Tabel `audit_logs` sengaja **tidak** memakai pola `updated_at`/`deleted_at` standar tabel lain — log bersifat append-only/immutable, tidak pernah diupdate atau di-soft-delete.
+- Belum ada UI untuk melihat audit log — data bisa dicek lewat Prisma Studio / query langsung untuk saat ini (konsisten dengan keputusan session management sebelumnya: backend dulu, UI menyusul kalau dibutuhkan).

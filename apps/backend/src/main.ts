@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +6,8 @@ import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
+import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -38,7 +40,15 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());
-  app.useGlobalInterceptors(new ResponseTransformInterceptor());
+
+  // Urutan penting: ResponseTransformInterceptor di luar, AuditLogInterceptor
+  // di dalam — supaya AuditLogInterceptor sempat baca hasil mentah controller
+  // (mis. { id, ... }) sebelum dibungkus jadi { data: ... }. (Ekstraksi id di
+  // AuditLogInterceptor tetap dibuat toleran ke kedua bentuk, jaga-jaga.)
+  app.useGlobalInterceptors(
+    new ResponseTransformInterceptor(),
+    new AuditLogInterceptor(app.get(PrismaService), app.get(Reflector)),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Instrument Maintenance Monitoring System API')

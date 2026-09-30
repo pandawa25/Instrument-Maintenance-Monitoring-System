@@ -19,6 +19,7 @@ import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -43,6 +44,7 @@ export class MaintenanceController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('CorrectiveMaintenance')
   @ApiOperation({ summary: 'Catat corrective maintenance baru (Admin only)' })
   create(@Body() dto: CreateMaintenanceDto, @CurrentUser() user: AuthenticatedUser) {
     return this.maintenanceService.create(dto, user.id);
@@ -50,6 +52,7 @@ export class MaintenanceController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('CorrectiveMaintenance')
   @ApiOperation({ summary: 'Update corrective maintenance (Admin only)' })
   update(
     @Param('id', ParseUuidPipe) id: string,
@@ -61,6 +64,7 @@ export class MaintenanceController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('CorrectiveMaintenance')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete corrective maintenance (Admin only)' })
   remove(@Param('id', ParseUuidPipe) id: string, @CurrentUser() user: AuthenticatedUser) {

@@ -19,6 +19,7 @@ import { QueryAreaDto } from './dto/query-area.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('Areas')
@@ -42,6 +43,7 @@ export class AreasController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('Area')
   @ApiOperation({ summary: 'Buat area baru (Admin only)' })
   create(@Body() dto: CreateAreaDto) {
     return this.areasService.create(dto);
@@ -49,6 +51,7 @@ export class AreasController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('Area')
   @ApiOperation({ summary: 'Update area (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateAreaDto) {
     return this.areasService.update(id, dto);
@@ -56,6 +59,7 @@ export class AreasController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('Area')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete area (Admin only) — ditolak jika masih ada equipment aktif' })
   remove(@Param('id', ParseUuidPipe) id: string) {

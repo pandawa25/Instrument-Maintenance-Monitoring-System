@@ -118,6 +118,7 @@ model User {
   attachments        Attachment[]
   refreshTokens      RefreshToken[]
   loginHistory       LoginHistory[]
+  auditLogs          AuditLog[]
 
   @@index([roleId])
   @@map("users")
@@ -617,4 +618,42 @@ model LoginHistory {
 
   @@index([userId])
   @@map("login_history")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// Jejak audit terpusat untuk semua mutasi (create/update/delete) di modul
+// master data & transaksi — dicatat otomatis lewat AuditLogInterceptor
+// (global), diaktifkan per endpoint lewat decorator @AuditLog('EntityName').
+//
+// `payload` = snapshot request body (data yang DIKIRIM user), BUKAN
+// before/after diff — cukup untuk jejak "siapa mengubah apa kapan" tanpa
+// menambah query baca sebelum tiap mutasi (MVP, lihat README bagian Audit
+// Log Terpusat). Field sensitif (password, token, dst) di-redact sebelum
+// disimpan — lihat common/utils/redact-sensitive.util.ts.
+//
+// SENGAJA TIDAK PAKAI pola updated_at/deleted_at standar tabel lain — log
+// audit bersifat append-only/immutable, tidak pernah diupdate atau di-soft-
+// delete (itu justru akan merusak tujuan audit trail itu sendiri).
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  action     AuditAction
+  entityType String      @map("entity_type") @db.VarChar(50)
+  entityId   String?     @map("entity_id") @db.VarChar(100)
+  payload    Json?
+  ipAddress  String?     @map("ip_address") @db.VarChar(45)
+  userAgent  String?     @map("user_agent") @db.VarChar(255)
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

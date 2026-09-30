@@ -5,6 +5,7 @@ import { CreatePmPeriodDto } from './dto/create-pm-period.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 // Nested di bawah PM Program: /pm-programs/:programId/periods
@@ -23,6 +24,7 @@ export class PmPeriodsController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('PmPeriod')
   @ApiOperation({
     summary:
       'Tambah periode baru (Admin only) — otomatis generate baris eksekusi kosong utk tiap equipment & checklist item program saat ini',

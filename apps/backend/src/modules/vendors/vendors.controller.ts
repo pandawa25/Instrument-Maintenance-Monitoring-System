@@ -19,6 +19,7 @@ import { QueryVendorDto } from './dto/query-vendor.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 
 @ApiTags('Vendors')
@@ -48,6 +49,7 @@ export class VendorsController {
 
   @Post()
   @Roles('Admin')
+  @AuditLog('Vendor')
   @ApiOperation({ summary: 'Buat vendor baru (Admin only)' })
   create(@Body() dto: CreateVendorDto) {
     return this.vendorsService.create(dto);
@@ -55,6 +57,7 @@ export class VendorsController {
 
   @Patch(':id')
   @Roles('Admin')
+  @AuditLog('Vendor')
   @ApiOperation({ summary: 'Update vendor (Admin only)' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateVendorDto) {
     return this.vendorsService.update(id, dto);
@@ -62,6 +65,7 @@ export class VendorsController {
 
   @Delete(':id')
   @Roles('Admin')
+  @AuditLog('Vendor')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete vendor (Admin only) — ditolak jika masih ada PM Program aktif' })
   remove(@Param('id', ParseUuidPipe) id: string) {
