@@ -26,12 +26,28 @@ export function HealthIndexSection() {
   const [search, setSearch] = useState('');
   const { data, isLoading } = useDashboardHealthIndex(months);
 
+  // Default: Top 10 Bad Actor — equipment paling sering gagal dalam periode terpilih
+  // (diurutkan dari total kegagalan terbanyak, lalu health score terendah sebagai
+  // tie-breaker). Equipment "Belum Cukup Data" (0 kegagalan) dikecualikan karena
+  // bukan bad actor, cuma belum ada histori. Saat user mengetik pencarian, cakupan
+  // dilebarkan ke seluruh equipment supaya tag spesifik tetap bisa ditemukan.
+  const topBadActors = useMemo(() => {
+    if (!data) return [];
+    return [...data.items]
+      .filter((i) => i.category !== 'INSUFFICIENT_DATA')
+      .sort((a, b) => {
+        if (b.totalFailures !== a.totalFailures) return b.totalFailures - a.totalFailures;
+        return (a.healthScore ?? Infinity) - (b.healthScore ?? Infinity);
+      })
+      .slice(0, 10);
+  }, [data]);
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return data.items;
+    if (!q) return topBadActors;
     return data.items.filter((i) => i.tagNumber.toLowerCase().includes(q) || i.service.toLowerCase().includes(q));
-  }, [data, search]);
+  }, [data, search, topBadActors]);
 
   const summary = data?.summary ?? zeroSummary();
 
@@ -73,14 +89,19 @@ export function HealthIndexSection() {
 
       <Card>
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <h4 className="text-sm font-semibold text-text">Detail per Instrument</h4>
+          <div>
+            <h4 className="text-sm font-semibold text-text">Top 10 Bad Actor</h4>
+            <p className="text-xs text-text-muted">Equipment paling sering gagal pada periode terpilih.</p>
+          </div>
           <Input className="h-8 w-48" placeholder="Cari Tag Number..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
         {isLoading ? (
           <div className="p-8 text-center text-sm text-text-muted">Memuat data...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-sm text-text-muted">Tidak ada instrument yang cocok.</div>
+          <div className="p-8 text-center text-sm text-text-muted">
+            {search.trim() ? 'Tidak ada instrument yang cocok.' : 'Belum ada kegagalan tercatat pada periode ini.'}
+          </div>
         ) : (
           <div className="max-h-96 overflow-y-auto overflow-x-auto">
             <table className="w-full text-sm">
