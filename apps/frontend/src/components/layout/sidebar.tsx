@@ -107,11 +107,8 @@ export function Sidebar() {
       )}
     >
       <div className={cn('flex items-center gap-2.5 border-b border-border px-5 py-4', collapsed && 'justify-center px-3')}>
-        {collapsed ? (
-          <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 shrink-0 rounded-lg" />
-        ) : (
-          <img src="/brand/logo-icon-wordmark-h96.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-9 w-auto" />
-        )}
+        <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 shrink-0 rounded-lg" />
+        {!collapsed && <img src="/brand/wordmark-h36.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-5 w-auto" />}
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-4">

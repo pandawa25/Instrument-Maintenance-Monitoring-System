@@ -75,7 +75,10 @@ export function LoginPage() {
       {/* Panel kanan — form login */}
       <div className="flex w-full flex-1 flex-col justify-between px-6 py-8 sm:px-10 lg:w-[54%] lg:px-16">
         <div className="flex items-center justify-between lg:justify-end">
-          <img src="/brand/logo-icon-wordmark-h56.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-8 w-auto lg:hidden" />
+          <div className="flex items-center gap-2 lg:hidden">
+            <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 rounded-lg" />
+            <img src="/brand/wordmark-h28.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-4 w-auto" />
+          </div>
           <ThemeToggle />
         </div>
 
