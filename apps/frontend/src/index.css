@@ -4,13 +4,73 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Brand — dikonversi dari hex asli di project brief (#005BAC / #00AEEF)
+       supaya nilai HSL bisa dipakai ulang untuk varian dark mode. */
+    --primary: 208 100% 34%;
+    --primary-dim: 208 88% 28%;
+    --primary-tint: 208 100% 96%;
+    --secondary: 196 100% 47%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+
+    --border: 212 28% 90%;
+    --ring: 208 100% 34%;
+    --surface: 0 0% 100%;
+    --surface-2: 210 31% 95%;
+    --surface-3: 212 28% 91%;
+    --background: 215 32% 97%;
+    --text: 214 42% 14%;
+    --text-muted: 212 16% 42%;
+  }
+
+  .dark {
+    /* Palet dark mode: hue brand dipertahankan, lightness disesuaikan supaya
+       kontras cukup di atas background gelap (bukan sekadar invert). */
+    --primary: 208 90% 58%;
+    --primary-dim: 208 85% 48%;
+    --primary-tint: 208 45% 20%;
+    --secondary: 196 90% 60%;
+    --success: 142 55% 45%;
+    --warning: 38 92% 58%;
+    --danger: 0 72% 62%;
+
+    --border: 215 18% 23%;
+    --ring: 208 90% 58%;
+    --surface: 215 25% 13%;
+    --surface-2: 215 22% 17%;
+    --surface-3: 215 19% 22%;
+    --background: 215 28% 9%;
+    --text: 210 20% 93%;
+    --text-muted: 215 14% 65%;
+  }
+
   html,
   body,
   #root {
     height: 100%;
   }
+
   body {
     @apply bg-background text-text antialiased;
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+  }
+
+  /* Scrollbar tipis & senada tema — cukup untuk Chromium/WebKit (Edge/Chrome
+     dipakai mayoritas user internal); browser lain fallback ke scrollbar default. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted/40;
   }
 }

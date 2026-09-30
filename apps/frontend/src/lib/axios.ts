@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth.store';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
@@ -65,6 +66,12 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
 
+    // Tidak ada response sama sekali (server down/koneksi putus) — beri tahu
+    // user secara global karena kalau tidak, halaman cuma terlihat "diam".
+    if (!error.response && !isNoRefreshPath(originalRequest?.url)) {
+      toast.error('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
+    }
+
     if (status !== 401 || !originalRequest || isNoRefreshPath(originalRequest.url)) {
       if (status === 401 && isNoRefreshPath(originalRequest?.url)) {
         useAuthStore.getState().logout();
@@ -73,6 +80,7 @@ api.interceptors.response.use(
     }
 
     if (originalRequest._retry) {
+      toast.error('Sesi Anda berakhir, silakan login kembali.');
       useAuthStore.getState().logout();
       return Promise.reject(error);
     }
@@ -84,6 +92,7 @@ api.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
+      toast.error('Sesi Anda berakhir, silakan login kembali.');
       useAuthStore.getState().logout();
       return Promise.reject(refreshError);
     }

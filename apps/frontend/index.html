@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Instrument Maintenance Monitoring System</title>
+    <script>
+      // Terapkan class "dark" sebelum React mount supaya tidak ada flash
+      // light->dark saat reload (baca localStorage yang sama dengan theme.store.ts).
+      (function () {
+        try {
+          var raw = localStorage.getItem('imms-theme');
+          var theme = raw ? JSON.parse(raw).state.theme : 'light';
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {
+          /* localStorage tidak tersedia (mis. private mode ketat) — fallback light, tidak fatal */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -128,6 +128,8 @@ chore: update dependency
 - [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance
 - [x] KPI Dashboard (Phase 3b) — MTTR, MTBF, PM Compliance Rate: overall, per Area, per Instrument, dengan filter rentang bulan
 - [x] Instrument Health Index (Phase 3c) — skor komposit 0-100 per instrument dari MTTR/MTBF/failure frequency (percentile relatif antar instrument) + penyesuaian criticality
+- [x] UI/UX Refresh — Foundation (Phase 4a) — design token CSS-variable + dark mode, sidebar collapsible, avatar dropdown menu, toast notification, redesign halaman Login
+- [ ] UI/UX Refresh — penerapan ke seluruh modul (Phase 4b, menyusul setelah foundation direview)
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -199,3 +201,17 @@ chore: update dependency
 - Endpoint: `GET /dashboard/health-index?months=12` — daftar diurutkan skor terendah dulu (paling mendesak di atas), plus ringkasan jumlah instrument per kategori.
 - **Keterbatasan yang disadari**: karena berbasis percentile relatif, skor akan bergeser kalau komposisi/jumlah instrument yang discoring berubah signifikan (mis. baru pertama kali dipakai dengan data sedikit) — ini bukan skor absolut yang bisa dibandingkan lintas periode/plant tanpa konteks. Cukup untuk MVP prioritisasi internal, belum untuk benchmarking eksternal.
 - 4 unit test baru mencakup: instrument tanpa riwayat → INSUFFICIENT_DATA, instrument performa buruk mendapat skor lebih rendah dari peer, criticality HIGH memperberat skor dibanding LOW untuk data identik, dan threshold kategori.
+
+### UI/UX Refresh — Foundation (Phase 4a)
+
+Rollout dikerjakan bertahap: tahap ini membangun fondasi (design system, layout, halaman Login) yang otomatis berlaku ke seluruh app; tahap berikutnya (Phase 4b) menerapkan polish visual per-modul (Area/Instrument/CM/PM/Vendor/dll) setelah fondasi ini direview.
+
+- **Design token → CSS variable**: warna (`primary`, `secondary`, `success`, `warning`, `danger`, `border`, `surface`, `background`, `text`, dll) di `tailwind.config.js` sekarang membaca dari CSS variable HSL (`hsl(var(--x) / <alpha-value>)`) yang didefinisikan di `index.css` (`:root` untuk light, `.dark` untuk dark) — **bukan hex literal langsung seperti sebelumnya**. Efeknya: hampir seluruh halaman existing otomatis dapat dark mode tanpa perlu diubah satu-satu, karena komponen sudah konsisten memakai nama class semantik (`bg-surface`, `text-text-muted`, dst), bukan warna mentah.
+- **Dark mode**: toggle sungguhan (bukan cuma disiapkan) — state disimpan di `theme.store.ts` (zustand + persist, key `imms-theme`), class `dark` di-toggle di `<html>`. Ada inline script kecil di `index.html` yang membaca localStorage SEBELUM React mount, supaya tidak ada flash light→dark saat reload halaman.
+- **Sidebar collapsible**: bisa diciutkan jadi icon-only (state persisted di `layout-preferences.store.ts`), dengan tooltip nama menu saat hover dalam kondisi collapsed (Radix Tooltip, `components/ui/tooltip.tsx`).
+- **Avatar dropdown menu**: tombol logout polos di header diganti dropdown (Radix DropdownMenu, `components/ui/dropdown-menu.tsx`) berisi info akun (nama, email) dan logout — juga jadi tempat theme toggle di layar sempit.
+- **Toast notification**: pakai `sonner` (dipasang global di `App.tsx`). Untuk fondasi ini baru dipasang di 2 titik yang sebelumnya tidak ada feedback ke user sama sekali: error network/server tidak terjangkau, dan notifikasi sesi berakhir (dari `lib/axios.ts` interceptor) — konversi form-error existing (inline text → toast) menyusul per-modul di Phase 4b, tidak diborongkan di sini supaya perubahan tetap bisa direview bertahap.
+- **Halaman Login**: didesain ulang jadi split-panel — panel kiri brand (gradient primary, pola SVG abstrak garis/instrument loop buatan sendiri, highlight fitur) hanya tampil di layar lebar (`lg:`), panel kanan form dengan password show/hide toggle dan error via toast (bukan lagi teks statis).
+- **Dashboard charts**: `dashboard-charts.tsx` sebelumnya pakai hex warna literal (tidak ikut dark mode) — sekarang baca warna lewat hook `use-chart-colors.ts` yang resolve CSS variable saat itu juga (Recharts butuh string warna literal, tidak bisa pakai class Tailwind langsung).
+- **Dependency baru**: `@radix-ui/react-dropdown-menu`, `@radix-ui/react-tooltip`, `sonner`.
+- **Belum dikerjakan** (menyusul Phase 4b): polish visual per-modul (Area/Instrument/CM/PM/Vendor/Spare Part/User Management/PM Programs detail), konversi sisa form-error inline ke toast, icon audit menyeluruh per-modul, kemungkinan redesign `detail-dialog.tsx` generik.

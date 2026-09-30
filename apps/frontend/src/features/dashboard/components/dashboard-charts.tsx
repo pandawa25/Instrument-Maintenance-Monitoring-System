@@ -17,17 +17,7 @@ import type {
   MaintenanceByMonth,
   PmCompliance,
 } from '../types/dashboard.types';
-
-// Palet warna brand IMMS (lihat project brief) — dipakai konsisten di semua chart
-// supaya tidak tercampur warna generik recharts.
-const COLORS = {
-  primary: '#005BAC',
-  secondary: '#00AEEF',
-  success: '#16A34A',
-  warning: '#F59E0B',
-  danger: '#DC2626',
-};
-const CATEGORY_PALETTE = [COLORS.primary, COLORS.secondary, COLORS.warning, COLORS.danger, COLORS.success, '#7C3AED', '#0D9488'];
+import { useChartColors } from '../hooks/use-chart-colors';
 
 const FAILURE_CATEGORY_LABEL: Record<string, string> = {
   INSTRUMENT: 'Instrument',
@@ -54,6 +44,8 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 }
 
 export function MaintenanceTrendChart({ data, isLoading }: { data?: MaintenanceByMonth[]; isLoading: boolean }) {
+  const colors = useChartColors();
+
   return (
     <ChartCard title="Corrective Maintenance per Bulan (12 Bulan Terakhir)">
       {isLoading || !data ? (
@@ -61,14 +53,14 @@ export function MaintenanceTrendChart({ data, isLoading }: { data?: MaintenanceB
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={data.map((d) => ({ ...d, label: monthLabel(d.month) }))}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#DDE4EC" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#5B6B7D' }} axisLine={{ stroke: '#DDE4EC' }} tickLine={false} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#5B6B7D' }} axisLine={false} tickLine={false} width={28} />
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 12, fill: colors['text-muted'] }} axisLine={{ stroke: colors.border }} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: colors['text-muted'] }} axisLine={false} tickLine={false} width={28} />
             <Tooltip
-              contentStyle={{ borderRadius: 8, border: '1px solid #DDE4EC', fontSize: 12 }}
+              contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }}
               formatter={(value: number) => [value, 'Maintenance']}
             />
-            <Bar dataKey="count" fill={COLORS.primary} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="count" fill={colors.primary} radius={[4, 4, 0, 0]} maxBarSize={28} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -77,6 +69,7 @@ export function MaintenanceTrendChart({ data, isLoading }: { data?: MaintenanceB
 }
 
 export function MaintenanceByAreaChart({ data, isLoading }: { data?: MaintenanceByArea[]; isLoading: boolean }) {
+  const colors = useChartColors();
   const chartData = (data ?? []).slice(0, 10).map((d) => ({ ...d, label: d.areaCode }));
 
   return (
@@ -88,21 +81,21 @@ export function MaintenanceByAreaChart({ data, isLoading }: { data?: Maintenance
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#DDE4EC" horizontal={false} />
-            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: '#5B6B7D' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} horizontal={false} />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: colors['text-muted'] }} axisLine={false} tickLine={false} />
             <YAxis
               type="category"
               dataKey="label"
-              tick={{ fontSize: 12, fill: '#152233' }}
+              tick={{ fontSize: 12, fill: colors.text }}
               axisLine={false}
               tickLine={false}
               width={70}
             />
             <Tooltip
-              contentStyle={{ borderRadius: 8, border: '1px solid #DDE4EC', fontSize: 12 }}
+              contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }}
               formatter={(value: number, _name, item) => [value, item.payload.areaName]}
             />
-            <Bar dataKey="count" fill={COLORS.secondary} radius={[0, 4, 4, 0]} maxBarSize={18} />
+            <Bar dataKey="count" fill={colors.secondary} radius={[0, 4, 4, 0]} maxBarSize={18} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -117,6 +110,7 @@ export function MaintenanceByCategoryChart({
   data?: MaintenanceByFailureCategory[];
   isLoading: boolean;
 }) {
+  const colors = useChartColors();
   const chartData = (data ?? []).map((d) => ({ name: FAILURE_CATEGORY_LABEL[d.category] ?? d.category, value: d.count }));
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
@@ -131,11 +125,11 @@ export function MaintenanceByCategoryChart({
           <PieChart>
             <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
               {chartData.map((_, index) => (
-                <Cell key={index} fill={CATEGORY_PALETTE[index % CATEGORY_PALETTE.length]} />
+                <Cell key={index} fill={colors.categoryPalette[index % colors.categoryPalette.length]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #DDE4EC', fontSize: 12 }} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.text }} />
           </PieChart>
         </ResponsiveContainer>
       )}
@@ -144,11 +138,12 @@ export function MaintenanceByCategoryChart({
 }
 
 export function PmComplianceChart({ data, isLoading }: { data?: PmCompliance; isLoading: boolean }) {
+  const colors = useChartColors();
   const chartData = data
     ? [
-        { name: 'Completed', value: data.completed, color: COLORS.success },
-        { name: 'Pending (belum jatuh tempo)', value: data.pendingOnTime, color: COLORS.warning },
-        { name: 'Overdue', value: data.overdue, color: COLORS.danger },
+        { name: 'Completed', value: data.completed, color: colors.success },
+        { name: 'Pending (belum jatuh tempo)', value: data.pendingOnTime, color: colors.warning },
+        { name: 'Overdue', value: data.overdue, color: colors.danger },
       ]
     : [];
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
@@ -167,8 +162,8 @@ export function PmComplianceChart({ data, isLoading }: { data?: PmCompliance; is
                 <Cell key={index} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #DDE4EC', fontSize: 12 }} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.text }} />
           </PieChart>
         </ResponsiveContainer>
       )}
