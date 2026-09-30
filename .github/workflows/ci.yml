@@ -24,6 +24,7 @@ jobs:
       - run: npm run build --workspace=packages/shared-utils
       - run: npm run prisma:generate --workspace=apps/backend
       - run: npm run build --workspace=apps/backend
+      - run: npm test --workspace=apps/backend
 
   frontend:
     runs-on: ubuntu-latest

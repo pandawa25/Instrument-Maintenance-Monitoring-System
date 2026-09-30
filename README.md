@@ -123,6 +123,7 @@ chore: update dependency
 - [x] Stock Movement Ledger (Phase 2) — audit trail lengkap perubahan stock, restock/adjustment manual
 - [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
+- [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening
@@ -135,3 +136,14 @@ chore: update dependency
 - `CORS_ORIGIN` di backend **wajib** diisi origin frontend yang eksak (bukan `*`) — browser menolak cookie cross-origin kalau `Access-Control-Allow-Origin` wildcard sementara `credentials: true`.
 - Login history (tabel `login_history`) mencatat sukses & gagal, **hanya untuk email yang terdaftar** (email yang sama sekali tidak ada di sistem tidak dicatat, menghindari noise dari salah ketik/bot scan).
 - Belum ada UI admin untuk browse/revoke session aktif — baru kemampuan backend (rotation otomatis + revoke saat logout).
+
+### Automated Testing Baseline
+
+- Framework: Jest + ts-jest (backend). Jalankan lokal dengan `npm test --workspace=apps/backend`.
+- Scope MVP: unit test untuk logika bisnis/security paling berisiko kalau salah, bukan coverage menyeluruh semua modul:
+  - `AuthService` — login tidak mencatat history untuk email tak terdaftar, bcrypt tetap jalan untuk akun nonaktif (timing-safe), refresh token rotation, reuse detection (token bekas dipakai lagi → semua sesi dicabut), logout.
+  - `RolesGuard` — enforcement RBAC (Admin vs Viewer, endpoint tanpa `@Roles(...)`).
+  - `SparePartsRepository.recordMovement` — satu-satunya jalur mutasi stock: penambahan/pengurangan benar, validasi stock tidak boleh negatif, spare part tidak ditemukan.
+- Semua test memakai mock (Prisma, bcrypt, JwtService) — tidak butuh database sungguhan, cepat dijalankan di CI.
+- Terpasang sebagai step di `.github/workflows/ci.yml` (job `backend`) — PR/push ke `main`/`develop` otomatis gagal kalau ada test yang merah.
+- Belum ada e2e test (butuh test database) maupun test frontend (Vitest) — menyusul di iterasi berikutnya sesuai kebutuhan.
