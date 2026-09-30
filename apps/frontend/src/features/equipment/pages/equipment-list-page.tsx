@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Gauge, Plus, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
@@ -84,7 +85,7 @@ export function EquipmentListPage() {
         }
       />
 
-      <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+      <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <SearchInput
             value={params.search ?? ''}
@@ -143,7 +144,7 @@ export function EquipmentListPage() {
         {data?.meta && (
           <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />
         )}
-      </div>
+      </Card>
 
       <EquipmentFormDialog open={formOpen} onOpenChange={setFormOpen} equipment={editingItem} />
 

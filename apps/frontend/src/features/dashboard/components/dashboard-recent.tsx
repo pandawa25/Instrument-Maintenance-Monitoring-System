@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { LatestMaintenanceItem, UpcomingPmPeriod } from '../types/dashboard.types';
 
@@ -14,7 +15,7 @@ const FAILURE_CATEGORY_LABEL: Record<string, string> = {
 
 export function LatestMaintenanceTable({ items, isLoading }: { items?: LatestMaintenanceItem[]; isLoading: boolean }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+    <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-text">10 Corrective Maintenance Terbaru</h3>
         <Link to="/maintenance" className="text-xs font-medium text-primary hover:underline">
@@ -54,13 +55,13 @@ export function LatestMaintenanceTable({ items, isLoading }: { items?: LatestMai
           </table>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
 export function UpcomingPmList({ items, isLoading }: { items?: UpcomingPmPeriod[]; isLoading: boolean }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+    <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-text">PM Mendatang / Overdue</h3>
         <Link to="/pm-programs" className="text-xs font-medium text-primary hover:underline">
@@ -92,6 +93,6 @@ export function UpcomingPmList({ items, isLoading }: { items?: UpcomingPmPeriod[
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

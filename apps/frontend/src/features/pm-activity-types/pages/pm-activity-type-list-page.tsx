@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ListChecks, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -65,7 +66,7 @@ export function PmActivityTypeListPage() {
         }
       />
 
-      <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+      <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <SearchInput
             value={params.search ?? ''}
@@ -86,7 +87,7 @@ export function PmActivityTypeListPage() {
         </div>
 
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}
-      </div>
+      </Card>
 
       <PmActivityTypeFormDialog open={formOpen} onOpenChange={setFormOpen} activityType={editingItem} />
 

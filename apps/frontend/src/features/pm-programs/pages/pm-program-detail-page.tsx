@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarClock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { PageHeader } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
@@ -65,7 +66,7 @@ export function PmProgramDetailPage() {
         action={<StatusBadge value={program.status} />}
       />
 
-      <div className="rounded-xl border border-border/70 bg-surface p-5 shadow-sm">
+      <Card className="p-5">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <SummaryStat label="Total Equipment" value={program.equipment.length} />
           <SummaryStat label="Total Periode" value={program.totalPeriod} />
@@ -84,7 +85,7 @@ export function PmProgramDetailPage() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-text">Periode PM</h3>

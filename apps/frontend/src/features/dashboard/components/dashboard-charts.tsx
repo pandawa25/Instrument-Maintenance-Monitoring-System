@@ -18,6 +18,7 @@ import type {
   PmCompliance,
 } from '../types/dashboard.types';
 import { useChartColors } from '../hooks/use-chart-colors';
+import { Card } from '@/components/ui/card';
 
 const FAILURE_CATEGORY_LABEL: Record<string, string> = {
   INSTRUMENT: 'Instrument',
@@ -36,10 +37,10 @@ function monthLabel(monthKey: string): string {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface p-4 shadow-sm">
+    <Card className="p-4">
       <h3 className="mb-3 text-sm font-semibold text-text">{title}</h3>
       {children}
-    </div>
+    </Card>
   );
 }
 

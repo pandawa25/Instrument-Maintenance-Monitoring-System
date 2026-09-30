@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { MapPinned, Gauge, AlertTriangle, CheckCircle2, CalendarClock, PackageX } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { DashboardSummary } from '../types/dashboard.types';
 
@@ -52,7 +53,7 @@ export function SummaryCards({ summary, isLoading }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-border/70 bg-surface p-4 shadow-sm">
+        <Card key={card.label} className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wide text-text-muted">{card.label}</span>
             <card.icon className={cn('h-4 w-4 shrink-0', card.accent)} />
@@ -61,7 +62,7 @@ export function SummaryCards({ summary, isLoading }: Props) {
             {isLoading ? <span className="inline-block h-7 w-12 animate-pulse rounded bg-surface-2" /> : card.value}
           </div>
           {card.hint && <p className="mt-1 text-[11px] text-text-muted">{card.hint}</p>}
-        </div>
+        </Card>
       ))}
     </div>
   );

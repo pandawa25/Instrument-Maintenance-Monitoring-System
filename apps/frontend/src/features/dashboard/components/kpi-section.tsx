@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Timer, Activity, ShieldCheck } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useDashboardKpi } from '../hooks/use-dashboard';
 import type { KpiByArea, KpiByInstrument, KpiMetrics } from '../types/dashboard.types';
@@ -14,14 +15,14 @@ function fmt(value: number | null, suffix: string): string {
 
 function KpiCard({ label, value, icon: Icon, accent, hint }: { label: string; value: string; icon: typeof Timer; accent: string; hint: string }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface p-4 shadow-sm">
+    <Card className="p-4">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</span>
         <Icon className={cn('h-4 w-4 shrink-0', accent)} />
       </div>
       <div className="mt-2 text-2xl font-semibold text-text">{value}</div>
       <p className="mt-1 text-[11px] text-text-muted">{hint}</p>
-    </div>
+    </Card>
   );
 }
 
@@ -65,7 +66,7 @@ function OverallCards({ overall, isLoading }: { overall: KpiMetrics | undefined;
 
 function ByAreaTable({ rows, isLoading }: { rows?: KpiByArea[]; isLoading: boolean }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+    <Card>
       <div className="border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-text">KPI per Area</h3>
       </div>
@@ -101,7 +102,7 @@ function ByAreaTable({ rows, isLoading }: { rows?: KpiByArea[]; isLoading: boole
           </table>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -116,7 +117,7 @@ function ByInstrumentTable({ rows, isLoading }: { rows?: KpiByInstrument[]; isLo
   }, [rows, search]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+    <Card>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-text">KPI per Instrument</h3>
         <Input
@@ -160,7 +161,7 @@ function ByInstrumentTable({ rows, isLoading }: { rows?: KpiByInstrument[]; isLo
           </table>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

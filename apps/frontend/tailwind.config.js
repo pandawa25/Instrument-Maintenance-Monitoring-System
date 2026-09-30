@@ -38,6 +38,10 @@ export default {
       },
       boxShadow: {
         soft: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
+        // Elevation untuk card/container konten — lebih tegas dari shadow-sm bawaan
+        // Tailwind supaya card terasa "terangkat" dari background, bukan cuma dikasih border.
+        card: '0 1px 2px 0 rgb(15 23 42 / 0.04), 0 3px 10px -2px rgb(15 23 42 / 0.10)',
+        'card-hover': '0 4px 14px -2px rgb(15 23 42 / 0.14), 0 2px 6px -2px rgb(15 23 42 / 0.08)',
       },
       keyframes: {
         'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },

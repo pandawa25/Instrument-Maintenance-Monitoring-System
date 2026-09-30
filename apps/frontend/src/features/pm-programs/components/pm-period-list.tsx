@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { LoadingState } from '@/components/shared/loading-state';
@@ -43,7 +44,7 @@ export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
   return (
     <div className="space-y-2">
       {periods.map((period) => (
-        <div key={period.id} className="rounded-xl border border-border/70 bg-surface shadow-sm">
+        <Card key={period.id}>
           <button
             type="button"
             className="flex w-full items-center justify-between px-4 py-3 text-left"
@@ -84,7 +85,7 @@ export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
           {expandedId === period.id && (
             <PmPeriodExecutionsPanel periodId={period.id} canEdit={canEdit} onFillExecution={onFillExecution} />
           )}
-        </div>
+        </Card>
       ))}
 
       <ConfirmDialog

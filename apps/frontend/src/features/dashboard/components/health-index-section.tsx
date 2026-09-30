@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { useDashboardHealthIndex } from '../hooks/use-dashboard';
 import type { HealthCategory } from '../types/dashboard.types';
 
@@ -59,18 +60,18 @@ export function HealthIndexSection() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         {SUMMARY_ORDER.map((s) => (
-          <div key={s.key} className="rounded-xl border border-border/70 bg-surface p-4 shadow-sm">
+          <Card key={s.key} className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-text-muted">{s.label}</span>
             </div>
             <div className="mt-2 text-2xl font-semibold text-text">
               {isLoading ? <span className="inline-block h-7 w-8 animate-pulse rounded bg-surface-2" /> : summary[s.key]}
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="rounded-xl border border-border/70 bg-surface shadow-sm">
+      <Card>
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <h4 className="text-sm font-semibold text-text">Detail per Instrument</h4>
           <Input className="h-8 w-48" placeholder="Cari Tag Number..." value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -118,7 +119,7 @@ export function HealthIndexSection() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

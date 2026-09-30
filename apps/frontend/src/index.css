@@ -15,12 +15,14 @@
     --warning: 38 92% 50%;
     --danger: 0 72% 51%;
 
-    --border: 212 28% 90%;
+    /* border & background sengaja dibuat lebih kontras dari surface (dulu selisih
+       cuma ~3% lightness sehingga card nyaris menyatu dengan canvas / terlihat flat) */
+    --border: 213 22% 86%;
     --ring: 208 100% 34%;
     --surface: 0 0% 100%;
     --surface-2: 210 31% 95%;
     --surface-3: 212 28% 91%;
-    --background: 215 32% 97%;
+    --background: 214 28% 94%;
     --text: 214 42% 14%;
     --text-muted: 212 16% 42%;
   }
@@ -36,12 +38,12 @@
     --warning: 38 92% 58%;
     --danger: 0 72% 62%;
 
-    --border: 215 18% 23%;
+    --border: 215 18% 25%;
     --ring: 208 90% 58%;
-    --surface: 215 25% 13%;
-    --surface-2: 215 22% 17%;
-    --surface-3: 215 19% 22%;
-    --background: 215 28% 9%;
+    --surface: 215 25% 15%;
+    --surface-2: 215 22% 19%;
+    --surface-3: 215 19% 24%;
+    --background: 215 30% 7%;
     --text: 210 20% 93%;
     --text-muted: 215 14% 65%;
   }
