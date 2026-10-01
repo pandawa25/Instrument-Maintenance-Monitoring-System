@@ -40,6 +40,15 @@ enum MaintenanceStatus {
   COMPLETED
 }
 
+// Posisi fail-safe aktuator saat kehilangan sinyal/power — hanya relevan untuk
+// equipment valve (Control Valve, Solenoid Valve, On-Off Valve, On-Off Valve SIS).
+// Lihat juga field size/rating/failAction di model Equipment.
+enum FailAction {
+  CLOSE
+  OPEN
+  LAST_POSITION
+}
+
 enum VendorStatus {
   ACTIVE
   INACTIVE
@@ -180,9 +189,19 @@ model Equipment {
   model            String?         @db.VarChar(100)
   serialNumber     String?         @map("serial_number") @db.VarChar(100)
   installationDate DateTime?       @map("installation_date") @db.Date
+  // LRV/URV/Unit: hanya relevan untuk equipment pengukuran (transmitter/gauge dst).
+  // Untuk equipment valve (kode instrument name CV/SV/KV/UV) field ini TIDAK dipakai —
+  // dipakai size/rating/failAction di bawah (lihat VALVE_INSTRUMENT_CODES di frontend,
+  // dan revisi "Module Equipment valve fields"). Keduanya sengaja tetap nullable &
+  // tidak saling exclusive di level DB/DTO — UX show/hide-nya murni di frontend (MVP,
+  // konsisten dengan pendekatan lrv/urv yang juga tidak divalidasi per instrument type).
   lrv              Decimal?        @db.Decimal(14, 4)
   urv              Decimal?        @db.Decimal(14, 4)
   unit             String?         @db.VarChar(20)
+  // Size/Rating/FailAction: khusus equipment valve (CV/SV/KV/UV) — lihat catatan di atas.
+  size             String?         @db.VarChar(50)
+  rating           String?         @db.VarChar(50)
+  failAction       FailAction?     @map("fail_action")
   status           EquipmentStatus @default(ACTIVE)
   criticality      Criticality     @default(MEDIUM)
   remarks          String?         @db.VarChar(500)

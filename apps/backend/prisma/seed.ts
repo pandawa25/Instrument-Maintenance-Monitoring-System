@@ -11,7 +11,9 @@ const INSTRUMENT_NAMES: Array<{ code: string; name: string }> = [
   { code: 'PG', name: 'Pressure Gauge' },
   { code: 'TG', name: 'Temperature Gauge' },
   { code: 'CV', name: 'Control Valve' },
-  { code: 'OOV', name: 'On-Off Valve' },
+  { code: 'SV', name: 'Solenoid Valve' },
+  { code: 'KV', name: 'On-Off Valve' },
+  { code: 'UV', name: 'On-Off Valve SIS' },
   { code: 'VP', name: 'Valve Positioner' },
   { code: 'AN', name: 'Analyzer' },
   { code: 'GD', name: 'Gas Detector' },
@@ -55,6 +57,16 @@ async function main() {
   });
 
   console.log('Seeding instrument names...');
+  // Migrasi kode lama 'OOV' (On-Off Valve) -> 'KV' (penyesuaian kode sesuai konvensi
+  // user: CV/SV/KV/UV untuk 4 tipe valve). Rename in-place supaya equipment yang sudah
+  // terlanjur pakai instrumentNameId lama tetap valid (FK tidak berubah, cuma code-nya).
+  // Idempotent: no-op kalau 'OOV' sudah tidak ada (baik karena sudah pernah di-rename,
+  // atau environment baru yang belum pernah seed versi lama).
+  const legacyOov = await prisma.instrumentName.findUnique({ where: { code: 'OOV' } });
+  if (legacyOov) {
+    await prisma.instrumentName.update({ where: { code: 'OOV' }, data: { code: 'KV', name: 'On-Off Valve' } });
+  }
+
   for (const item of INSTRUMENT_NAMES) {
     await prisma.instrumentName.upsert({
       where: { code: item.code },

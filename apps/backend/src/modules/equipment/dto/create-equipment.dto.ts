@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Criticality, EquipmentStatus } from '@prisma/client';
+import { Criticality, EquipmentStatus, FailAction } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
@@ -89,6 +89,27 @@ export class CreateEquipmentDto {
   @IsString()
   @MaxLength(20)
   unit?: string;
+
+  // Size/Rating/FailAction: khusus equipment valve (Control Valve, Solenoid Valve,
+  // On-Off Valve, On-Off Valve SIS — kode CV/SV/KV/UV). Sengaja tidak ada validasi
+  // "wajib diisi kalau instrument type X" di level DTO ini — sama seperti lrv/urv,
+  // show/hide field per tipe instrument murni urusan UX frontend (MVP).
+  @ApiProperty({ required: false, maxLength: 50, example: '2"' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  size?: string;
+
+  @ApiProperty({ required: false, maxLength: 50, example: 'ANSI 600' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  rating?: string;
+
+  @ApiProperty({ enum: FailAction, required: false, description: 'Posisi fail-safe aktuator (khusus valve)' })
+  @IsOptional()
+  @IsEnum(FailAction)
+  failAction?: FailAction;
 
   @ApiProperty({ enum: EquipmentStatus, default: EquipmentStatus.ACTIVE, required: false })
   @IsOptional()

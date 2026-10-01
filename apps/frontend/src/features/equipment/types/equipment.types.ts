@@ -1,5 +1,21 @@
 export type EquipmentStatus = 'ACTIVE' | 'STANDBY' | 'OUT_OF_SERVICE';
 export type Criticality = 'HIGH' | 'MEDIUM' | 'LOW';
+export type FailAction = 'CLOSE' | 'OPEN' | 'LAST_POSITION';
+
+export const FAIL_ACTION_LABEL: Record<FailAction, string> = {
+  CLOSE: 'Close',
+  OPEN: 'Open',
+  LAST_POSITION: 'Last Position',
+};
+
+// Kode instrument_names yang merupakan tipe valve — equipment dengan kode ini memakai
+// field Size/Rating/Fail Action, BUKAN LRV/URV/Unit (revisi Module Equipment valve fields):
+// Control Valve (CV), Solenoid Valve (SV), On-Off Valve (KV), On-Off Valve SIS (UV).
+export const VALVE_INSTRUMENT_CODES = ['CV', 'SV', 'KV', 'UV'] as const;
+
+export function isValveInstrumentCode(code: string | null | undefined): boolean {
+  return !!code && (VALVE_INSTRUMENT_CODES as readonly string[]).includes(code);
+}
 
 export interface InstrumentNameRef {
   id: string;
@@ -28,6 +44,9 @@ export interface Equipment {
   lrv: number | string | null;
   urv: number | string | null;
   unit: string | null;
+  size: string | null;
+  rating: string | null;
+  failAction: FailAction | null;
   status: EquipmentStatus;
   criticality: Criticality;
   remarks: string | null;
@@ -50,6 +69,9 @@ export interface EquipmentFormValues {
   lrv?: number | string;
   urv?: number | string;
   unit?: string;
+  size?: string;
+  rating?: string;
+  failAction?: FailAction | '';
   status: EquipmentStatus;
   criticality: Criticality;
   remarks?: string;

@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
-import { Area, Criticality, EquipmentStatus, ImportRowSeverity, InstrumentName, Prisma } from '@prisma/client';
+import { Area, Criticality, EquipmentStatus, FailAction, ImportRowSeverity, InstrumentName, Prisma } from '@prisma/client';
 import { normalizeTag } from '@imms/shared-utils';
 import { EquipmentRepository } from './equipment.repository';
 import { ImportBatchRepository, NewImportRow } from './import-batch.repository';
@@ -35,10 +35,18 @@ const TEMPLATE_COLUMNS: { header: string; key: string; width: number }[] = [
   { header: 'URV', key: 'urv', width: 10 },
   { header: 'Unit', key: 'unit', width: 10 },
   { header: 'Remarks', key: 'remarks', width: 30 },
+  // Khusus equipment valve (Instrument Name Code CV/SV/KV/UV) — lihat EquipmentBulkUploadService
+  // dan revisi "Module Equipment valve fields". Sengaja ditambahkan DI AKHIR (bukan disisipkan
+  // di tengah) supaya kolom Status (J) & Criticality (K) yang dipakai dataValidation di bawah
+  // tidak ikut bergeser huruf kolomnya.
+  { header: 'Size', key: 'size', width: 12 },
+  { header: 'Rating', key: 'rating', width: 14 },
+  { header: 'Fail Action', key: 'failAction', width: 16 },
 ];
 
 const STATUS_VALUES: EquipmentStatus[] = Object.values(EquipmentStatus);
 const CRITICALITY_VALUES: Criticality[] = Object.values(Criticality);
+const FAIL_ACTION_VALUES: FailAction[] = Object.values(FailAction);
 
 // Batas keras jumlah baris per upload. File yang lebih besar HARUS dipecah oleh user —
 // bukan diam-diam dipotong. Di volume ini, proses sinkron (bukan job queue) masih aman.
@@ -64,6 +72,9 @@ interface ParsedRow {
   urv?: string | number;
   unit?: string;
   remarks?: string;
+  size?: string;
+  rating?: string;
+  failAction?: string;
 }
 
 interface ResolvedEquipmentRow {
@@ -79,6 +90,9 @@ interface ResolvedEquipmentRow {
   lrv?: number;
   urv?: number;
   unit?: string;
+  size?: string;
+  rating?: string;
+  failAction?: FailAction;
   status?: EquipmentStatus;
   criticality?: Criticality;
   remarks?: string;
@@ -140,7 +154,25 @@ export class EquipmentBulkUploadService {
       remarks: 'Contoh baris — hapus sebelum upload',
     });
 
-    // Dropdown validasi untuk kolom Status & Criticality (kolom J & K).
+    // Contoh baris kedua — equipment valve (Size/Rating/Fail Action, bukan LRV/URV/Unit).
+    sheet.addRow({
+      areaCode: 'PU-01',
+      tagNo: 'CV-1001',
+      service: 'Control Valve Discharge Pump 01',
+      instrumentNameCode: 'CV',
+      manufacturer: 'Fisher',
+      model: 'ED',
+      serialNumber: 'SN-000456',
+      installationDate: '2024-01-15',
+      status: 'ACTIVE',
+      criticality: 'HIGH',
+      size: '2"',
+      rating: 'ANSI 600',
+      failAction: 'CLOSE',
+      remarks: 'Contoh baris valve — hapus sebelum upload',
+    });
+
+    // Dropdown validasi untuk kolom Status (J), Criticality (K), & Fail Action (R).
     for (let rowNumber = 2; rowNumber <= MAX_ROWS + 1; rowNumber += 1) {
       sheet.getCell(`J${rowNumber}`).dataValidation = {
         type: 'list',
@@ -151,6 +183,11 @@ export class EquipmentBulkUploadService {
         type: 'list',
         allowBlank: true,
         formulae: [`"${CRITICALITY_VALUES.join(',')}"`],
+      };
+      sheet.getCell(`R${rowNumber}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`"${FAIL_ACTION_VALUES.join(',')}"`],
       };
     }
 
@@ -370,6 +407,9 @@ export class EquipmentBulkUploadService {
         lrv: resolved.lrv,
         urv: resolved.urv,
         unit: resolved.unit,
+        size: resolved.size,
+        rating: resolved.rating,
+        failAction: resolved.failAction,
         status: resolved.status,
         criticality: resolved.criticality,
         remarks: resolved.remarks,
@@ -429,6 +469,9 @@ export class EquipmentBulkUploadService {
       urv: cellText(13),
       unit: cellText(14),
       remarks: cellText(15),
+      size: cellText(16),
+      rating: cellText(17),
+      failAction: cellText(18),
     };
   }
 
@@ -552,11 +595,25 @@ export class EquipmentBulkUploadService {
       ['Serial Number', row.serialNumber, 100],
       ['Unit', row.unit, 20],
       ['Remarks', row.remarks, 500],
+      ['Size', row.size, 50],
+      ['Rating', row.rating, 50],
     ];
     for (const [label, value, max] of lengthChecks) {
       if (value && value.length > max) {
         return { severity: 'ERROR', messages: [`${label} melebihi ${max} karakter`] };
       }
+    }
+
+    let failAction: FailAction | undefined;
+    if (row.failAction) {
+      const match = FAIL_ACTION_VALUES.find((v) => v === row.failAction!.trim().toUpperCase());
+      if (!match) {
+        return {
+          severity: 'ERROR',
+          messages: [`Fail Action '${row.failAction}' tidak valid — pilihan: ${FAIL_ACTION_VALUES.join(', ')}`],
+        };
+      }
+      failAction = match;
     }
 
     if (lrv !== undefined && urv !== undefined && lrv >= urv) {
@@ -589,6 +646,9 @@ export class EquipmentBulkUploadService {
       lrv,
       urv,
       unit: row.unit,
+      size: row.size,
+      rating: row.rating,
+      failAction,
       status,
       criticality,
       remarks: row.remarks,

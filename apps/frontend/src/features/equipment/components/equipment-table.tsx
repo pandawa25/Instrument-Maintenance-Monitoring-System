@@ -3,7 +3,19 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
-import type { Equipment } from '../types/equipment.types';
+import { isValveInstrumentCode, type Equipment } from '../types/equipment.types';
+
+/** Range (LRV-URV/Unit) untuk equipment ukur, atau Size/Rating untuk equipment valve. */
+function rangeOrSizeCell(item: Equipment): string {
+  if (isValveInstrumentCode(item.instrumentName.code)) {
+    if (!item.size && !item.rating) return '—';
+    return [item.size, item.rating].filter(Boolean).join(' · ');
+  }
+  if (item.lrv !== null && item.urv !== null && item.lrv !== undefined && item.urv !== undefined) {
+    return `${item.lrv} – ${item.urv}${item.unit ? ` ${item.unit}` : ''}`;
+  }
+  return '—';
+}
 
 interface Props {
   equipment: Equipment[];
@@ -33,7 +45,7 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
           <th className="px-4 py-2.5 font-medium">Type</th>
           <th className="px-4 py-2.5 font-medium">Area</th>
           <th className="px-4 py-2.5 font-medium">Manufacturer</th>
-          <th className="px-4 py-2.5 font-medium">Range</th>
+          <th className="px-4 py-2.5 font-medium">Range / Size</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
           <th className="px-4 py-2.5 font-medium">Last Maintenance</th>
           <th className="px-4 py-2.5 font-medium text-right">Action</th>
@@ -48,11 +60,7 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
             <td className="px-4 py-2.5 text-text-muted">{item.type || '—'}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.manufacturer || '—'}</td>
-            <td className="px-4 py-2.5 text-text-muted">
-              {item.lrv !== null && item.urv !== null && item.lrv !== undefined && item.urv !== undefined
-                ? `${item.lrv} – ${item.urv}${item.unit ? ` ${item.unit}` : ''}`
-                : '—'}
-            </td>
+            <td className="px-4 py-2.5 text-text-muted">{rangeOrSizeCell(item)}</td>
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
             </td>

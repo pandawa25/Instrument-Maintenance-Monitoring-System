@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateEquipment, useUpdateEquipment } from '../hooks/use-equipment';
 import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-lookups';
-import type { Equipment, EquipmentFormValues } from '../types/equipment.types';
+import { isValveInstrumentCode, type Equipment, type EquipmentFormValues, type FailAction } from '../types/equipment.types';
 
 const EMPTY_FORM: EquipmentFormValues = {
   tagNumber: '',
@@ -23,6 +23,9 @@ const EMPTY_FORM: EquipmentFormValues = {
   lrv: '',
   urv: '',
   unit: '',
+  size: '',
+  rating: '',
+  failAction: '',
   status: 'ACTIVE',
   criticality: 'MEDIUM',
   remarks: '',
@@ -58,6 +61,8 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const selectedArea = areas?.find((area) => area.id === form.areaId);
+  const selectedInstrumentName = instrumentNames?.find((item) => item.id === form.instrumentNameId);
+  const isValve = isValveInstrumentCode(selectedInstrumentName?.code);
 
   useEffect(() => {
     if (open) {
@@ -76,6 +81,9 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
           lrv: equipment.lrv ?? '',
           urv: equipment.urv ?? '',
           unit: equipment.unit ?? '',
+          size: equipment.size ?? '',
+          rating: equipment.rating ?? '',
+          failAction: equipment.failAction ?? '',
           status: equipment.status,
           criticality: equipment.criticality,
           remarks: equipment.remarks ?? '',
@@ -103,13 +111,19 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
     const composedTagNumber = `${selectedArea.areaCode}-${tagSuffix}`.trim();
 
     try {
+      // Equipment valve (CV/SV/KV/UV) pakai Size/Rating/Fail Action, equipment lain pakai
+      // LRV/URV/Unit — keduanya saling eksklusif, jadi field yang tidak relevan dikosongkan
+      // saat submit supaya tidak ada data basi tersisa kalau instrument type pernah diganti.
       const payload: EquipmentFormValues = {
         ...form,
         tagNumber: composedTagNumber,
         installationDate: form.installationDate || undefined,
-        lrv: form.lrv === '' || form.lrv === undefined ? undefined : Number(form.lrv),
-        urv: form.urv === '' || form.urv === undefined ? undefined : Number(form.urv),
-        unit: form.unit || undefined,
+        lrv: isValve || form.lrv === '' || form.lrv === undefined ? undefined : Number(form.lrv),
+        urv: isValve || form.urv === '' || form.urv === undefined ? undefined : Number(form.urv),
+        unit: isValve ? undefined : form.unit || undefined,
+        size: isValve ? form.size || undefined : undefined,
+        rating: isValve ? form.rating || undefined : undefined,
+        failAction: isValve && form.failAction ? form.failAction : undefined,
       };
       if (isEdit && equipment) {
         await updateMutation.mutateAsync({ id: equipment.id, payload });
@@ -255,40 +269,82 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
             />
           </div>
 
-          <div>
-            <Label htmlFor="lrv">LRV (Lower Range Value)</Label>
-            <Input
-              id="lrv"
-              type="number"
-              step="any"
-              value={form.lrv}
-              onChange={(e) => setForm({ ...form, lrv: e.target.value })}
-              placeholder="0"
-            />
-          </div>
+          {isValve ? (
+            <>
+              <div>
+                <Label htmlFor="size">Size</Label>
+                <Input
+                  id="size"
+                  value={form.size}
+                  onChange={(e) => setForm({ ...form, size: e.target.value })}
+                  placeholder='mis. 2", 4"'
+                  maxLength={50}
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="urv">URV (Upper Range Value)</Label>
-            <Input
-              id="urv"
-              type="number"
-              step="any"
-              value={form.urv}
-              onChange={(e) => setForm({ ...form, urv: e.target.value })}
-              placeholder="100"
-            />
-          </div>
+              <div>
+                <Label htmlFor="rating">Rating</Label>
+                <Input
+                  id="rating"
+                  value={form.rating}
+                  onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                  placeholder="mis. ANSI 600"
+                  maxLength={50}
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="unit">Unit</Label>
-            <Input
-              id="unit"
-              value={form.unit}
-              onChange={(e) => setForm({ ...form, unit: e.target.value })}
-              placeholder="mis. barg, °C, m3/h"
-              maxLength={20}
-            />
-          </div>
+              <div>
+                <Label htmlFor="failAction">Fail Action</Label>
+                <Select
+                  id="failAction"
+                  value={form.failAction}
+                  onChange={(e) => setForm({ ...form, failAction: e.target.value as FailAction })}
+                >
+                  <option value="">Pilih fail action...</option>
+                  <option value="CLOSE">Close</option>
+                  <option value="OPEN">Open</option>
+                  <option value="LAST_POSITION">Last Position</option>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <Label htmlFor="lrv">LRV (Lower Range Value)</Label>
+                <Input
+                  id="lrv"
+                  type="number"
+                  step="any"
+                  value={form.lrv}
+                  onChange={(e) => setForm({ ...form, lrv: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="urv">URV (Upper Range Value)</Label>
+                <Input
+                  id="urv"
+                  type="number"
+                  step="any"
+                  value={form.urv}
+                  onChange={(e) => setForm({ ...form, urv: e.target.value })}
+                  placeholder="100"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="unit">Unit</Label>
+                <Input
+                  id="unit"
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                  placeholder="mis. barg, °C, m3/h"
+                  maxLength={20}
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <Label htmlFor="status">Status</Label>

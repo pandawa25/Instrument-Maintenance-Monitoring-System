@@ -1,7 +1,7 @@
 import { Gauge } from 'lucide-react';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
-import type { Equipment } from '../types/equipment.types';
+import { FAIL_ACTION_LABEL, isValveInstrumentCode, type Equipment } from '../types/equipment.types';
 
 interface Props {
   open: boolean;
@@ -11,6 +11,22 @@ interface Props {
 
 export function EquipmentDetailDialog({ open, onOpenChange, equipment }: Props) {
   if (!equipment) return null;
+
+  const isValve = isValveInstrumentCode(equipment.instrumentName.code);
+
+  // Equipment valve (CV/SV/KV/UV) pakai Size/Rating/Fail Action; equipment lain pakai
+  // LRV/URV/Unit — lihat revisi "Module Equipment valve fields".
+  const valveOrRangeFields: DetailField[] = isValve
+    ? [
+        { label: 'Size', value: equipment.size },
+        { label: 'Rating', value: equipment.rating },
+        { label: 'Fail Action', value: equipment.failAction ? FAIL_ACTION_LABEL[equipment.failAction] : null },
+      ]
+    : [
+        { label: 'LRV', value: equipment.lrv !== null && equipment.lrv !== undefined ? String(equipment.lrv) : null },
+        { label: 'URV', value: equipment.urv !== null && equipment.urv !== undefined ? String(equipment.urv) : null },
+        { label: 'Unit', value: equipment.unit },
+      ];
 
   const fields: DetailField[] = [
     { label: 'Tag Number', value: equipment.tagNumber },
@@ -26,9 +42,7 @@ export function EquipmentDetailDialog({ open, onOpenChange, equipment }: Props) 
       label: 'Installation Date',
       value: equipment.installationDate ? new Date(equipment.installationDate).toLocaleDateString('id-ID') : null,
     },
-    { label: 'LRV', value: equipment.lrv !== null && equipment.lrv !== undefined ? String(equipment.lrv) : null },
-    { label: 'URV', value: equipment.urv !== null && equipment.urv !== undefined ? String(equipment.urv) : null },
-    { label: 'Unit', value: equipment.unit },
+    ...valveOrRangeFields,
     { label: 'Status', value: <StatusBadge value={equipment.status} /> },
     { label: 'Criticality', value: <StatusBadge value={equipment.criticality} /> },
     {
