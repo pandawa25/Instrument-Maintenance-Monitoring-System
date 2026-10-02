@@ -298,7 +298,15 @@ export class MaintenanceRepository {
 
     const [total, grouped] = await this.prisma.$transaction([
       this.prisma.correctiveMaintenance.count({ where }),
-      this.prisma.correctiveMaintenance.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      this.prisma.correctiveMaintenance.groupBy({
+        by: ['status'],
+        where,
+        _count: { _all: true },
+        // Prisma mewajibkan `orderBy` secara tipe saat pakai `groupBy` + `by` — nilai
+        // urutannya tidak penting di sini karena hasilnya di-map ke object `counts`
+        // berdasarkan nama status, bukan berdasarkan urutan array.
+        orderBy: { status: 'asc' },
+      }),
     ]);
 
     const counts: Record<string, number> = {
