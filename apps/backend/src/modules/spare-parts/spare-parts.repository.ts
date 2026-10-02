@@ -1,11 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, StockMovementType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
 import { QuerySparePartDto } from './dto/query-spare-part.dto';
 import { CreateSparePartDto } from './dto/create-spare-part.dto';
 import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
 import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
+
+const SPARE_PART_SORTABLE_FIELDS = ['kimap', 'name', 'stock', 'status', 'createdAt', 'updatedAt'] as const;
+const STOCK_MOVEMENT_SORTABLE_FIELDS = ['type', 'quantityDelta', 'balanceAfter', 'createdAt'] as const;
 
 interface RecordMovementParams {
   sparePartId: string;
@@ -50,7 +54,7 @@ export class SparePartsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SPARE_PART_SORTABLE_FIELDS, 'createdAt'),
       }),
       this.prisma.sparePart.count({ where }),
     ]);
@@ -168,7 +172,7 @@ export class SparePartsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, STOCK_MOVEMENT_SORTABLE_FIELDS, 'createdAt'),
         include: { createdBy: { select: { id: true, fullName: true } } },
       }),
       this.prisma.sparePartStockMovement.count({ where }),
@@ -210,7 +214,7 @@ export class SparePartsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, STOCK_MOVEMENT_SORTABLE_FIELDS, 'createdAt'),
         include: {
           createdBy: { select: { id: true, fullName: true } },
           sparePart: { select: { id: true, kimap: true, name: true, unit: true } },

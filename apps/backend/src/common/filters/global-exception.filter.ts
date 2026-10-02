@@ -45,7 +45,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = this.mapPrismaStatus(exception.code);
       message = this.mapPrismaMessage(exception);
     } else if (exception instanceof Error) {
-      message = exception.message;
+      // SENGAJA TIDAK pakai `exception.message` sebagai response ke client — error di
+      // cabang ini tidak dikenal/tidak terduga (mis. Prisma.PrismaClientValidationError
+      // kalau ada query yang salah bentuk, bug di library pihak ketiga, dst) dan pesannya
+      // bisa memuat detail internal (nama tabel/kolom, path file, stack info) yang tidak
+      // boleh bocor ke response API. `message` tetap "Internal server error" (default di
+      // atas); detail asli cukup di log server untuk debugging.
       this.logger.error(exception.message, exception.stack);
     }
 

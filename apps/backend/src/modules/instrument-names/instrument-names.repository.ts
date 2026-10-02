@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = ['code', 'name', 'createdAt', 'updatedAt'] as const;
 import { QueryInstrumentNameDto } from './dto/query-instrument-name.dto';
 import { CreateInstrumentNameDto } from './dto/create-instrument-name.dto';
 import { UpdateInstrumentNameDto } from './dto/update-instrument-name.dto';
@@ -35,7 +38,7 @@ export class InstrumentNamesRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: { _count: { select: { equipment: true } } },
       }),
       this.prisma.instrumentName.count({ where }),

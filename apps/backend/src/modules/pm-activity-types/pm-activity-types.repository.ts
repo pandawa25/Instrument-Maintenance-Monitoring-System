@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = ['code', 'name', 'createdAt', 'updatedAt'] as const;
 import { QueryPmActivityTypeDto } from './dto/query-pm-activity-type.dto';
 import { CreatePmActivityTypeDto } from './dto/create-pm-activity-type.dto';
 import { UpdatePmActivityTypeDto } from './dto/update-pm-activity-type.dto';
@@ -34,7 +37,7 @@ export class PmActivityTypesRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: { _count: { select: { checklistItems: true } } },
       }),
       this.prisma.pmActivityType.count({ where }),

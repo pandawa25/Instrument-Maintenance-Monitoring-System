@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = ['areaCode', 'areaName', 'status', 'createdAt', 'updatedAt'] as const;
 import { QueryAreaDto } from './dto/query-area.dto';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
@@ -39,7 +42,7 @@ export class AreasRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: { _count: { select: { equipment: true } } },
       }),
       this.prisma.area.count({ where }),

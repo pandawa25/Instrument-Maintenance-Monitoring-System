@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = ['name', 'startDate', 'status', 'createdAt', 'updatedAt'] as const;
 import { QueryPmProgramDto } from './dto/query-pm-program.dto';
 import { CreatePmProgramDto } from './dto/create-pm-program.dto';
 import { UpdatePmProgramDto } from './dto/update-pm-program.dto';
@@ -58,7 +61,7 @@ export class PmProgramsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: {
           vendor: { select: { id: true, name: true } },
           _count: { select: { equipment: true, periods: true } },

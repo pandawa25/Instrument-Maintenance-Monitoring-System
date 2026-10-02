@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = [
+  'spkNumber',
+  'maintenanceDate',
+  'failureCategory',
+  'priority',
+  'status',
+  'completionDate',
+  'createdAt',
+  'updatedAt',
+] as const;
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
@@ -87,7 +99,7 @@ export class MaintenanceRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'maintenanceDate'),
         include: LIST_INCLUDE,
       }),
       this.prisma.correctiveMaintenance.count({ where }),
@@ -108,7 +120,7 @@ export class MaintenanceRepository {
     const where = this.buildWhere(query);
     return this.prisma.correctiveMaintenance.findMany({
       where,
-      orderBy: { [query.sortBy]: query.sortOrder },
+      orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'maintenanceDate'),
       include: LIST_INCLUDE,
     });
   }

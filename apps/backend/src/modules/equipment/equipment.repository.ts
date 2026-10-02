@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
+
+const SORTABLE_FIELDS = [
+  'tagNumber',
+  'service',
+  'status',
+  'criticality',
+  'installationDate',
+  'createdAt',
+  'updatedAt',
+] as const;
 import { QueryEquipmentDto } from './dto/query-equipment.dto';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
@@ -46,7 +57,7 @@ export class EquipmentRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: { [query.sortBy]: query.sortOrder },
+        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: {
           area: { select: { id: true, areaCode: true, areaName: true } },
           instrumentName: { select: { id: true, code: true, name: true } },
