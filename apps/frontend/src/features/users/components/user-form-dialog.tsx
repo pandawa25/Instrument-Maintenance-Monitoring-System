@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/select';
 import { useCreateUser, useUpdateUser } from '../hooks/use-users';
 import { useRolesLookup } from '../hooks/use-roles-lookup';
 import type { ManagedUser } from '../types/user.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface FormState {
   fullName: string;
@@ -82,7 +83,7 @@ export function UserFormDialog({ open, onOpenChange, user, isSelf }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan user');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan user'));
     }
   }
 

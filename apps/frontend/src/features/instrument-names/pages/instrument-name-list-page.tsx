@@ -13,6 +13,7 @@ import { InstrumentNameFormDialog } from '../components/instrument-name-form-dia
 import { InstrumentNameDetailDialog } from '../components/instrument-name-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { InstrumentName, InstrumentNameQueryParams } from '../types/instrument-name.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: InstrumentNameQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -46,7 +47,7 @@ export function InstrumentNameListPage() {
       toast.success(`Instrument name "${deletingItem.name}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus instrument name');
+      toast.error(getErrorMessage(err, 'Gagal menghapus instrument name'));
     }
   }
 

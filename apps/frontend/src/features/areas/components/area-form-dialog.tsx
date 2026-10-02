@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateArea, useUpdateArea } from '../hooks/use-areas';
 import type { Area, AreaFormValues } from '../types/area.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: AreaFormValues = { areaCode: '', areaName: '', description: '', status: 'ACTIVE' };
 
@@ -50,7 +51,7 @@ export function AreaFormDialog({ open, onOpenChange, area }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan area');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan area'));
     }
   }
 

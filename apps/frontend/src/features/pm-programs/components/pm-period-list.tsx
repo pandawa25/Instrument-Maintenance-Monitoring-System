@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { usePmPeriodDetail, useDeletePmPeriod } from '../hooks/use-pm-periods';
 import { PmBulkExecutionFormDialog } from './pm-bulk-execution-form-dialog';
 import type { PmPeriodListItem } from '../types/pm-period.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   periods: PmPeriodListItem[];
@@ -37,7 +38,7 @@ export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
       toast.success('Periode berhasil dihapus');
       setDeletingId(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus periode');
+      toast.error(getErrorMessage(err, 'Gagal menghapus periode'));
     }
   }
 

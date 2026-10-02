@@ -13,6 +13,7 @@ import { PmActivityTypeFormDialog } from '../components/pm-activity-type-form-di
 import { PmActivityTypeDetailDialog } from '../components/pm-activity-type-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { PmActivityType, PmActivityTypeQueryParams } from '../types/pm-activity-type.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: PmActivityTypeQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -46,7 +47,7 @@ export function PmActivityTypeListPage() {
       toast.success(`Activity type "${deletingItem.name}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus activity type');
+      toast.error(getErrorMessage(err, 'Gagal menghapus activity type'));
     }
   }
 

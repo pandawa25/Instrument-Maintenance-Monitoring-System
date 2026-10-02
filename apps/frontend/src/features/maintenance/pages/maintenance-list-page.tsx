@@ -24,6 +24,7 @@ import { MaintenanceSummaryCards } from '../components/maintenance-summary-cards
 import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
 import { useAuthStore } from '@/store/auth.store';
 import type { Maintenance, MaintenanceQueryParams } from '../types/maintenance.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: MaintenanceQueryParams = {
   page: 1,
@@ -71,7 +72,7 @@ export function MaintenanceListPage() {
       toast.success(`Data maintenance "${deletingItem.spkNumber ?? deletingItem.equipment.tagNumber}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus data maintenance');
+      toast.error(getErrorMessage(err, 'Gagal menghapus data maintenance'));
     }
   }
 

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreatePmPeriod } from '../hooks/use-pm-periods';
+import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   open: boolean;
@@ -34,7 +35,7 @@ export function PmPeriodCreateDialog({ open, onOpenChange, programId, suggestedD
       toast.success('Periode berhasil ditambahkan');
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menambah periode');
+      toast.error(getErrorMessage(err, 'Gagal menambah periode'));
     }
   }
 

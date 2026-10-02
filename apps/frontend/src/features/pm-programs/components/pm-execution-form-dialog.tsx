@@ -10,6 +10,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { usePmPeriodExecution, useUpdatePmPeriodExecution } from '../hooks/use-pm-period-executions';
 import type { PmChecklistResult, PmExecutionResult, PmExecutionStatus } from '../types/pm-period.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface FormState {
   executionDate: string;
@@ -100,7 +101,7 @@ export function PmExecutionFormDialog({ open, onOpenChange, executionId, canEdit
       toast.success('Hasil eksekusi PM berhasil disimpan');
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan hasil eksekusi PM');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan hasil eksekusi PM'));
     }
   }
 

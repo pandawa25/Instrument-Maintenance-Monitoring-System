@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateSparePart, useUpdateSparePart } from '../hooks/use-spare-parts';
 import type { SparePart, SparePartFormValues } from '../types/spare-part.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: SparePartFormValues = {
   kimap: '',
@@ -73,7 +74,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan spare part / material');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan spare part / material'));
     }
   }
 

@@ -11,6 +11,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useCreateStockMovement, useStockMovements } from '../hooks/use-spare-parts';
 import type { CreateStockMovementPayload, ManualStockMovementType, SparePart } from '../types/spare-part.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: CreateStockMovementPayload = { type: 'RESTOCK', quantityDelta: 0, notes: '' };
 
@@ -60,7 +61,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
       setPage(1);
       toast.success('Pergerakan stock berhasil dicatat');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal mencatat pergerakan stock');
+      toast.error(getErrorMessage(err, 'Gagal mencatat pergerakan stock'));
     }
   }
 

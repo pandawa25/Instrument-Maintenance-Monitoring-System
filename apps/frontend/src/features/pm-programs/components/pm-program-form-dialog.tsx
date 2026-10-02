@@ -12,6 +12,7 @@ import { usePmActivityTypesLookup } from '@/features/pm-activity-types/hooks/use
 import { useCreatePmProgram, usePmProgramDetail, useUpdatePmProgram } from '../hooks/use-pm-programs';
 import { useEquipmentOptions } from '../hooks/use-equipment-options';
 import type { PmProgramFormValues } from '../types/pm-program.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: PmProgramFormValues = {
   name: '',
@@ -130,7 +131,7 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan PM Program');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan PM Program'));
     }
   }
 

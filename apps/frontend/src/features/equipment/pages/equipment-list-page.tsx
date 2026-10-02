@@ -16,6 +16,7 @@ import { EquipmentDetailDialog } from '../components/equipment-detail-dialog';
 import { EquipmentBulkUploadDialog } from '../components/equipment-bulk-upload-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: EquipmentQueryParams = {
   page: 1,
@@ -59,7 +60,7 @@ export function EquipmentListPage() {
       toast.success(`Equipment "${deletingItem.tagNumber}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus equipment');
+      toast.error(getErrorMessage(err, 'Gagal menghapus equipment'));
     }
   }
 

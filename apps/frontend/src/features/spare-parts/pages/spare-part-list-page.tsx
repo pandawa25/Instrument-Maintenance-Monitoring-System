@@ -15,6 +15,7 @@ import { SparePartDetailDialog } from '../components/spare-part-detail-dialog';
 import { StockMovementDialog } from '../components/stock-movement-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: SparePartQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -49,7 +50,7 @@ export function SparePartListPage() {
       toast.success(`Spare part "${deletingItem.name}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus spare part / material');
+      toast.error(getErrorMessage(err, 'Gagal menghapus spare part / material'));
     }
   }
 

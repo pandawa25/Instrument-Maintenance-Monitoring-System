@@ -15,6 +15,7 @@ import { PmProgramTable } from '../components/pm-program-table';
 import { PmProgramFormDialog } from '../components/pm-program-form-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { PmProgramListItem, PmProgramQueryParams } from '../types/pm-program.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: PmProgramQueryParams = { page: 1, limit: 20, search: '', status: '', vendorId: '' };
 
@@ -53,7 +54,7 @@ export function PmProgramListPage() {
       toast.success(`PM Program "${deletingItem.name}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus PM Program');
+      toast.error(getErrorMessage(err, 'Gagal menghapus PM Program'));
     }
   }
 

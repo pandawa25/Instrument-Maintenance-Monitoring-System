@@ -14,6 +14,7 @@ import { AreaFormDialog } from '../components/area-form-dialog';
 import { AreaDetailDialog } from '../components/area-detail-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { Area, AreaQueryParams } from '../types/area.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: AreaQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -47,7 +48,7 @@ export function AreaListPage() {
       toast.success(`Area "${deletingArea.areaName}" berhasil dihapus`);
       setDeletingArea(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus area');
+      toast.error(getErrorMessage(err, 'Gagal menghapus area'));
     }
   }
 

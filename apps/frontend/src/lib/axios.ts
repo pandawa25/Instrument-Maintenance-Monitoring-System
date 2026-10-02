@@ -98,3 +98,23 @@ api.interceptors.response.use(
     }
   },
 );
+
+/**
+ * Ekstrak pesan error yang paling informatif dari response API.
+ *
+ * GlobalExceptionFilter backend mengirim `{ message: "Validation failed", errors: [...] }`
+ * untuk error validasi class-validator (per-field) — kalau cuma `message` yang dibaca,
+ * user cuma lihat "Validation failed" tanpa tahu field mana yang bermasalah. Fungsi ini
+ * memprioritaskan `errors` (daftar pesan per-field) kalau ada, baru fallback ke `message`
+ * biasa, baru ke fallback yang dikasih si pemanggil.
+ */
+export function getErrorMessage(err: any, fallback: string): string {
+  const data = err?.response?.data;
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    return data.errors.join('; ');
+  }
+  if (typeof data?.message === 'string' && data.message.length > 0) {
+    return data.message;
+  }
+  return fallback;
+}

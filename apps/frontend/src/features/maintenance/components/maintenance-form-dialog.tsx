@@ -15,6 +15,7 @@ import {
   useTechniciansLookup,
 } from '../hooks/use-maintenance-lookups';
 import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: MaintenanceFormValues = {
   spkNumber: '',
@@ -161,7 +162,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan data maintenance');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan data maintenance'));
     }
   }
 

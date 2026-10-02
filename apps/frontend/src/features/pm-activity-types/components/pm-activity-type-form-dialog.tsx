@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreatePmActivityType, useUpdatePmActivityType } from '../hooks/use-pm-activity-types';
 import type { PmActivityType, PmActivityTypeFormValues } from '../types/pm-activity-type.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: PmActivityTypeFormValues = { code: '', name: '', description: '' };
 
@@ -45,7 +46,7 @@ export function PmActivityTypeFormDialog({ open, onOpenChange, activityType }: P
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan activity type');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan activity type'));
     }
   }
 

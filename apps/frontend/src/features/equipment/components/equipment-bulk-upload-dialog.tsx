@@ -10,6 +10,7 @@ import {
 } from '../hooks/use-equipment';
 import { downloadBulkUploadTemplate } from '../api/equipment.api';
 import type { ImportPreviewResult, ImportRowSeverity } from '../types/equipment.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   open: boolean;
@@ -83,7 +84,7 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
       setRowsPage(1);
       setStep('preview');
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal memproses file — pastikan format sesuai template');
+      setError(getErrorMessage(err, 'Gagal memproses file — pastikan format sesuai template'));
     }
   }
 
@@ -94,7 +95,7 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
       toast.success(`${result?.createdCount ?? 0} equipment berhasil diimpor`);
       setStep('done');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal commit — coba upload & preview ulang');
+      toast.error(getErrorMessage(err, 'Gagal commit — coba upload & preview ulang'));
     }
   }
 

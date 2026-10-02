@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { fetchAttachmentBlob } from '../api/attachments.api';
 import { useAttachments, useDeleteAttachment, useUploadAttachment } from '../hooks/use-attachments';
 import type { Attachment, AttachmentEntityType } from '../types/attachment.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,application/pdf';
@@ -41,7 +42,7 @@ export function AttachmentsSection({ entityType, entityId, canEdit }: Props) {
     try {
       await uploadMutation.mutateAsync(file);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal upload lampiran');
+      setError(getErrorMessage(err, 'Gagal upload lampiran'));
     }
   }
 
@@ -60,7 +61,7 @@ export function AttachmentsSection({ entityType, entityId, canEdit }: Props) {
     try {
       await deleteMutation.mutateAsync(id);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Gagal menghapus lampiran');
+      setError(getErrorMessage(err, 'Gagal menghapus lampiran'));
     }
   }
 

@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUpdatePmPeriodExecution } from '../hooks/use-pm-period-executions';
 import type { PmChecklistResult, PmExecutionResult, PmExecutionStatus, PmPeriodExecutionItem } from '../types/pm-period.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface ChecklistDraft {
   activityTypeName: string;
@@ -123,7 +124,7 @@ export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Pr
       toast.success(`Hasil eksekusi berhasil diterapkan ke ${executions.length} equipment`);
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan sebagian atau semua eksekusi');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan sebagian atau semua eksekusi'));
     }
   }
 

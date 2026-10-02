@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/select';
 import { useCreateEquipment, useUpdateEquipment } from '../hooks/use-equipment';
 import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-lookups';
 import { isValveInstrumentCode, type Equipment, type EquipmentFormValues, type FailAction } from '../types/equipment.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: EquipmentFormValues = {
   tagNumber: '',
@@ -134,7 +135,7 @@ export function EquipmentFormDialog({ open, onOpenChange, equipment }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan equipment');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan equipment'));
     }
   }
 

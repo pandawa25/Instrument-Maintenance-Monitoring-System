@@ -15,6 +15,7 @@ import { UserFormDialog } from '../components/user-form-dialog';
 import { ChangePasswordDialog } from '../components/change-password-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { ManagedUser, UserQueryParams } from '../types/user.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: UserQueryParams = {
   page: 1,
@@ -54,7 +55,7 @@ export function UserManagementPage() {
       toast.success(`User "${deletingUser.fullName}" berhasil dihapus`);
       setDeletingUser(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menghapus user');
+      toast.error(getErrorMessage(err, 'Gagal menghapus user'));
     }
   }
 

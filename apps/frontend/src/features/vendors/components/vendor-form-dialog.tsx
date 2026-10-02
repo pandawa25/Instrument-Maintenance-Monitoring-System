@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateVendor, useUpdateVendor } from '../hooks/use-vendors';
 import type { Vendor, VendorFormValues } from '../types/vendor.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: VendorFormValues = {
   name: '',
@@ -61,7 +62,7 @@ export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan vendor');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan vendor'));
     }
   }
 

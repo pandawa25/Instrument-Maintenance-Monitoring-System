@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateStandaloneMovement, useSparePartsLookup } from '../hooks/use-spare-parts';
+import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   open: boolean;
@@ -64,7 +65,7 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
       toast.success(`${type === 'RESTOCK' ? 'Stock In' : 'Stock Out'} berhasil dicatat`);
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? `Gagal mencatat ${type === 'RESTOCK' ? 'Stock In' : 'Stock Out'}`);
+      toast.error(getErrorMessage(err, `Gagal mencatat ${type === 'RESTOCK' ? 'Stock In' : 'Stock Out'}`));
     }
   }
 

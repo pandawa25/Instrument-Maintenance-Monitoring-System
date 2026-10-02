@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useChangeUserPassword } from '../hooks/use-users';
 import type { ManagedUser } from '../types/user.types';
+import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   open: boolean;
@@ -39,7 +40,7 @@ export function ChangePasswordDialog({ open, onOpenChange, user }: Props) {
       toast.success('Password berhasil diganti');
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal mengganti password');
+      toast.error(getErrorMessage(err, 'Gagal mengganti password'));
     }
   }
 

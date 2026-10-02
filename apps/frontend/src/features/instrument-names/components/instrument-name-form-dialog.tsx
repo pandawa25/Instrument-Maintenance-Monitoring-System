@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateInstrumentName, useUpdateInstrumentName } from '../hooks/use-instrument-names';
 import type { InstrumentName, InstrumentNameFormValues } from '../types/instrument-name.types';
+import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: InstrumentNameFormValues = { code: '', name: '', description: '' };
 
@@ -49,7 +50,7 @@ export function InstrumentNameFormDialog({ open, onOpenChange, instrumentName }:
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Gagal menyimpan instrument name');
+      toast.error(getErrorMessage(err, 'Gagal menyimpan instrument name'));
     }
   }
 
