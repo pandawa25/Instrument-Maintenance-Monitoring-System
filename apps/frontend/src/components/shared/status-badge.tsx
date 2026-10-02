@@ -20,6 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
   MAINTENANCE_USAGE: 'bg-danger/10 text-danger border-danger/30',
   MAINTENANCE_RETURN: 'bg-success/10 text-success border-success/30',
   RESTOCK: 'bg-success/10 text-success border-success/30',
+  STOCK_OUT: 'bg-danger/10 text-danger border-danger/30',
   ADJUSTMENT: 'bg-warning/10 text-warning border-warning/30',
   GOOD: 'bg-success/10 text-success border-success/30',
   FAIR: 'bg-secondary/10 text-secondary border-secondary/30',

@@ -46,7 +46,7 @@ export function SummaryCards({ summary, isLoading }: Props) {
       value: summary?.sparePartLowStock ?? 0,
       icon: PackageX,
       accent: 'text-danger',
-      hint: 'Stock ≤ 5',
+      hint: 'Stock ≤ ambang min. per item',
     },
   ];
 

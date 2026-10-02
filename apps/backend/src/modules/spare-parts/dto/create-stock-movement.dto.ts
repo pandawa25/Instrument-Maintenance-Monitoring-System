@@ -1,18 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsString, MaxLength, NotEquals } from 'class-validator';
 
-// Hanya 2 tipe yang boleh diinput manual dari API — MAINTENANCE_USAGE/MAINTENANCE_RETURN
+// Hanya 3 tipe yang boleh diinput manual dari API — MAINTENANCE_USAGE/MAINTENANCE_RETURN
 // selalu otomatis dari MaintenanceService, tidak pernah dari endpoint ini.
-export type ManualStockMovementType = 'RESTOCK' | 'ADJUSTMENT';
+export type ManualStockMovementType = 'RESTOCK' | 'STOCK_OUT' | 'ADJUSTMENT';
 
 export class CreateStockMovementDto {
-  @ApiProperty({ enum: ['RESTOCK', 'ADJUSTMENT'] })
-  @IsIn(['RESTOCK', 'ADJUSTMENT'])
+  @ApiProperty({ enum: ['RESTOCK', 'STOCK_OUT', 'ADJUSTMENT'] })
+  @IsIn(['RESTOCK', 'STOCK_OUT', 'ADJUSTMENT'])
   type!: ManualStockMovementType;
 
   @ApiProperty({
     example: 10,
-    description: 'Signed — RESTOCK harus positif, ADJUSTMENT boleh positif/negatif (hasil opname)',
+    description:
+      'Selalu kirim angka POSITIF untuk RESTOCK (Stock In) & STOCK_OUT (Stock Out) — tanda minus untuk ' +
+      'STOCK_OUT otomatis diterapkan di service. ADJUSTMENT boleh positif/negatif (hasil opname) sesuai apa adanya.',
   })
   @IsInt()
   @NotEquals(0)

@@ -17,6 +17,7 @@ export function SparePartDetailDialog({ open, onOpenChange, sparePart }: Props) 
     { label: 'Nama Material', value: sparePart.name },
     { label: 'Stock', value: sparePart.stock },
     { label: 'Unit', value: sparePart.unit },
+    { label: 'Min. Stock (ambang Low Stock)', value: sparePart.minStock },
     { label: 'Status', value: <StatusBadge value={sparePart.status} /> },
     { label: 'Remarks', value: sparePart.remarks, fullWidth: true },
     { label: 'Dibuat Pada', value: new Date(sparePart.createdAt).toLocaleString('id-ID') },

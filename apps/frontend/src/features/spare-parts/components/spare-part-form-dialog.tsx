@@ -13,6 +13,7 @@ const EMPTY_FORM: SparePartFormValues = {
   name: '',
   unit: '',
   stock: 0,
+  minStock: 0,
   status: 'ACTIVE',
   remarks: '',
 };
@@ -39,6 +40,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
               name: sparePart.name,
               unit: sparePart.unit,
               stock: sparePart.stock,
+              minStock: sparePart.minStock,
               status: sparePart.status,
               remarks: sparePart.remarks ?? '',
             }
@@ -50,15 +52,22 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      const minStock = form.minStock === '' || form.minStock === undefined ? 0 : Number(form.minStock);
+
       if (isEdit && sparePart) {
         // `stock` sengaja tidak dikirim saat update — sejak Stock Movement
         // Ledger, perubahan stock wajib lewat tombol Stock In / Adjustment
-        // supaya selalu tercatat di ledger.
+        // supaya selalu tercatat di ledger. minStock boleh diedit langsung
+        // (cuma ambang alert, bukan saldo).
         const { stock: _stock, ...updatePayload } = form;
-        await updateMutation.mutateAsync({ id: sparePart.id, payload: updatePayload });
+        await updateMutation.mutateAsync({ id: sparePart.id, payload: { ...updatePayload, minStock } });
         toast.success('Spare part / material berhasil diperbarui');
       } else {
-        const payload: SparePartFormValues = { ...form, stock: form.stock === '' ? 0 : Number(form.stock) };
+        const payload: SparePartFormValues = {
+          ...form,
+          stock: form.stock === '' ? 0 : Number(form.stock),
+          minStock,
+        };
         await createMutation.mutateAsync(payload);
         toast.success('Spare part / material berhasil ditambahkan');
       }
@@ -112,7 +121,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
               />
               {isEdit && (
                 <p className="mt-1 text-xs text-text-muted">
-                  Gunakan tombol "Stock In / Adjustment" pada detail untuk mengubah stock.
+                  Gunakan tombol "Stock In / Out / Adjustment" pada baris tabel, atau halaman Stock In / Stock Out, untuk mengubah stock.
                 </p>
               )}
             </div>
@@ -127,6 +136,21 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="minStock">Min. Stock (ambang Low Stock)</Label>
+            <Input
+              id="minStock"
+              type="number"
+              min={0}
+              value={form.minStock}
+              onChange={(e) => setForm({ ...form, minStock: e.target.value })}
+              placeholder="0"
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Dipakai Inventory Dashboard untuk menandai item "low stock" — 0 berarti baru ditandai saat stock habis.
+            </p>
           </div>
 
           <div>

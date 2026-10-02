@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const LOW_STOCK_THRESHOLD = 5;
-
 /**
  * Satu-satunya tempat yang bicara langsung ke Prisma untuk agregat Dashboard.
  * Read-only murni — tidak ada mutasi di sini. Query dibuat lintas modul
@@ -15,7 +13,7 @@ export class DashboardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSummaryCounts() {
-    const [totalArea, totalEquipment, openMaintenance, completedMaintenance, pmExecutionPending, sparePartLowStock] =
+    const [totalArea, totalEquipment, openMaintenance, completedMaintenance, pmExecutionPending, sparePartLowStockRows] =
       await Promise.all([
         this.prisma.area.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
         this.prisma.equipment.count({ where: { deletedAt: null } }),
@@ -24,12 +22,23 @@ export class DashboardRepository {
         }),
         this.prisma.correctiveMaintenance.count({ where: { deletedAt: null, status: 'COMPLETED' } }),
         this.prisma.pmPeriodExecution.count({ where: { deletedAt: null, status: 'PENDING' } }),
-        this.prisma.sparePart.count({
-          where: { deletedAt: null, status: 'ACTIVE', stock: { lte: LOW_STOCK_THRESHOLD } },
-        }),
+        // Ambang low-stock sekarang per item (SparePart.minStock, lihat revisi Spare Part
+        // Stock In/Out/Inventory Dashboard) — bukan lagi angka tetap 5 untuk semua part.
+        // Angka ini sama persis dengan yang dipakai Inventory Dashboard spare part.
+        this.prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*)::bigint AS count FROM "spare_parts"
+          WHERE "deleted_at" IS NULL AND "status" = 'ACTIVE' AND "stock" <= "min_stock"
+        `,
       ]);
 
-    return { totalArea, totalEquipment, openMaintenance, completedMaintenance, pmExecutionPending, sparePartLowStock };
+    return {
+      totalArea,
+      totalEquipment,
+      openMaintenance,
+      completedMaintenance,
+      pmExecutionPending,
+      sparePartLowStock: Number(sparePartLowStockRows[0]?.count ?? 0),
+    };
   }
 
   // Tren 12 bulan terakhir — di-zero-fill di service supaya bulan tanpa data tetap muncul di chart.

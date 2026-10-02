@@ -13,6 +13,9 @@ import { PmActivityTypeListPage } from '@/features/pm-activity-types/pages/pm-ac
 import { PmProgramListPage } from '@/features/pm-programs/pages/pm-program-list-page';
 import { PmProgramDetailPage } from '@/features/pm-programs/pages/pm-program-detail-page';
 import { SparePartListPage } from '@/features/spare-parts/pages/spare-part-list-page';
+import { StockInPage } from '@/features/spare-parts/pages/stock-in-page';
+import { StockOutPage } from '@/features/spare-parts/pages/stock-out-page';
+import { InventoryDashboardPage } from '@/features/spare-parts/pages/inventory-dashboard-page';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -51,6 +54,18 @@ export const router = createBrowserRouter([
       {
         element: <DashboardLayout title="Master Spare Part / Material" />,
         children: [{ path: '/spare-parts', element: <SparePartListPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Stock In" />,
+        children: [{ path: '/spare-parts/stock-in', element: <StockInPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Stock Out" />,
+        children: [{ path: '/spare-parts/stock-out', element: <StockOutPage /> }],
+      },
+      {
+        element: <DashboardLayout title="Inventory Dashboard" />,
+        children: [{ path: '/spare-parts/dashboard', element: <InventoryDashboardPage /> }],
       },
       {
         element: <DashboardLayout title="Preventive Maintenance" />,

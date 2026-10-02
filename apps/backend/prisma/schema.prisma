@@ -90,7 +90,8 @@ enum SparePartStatus {
 enum StockMovementType {
   MAINTENANCE_USAGE // otomatis: dipakai di Corrective Maintenance (quantityDelta negatif)
   MAINTENANCE_RETURN // otomatis: dikembalikan krn Corrective Maintenance diedit/dihapus (quantityDelta positif)
-  RESTOCK // manual: Admin tambah stock baru (quantityDelta positif)
+  RESTOCK // manual: Admin tambah stock baru / "Stock In" (quantityDelta positif)
+  STOCK_OUT // manual: Admin keluarkan stock di luar Corrective Maintenance — mis. dipakai langsung di lapangan tanpa tiket CM, rusak/scrap, dipindah ke project lain (quantityDelta negatif)
   ADJUSTMENT // manual: koreksi hasil stock opname (quantityDelta boleh +/-)
 }
 
@@ -447,6 +448,10 @@ model SparePart {
   name      String          @db.VarChar(150)
   unit      String          @db.VarChar(20)
   stock     Int             @default(0)
+  // Ambang batas "low stock" untuk Inventory Dashboard — default 0 berarti baru
+  // ditandai low stock kalau stock sudah habis (non-breaking untuk data lama).
+  // Diisi manual per item oleh Admin sesuai kebutuhan reorder masing-masing part.
+  minStock  Int             @default(0) @map("min_stock")
   status    SparePartStatus @default(ACTIVE)
   remarks   String?         @db.VarChar(500)
   createdAt DateTime        @default(now()) @map("created_at")

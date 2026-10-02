@@ -11,6 +11,9 @@ import {
   Building2,
   ListChecks,
   PackageSearch,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  BarChart3,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
@@ -25,6 +28,10 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   roles: string[];
+  // true = NavLink exact match. Dipakai untuk item yang path-nya adalah prefix dari
+  // sibling lain (mis. "/spare-parts" vs "/spare-parts/stock-in") supaya tidak ikut
+  // ter-highlight saat sibling-nya aktif.
+  end?: boolean;
 }
 
 interface NavGroup {
@@ -53,7 +60,15 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/instrument-names', label: 'Instrument Name', icon: Tag, roles: ['Admin', 'Viewer'] },
       { to: '/vendors', label: 'Vendor', icon: Building2, roles: ['Admin', 'Viewer'] },
       { to: '/pm-activity-types', label: 'PM Activity Type', icon: ListChecks, roles: ['Admin', 'Viewer'] },
-      { to: '/spare-parts', label: 'Spare Part / Material', icon: PackageSearch, roles: ['Admin', 'Viewer'] },
+    ],
+  },
+  {
+    label: 'Spare Part / Material',
+    items: [
+      { to: '/spare-parts', label: 'Master Spare Part', icon: PackageSearch, roles: ['Admin', 'Viewer'], end: true },
+      { to: '/spare-parts/stock-in', label: 'Stock In', icon: ArrowDownToLine, roles: ['Admin', 'Viewer'] },
+      { to: '/spare-parts/stock-out', label: 'Stock Out', icon: ArrowUpFromLine, roles: ['Admin', 'Viewer'] },
+      { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, roles: ['Admin', 'Viewer'] },
     ],
   },
   {
@@ -66,6 +81,7 @@ function NavItemLink({ item, collapsed, onNavigate }: { item: NavItem; collapsed
   const link = (
     <NavLink
       to={item.to}
+      end={item.end}
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(

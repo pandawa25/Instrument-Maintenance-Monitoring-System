@@ -29,6 +29,18 @@ export class CreateSparePartDto {
   @Min(0)
   stock?: number;
 
+  @ApiProperty({
+    example: 5,
+    default: 0,
+    required: false,
+    description: 'Ambang batas low-stock untuk Inventory Dashboard — 0 berarti baru ditandai saat stock habis',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minStock?: number;
+
   @ApiProperty({ enum: SparePartStatus, default: SparePartStatus.ACTIVE, required: false })
   @IsOptional()
   @IsEnum(SparePartStatus)

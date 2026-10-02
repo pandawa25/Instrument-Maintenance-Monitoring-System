@@ -5,6 +5,7 @@ import { QuerySparePartDto } from './dto/query-spare-part.dto';
 import { CreateSparePartDto } from './dto/create-spare-part.dto';
 import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
+import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
 
 interface RecordMovementParams {
   sparePartId: string;
@@ -174,5 +175,101 @@ export class SparePartsRepository {
     ]);
 
     return { rows, total };
+  }
+
+  /**
+   * Ledger LINTAS spare part — dasar halaman Stock In / Stock Out (query.type selalu
+   * diisi controller, lihat QueryAllStockMovementsDto). search menyaring lewat relasi
+   * sparePart.kimap/name (bukan kolom langsung di SparePartStockMovement).
+   */
+  async findAllMovements(query: QueryAllStockMovementsDto) {
+    const where: Prisma.SparePartStockMovementWhereInput = {};
+
+    if (query.type) {
+      where.type = query.type;
+    }
+
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {
+        ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+        ...(query.dateTo ? { lte: new Date(`${query.dateTo}T23:59:59.999Z`) } : {}),
+      };
+    }
+
+    if (query.search) {
+      where.sparePart = {
+        OR: [
+          { kimap: { contains: query.search, mode: 'insensitive' } },
+          { name: { contains: query.search, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.sparePartStockMovement.findMany({
+        where,
+        skip: query.skip,
+        take: query.limit,
+        orderBy: { [query.sortBy]: query.sortOrder },
+        include: {
+          createdBy: { select: { id: true, fullName: true } },
+          sparePart: { select: { id: true, kimap: true, name: true, unit: true } },
+        },
+      }),
+      this.prisma.sparePartStockMovement.count({ where }),
+    ]);
+
+    return { rows, total };
+  }
+
+  /** Angka ringkasan untuk summary card Inventory Dashboard. */
+  async getInventorySummary() {
+    const [totalItems, activeItems, stockAgg, outOfStockCount, lowStockCount] = await this.prisma.$transaction([
+      this.prisma.sparePart.count({ where: { deletedAt: null } }),
+      this.prisma.sparePart.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
+      this.prisma.sparePart.aggregate({ where: { deletedAt: null }, _sum: { stock: true } }),
+      this.prisma.sparePart.count({ where: { deletedAt: null, stock: 0 } }),
+      // Low stock = stock > 0 tapi <= ambang (minStock) — out-of-stock dihitung terpisah
+      // di atas supaya 2 angka ini tidak tumpang tindih di summary card.
+      this.prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::bigint AS count FROM "spare_parts"
+        WHERE "deleted_at" IS NULL AND "stock" > 0 AND "stock" <= "min_stock"
+      `,
+    ]);
+
+    return {
+      totalItems,
+      activeItems,
+      totalStockQty: stockAgg._sum.stock ?? 0,
+      outOfStockCount,
+      lowStockCount: Number(lowStockCount[0]?.count ?? 0),
+    };
+  }
+
+  /** Tren Stock In (RESTOCK) vs Stock Out (STOCK_OUT) per bulan, N bulan terakhir. */
+  async getMonthlyStockInOut(months: number) {
+    return this.prisma.$queryRaw<{ month: string; type: string; total: bigint }[]>`
+      SELECT TO_CHAR(DATE_TRUNC('month', "created_at"), 'YYYY-MM') AS month,
+             "type"::text AS type,
+             SUM(ABS("quantity_delta"))::bigint AS total
+      FROM "spare_part_stock_movements"
+      WHERE "type" IN ('RESTOCK', 'STOCK_OUT')
+        AND "created_at" >= DATE_TRUNC('month', NOW()) - (${months - 1} || ' months')::interval
+      GROUP BY 1, 2
+      ORDER BY 1 ASC
+    `;
+  }
+
+  /** Daftar spare part yang sudah menyentuh/melewati ambang low-stock (termasuk habis). */
+  findLowStockItems(limit: number) {
+    return this.prisma.$queryRaw<
+      { id: string; kimap: string; name: string; unit: string; stock: number; minStock: number }[]
+    >`
+      SELECT "id", "kimap", "name", "unit", "stock", "min_stock" AS "minStock"
+      FROM "spare_parts"
+      WHERE "deleted_at" IS NULL AND "stock" <= "min_stock"
+      ORDER BY ("stock" - "min_stock") ASC, "kimap" ASC
+      LIMIT ${limit}
+    `;
   }
 }

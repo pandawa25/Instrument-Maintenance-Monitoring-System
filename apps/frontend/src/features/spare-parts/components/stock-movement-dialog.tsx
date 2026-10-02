@@ -42,7 +42,11 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
       return;
     }
     if (form.type === 'RESTOCK' && qty <= 0) {
-      toast.error('RESTOCK harus bernilai positif');
+      toast.error('Stock In (RESTOCK) harus bernilai positif');
+      return;
+    }
+    if (form.type === 'STOCK_OUT' && qty <= 0) {
+      toast.error('Stock Out harus bernilai positif (jumlah yang keluar)');
       return;
     }
 
@@ -76,7 +80,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
 
         {canEdit && (
           <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-border p-4">
-            <p className="text-sm font-medium text-text">Restock / Adjustment Manual</p>
+            <p className="text-sm font-medium text-text">Stock In / Stock Out / Adjustment Manual</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="movement-type">Tipe</Label>
@@ -85,18 +89,21 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value as ManualStockMovementType })}
                 >
-                  <option value="RESTOCK">Restock (+)</option>
+                  <option value="RESTOCK">Stock In (+)</option>
+                  <option value="STOCK_OUT">Stock Out (-)</option>
                   <option value="ADJUSTMENT">Adjustment (+/-)</option>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="movement-qty">Jumlah {form.type === 'ADJUSTMENT' && '(+/-)'}</Label>
+                <Label htmlFor="movement-qty">
+                  Jumlah {form.type === 'ADJUSTMENT' ? '(+/-)' : form.type === 'STOCK_OUT' ? '(yang keluar)' : ''}
+                </Label>
                 <Input
                   id="movement-qty"
                   type="number"
                   value={form.quantityDelta || ''}
                   onChange={(e) => setForm({ ...form, quantityDelta: Number(e.target.value) })}
-                  placeholder={form.type === 'RESTOCK' ? '10' : '-2 atau 5'}
+                  placeholder={form.type === 'ADJUSTMENT' ? '-2 atau 5' : '10'}
                 />
               </div>
               <div>

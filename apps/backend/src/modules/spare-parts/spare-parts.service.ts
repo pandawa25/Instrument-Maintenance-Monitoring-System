@@ -6,6 +6,7 @@ import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QuerySparePartDto } from './dto/query-spare-part.dto';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
+import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class SparePartsService {
       name: row.name,
       unit: row.unit,
       stock: row.stock,
+      minStock: row.minStock,
       status: row.status,
       remarks: row.remarks,
       createdAt: row.createdAt,
@@ -86,26 +88,86 @@ export class SparePartsService {
 
   /**
    * Satu-satunya jalur manual untuk mengubah stock setelah spare part dibuat —
-   * RESTOCK (penambahan stock baru, wajib positif) atau ADJUSTMENT (koreksi
-   * hasil stock opname, boleh +/-). MAINTENANCE_USAGE/MAINTENANCE_RETURN tidak
-   * pernah lewat sini — itu otomatis dari MaintenanceRepository.
+   * RESTOCK/"Stock In" (penambahan, wajib dikirim positif), STOCK_OUT/"Stock Out"
+   * (pengeluaran di luar Corrective Maintenance, wajib dikirim positif — tanda
+   * minus diterapkan di sini sebelum masuk ledger), atau ADJUSTMENT (koreksi hasil
+   * stock opname, boleh +/-, dipakai apa adanya). MAINTENANCE_USAGE/MAINTENANCE_RETURN
+   * tidak pernah lewat sini — itu otomatis dari MaintenanceRepository.
    */
   async createMovement(sparePartId: string, dto: CreateStockMovementDto, createdById: string) {
     await this.findOne(sparePartId); // 404 check
 
     if (dto.type === 'RESTOCK' && dto.quantityDelta <= 0) {
-      throw new BadRequestException('RESTOCK harus bernilai positif');
+      throw new BadRequestException('RESTOCK (Stock In) harus bernilai positif');
     }
+    if (dto.type === 'STOCK_OUT' && dto.quantityDelta <= 0) {
+      throw new BadRequestException('STOCK_OUT (Stock Out) harus bernilai positif — jumlah yang keluar');
+    }
+
+    const quantityDelta = dto.type === 'STOCK_OUT' ? -Math.abs(dto.quantityDelta) : dto.quantityDelta;
 
     await this.repository.createManualMovement({
       sparePartId,
       type: dto.type,
-      quantityDelta: dto.quantityDelta,
+      quantityDelta,
       notes: dto.notes,
       createdById,
     });
 
     return this.findOne(sparePartId);
+  }
+
+  /**
+   * Ledger lintas spare part untuk halaman Stock In / Stock Out — `type` di-set
+   * controller (STOCK_IN -> RESTOCK, STOCK_OUT -> STOCK_OUT), bukan dari user.
+   */
+  async listAllMovements(query: QueryAllStockMovementsDto): Promise<PaginatedResult<unknown>> {
+    const { rows, total } = await this.repository.findAllMovements(query);
+    const data = rows.map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      quantityDelta: row.quantityDelta,
+      balanceAfter: row.balanceAfter,
+      notes: row.notes,
+      sparePart: row.sparePart,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+    }));
+
+    return { data, meta: buildPaginationMeta(query.page, query.limit, total) };
+  }
+
+  async getDashboardSummary() {
+    return this.repository.getInventorySummary();
+  }
+
+  /**
+   * Data untuk chart + tabel Inventory Dashboard: tren Stock In/Out bulanan
+   * (default 6 bulan terakhir) dan daftar item yang sudah low-stock/habis.
+   */
+  async getDashboardCharts(months = 6) {
+    const rawTrend = await this.repository.getMonthlyStockInOut(months);
+
+    // Isi semua bulan dalam rentang (termasuk yang 0 pergerakan) supaya chart tidak
+    // "bolong" — rawTrend dari DB hanya berisi bulan yang punya baris movement.
+    const trendMap = new Map<string, { month: string; stockIn: number; stockOut: number }>();
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      trendMap.set(key, { month: key, stockIn: 0, stockOut: 0 });
+    }
+    for (const r of rawTrend) {
+      const entry = trendMap.get(r.month);
+      if (!entry) continue;
+      if (r.type === 'RESTOCK') entry.stockIn = Number(r.total);
+      if (r.type === 'STOCK_OUT') entry.stockOut = Number(r.total);
+    }
+    const monthlyTrend = Array.from(trendMap.values());
+
+    const lowStockItems = await this.repository.findLowStockItems(10);
+
+    return { monthlyTrend, lowStockItems };
   }
 
   async listMovements(sparePartId: string, query: QueryStockMovementDto): Promise<PaginatedResult<unknown>> {
