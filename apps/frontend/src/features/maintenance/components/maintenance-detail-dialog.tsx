@@ -25,6 +25,7 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
   if (!maintenance) return null;
 
   const fields: DetailField[] = [
+    { label: 'No. e-SPK', value: maintenance.spkNumber },
     { label: 'Maintenance Date', value: new Date(maintenance.maintenanceDate).toLocaleDateString('id-ID') },
     {
       label: 'Equipment',
@@ -32,7 +33,8 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
     },
     { label: 'Area', value: `${maintenance.area.areaCode} — ${maintenance.area.areaName}` },
     { label: 'Failure Category', value: FAILURE_CATEGORY_LABEL[maintenance.failureCategory] },
-    { label: 'Technician', value: maintenance.technician.fullName },
+    { label: 'Priority', value: <StatusBadge value={maintenance.priority} /> },
+    { label: 'Technician / PIC', value: maintenance.technician.fullName },
     {
       label: 'Technician Tambahan',
       value:

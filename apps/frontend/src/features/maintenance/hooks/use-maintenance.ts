@@ -3,6 +3,8 @@ import {
   createMaintenance,
   deleteMaintenance,
   fetchMaintenance,
+  fetchMaintenanceKpiSummary,
+  fetchMaintenanceStatusCounts,
   updateMaintenance,
 } from '../api/maintenance.api';
 import type { MaintenanceFormValues, MaintenanceQueryParams } from '../types/maintenance.types';
@@ -13,6 +15,23 @@ export function useMaintenanceList(params: MaintenanceQueryParams) {
   return useQuery({
     queryKey: [MAINTENANCE_KEY, params],
     queryFn: () => fetchMaintenance(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** 4 KPI card teratas — global, tidak terpengaruh filter tabel. */
+export function useMaintenanceKpiSummary() {
+  return useQuery({
+    queryKey: [MAINTENANCE_KEY, 'kpi-summary'],
+    queryFn: fetchMaintenanceKpiSummary,
+  });
+}
+
+/** Count per status untuk badge tab — ikut filter search/area/date range (bukan status). */
+export function useMaintenanceStatusCounts(params: MaintenanceQueryParams) {
+  return useQuery({
+    queryKey: [MAINTENANCE_KEY, 'status-counts', params],
+    queryFn: () => fetchMaintenanceStatusCounts(params),
     placeholderData: (prev) => prev,
   });
 }

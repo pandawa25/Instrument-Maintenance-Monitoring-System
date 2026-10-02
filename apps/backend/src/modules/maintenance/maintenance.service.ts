@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import { CorrectiveMaintenance } from '@prisma/client';
 import { MaintenanceRepository } from './maintenance.repository';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
@@ -36,6 +37,7 @@ export class MaintenanceService {
   private toListItem(row: MaintenanceWithRelations) {
     return {
       id: row.id,
+      spkNumber: row.spkNumber,
       maintenanceDate: row.maintenanceDate,
       equipment: row.equipment,
       area: row.area,
@@ -46,6 +48,7 @@ export class MaintenanceService {
       downtimeHours: row.downtimeHours,
       technician: row.technician,
       additionalTechnicians: (row.additionalTechnicians ?? []).map((t) => t.user),
+      priority: row.priority,
       status: row.status,
       completionDate: row.completionDate,
       createdBy: row.createdBy,
@@ -138,7 +141,7 @@ export class MaintenanceService {
   }
 
   async update(id: string, dto: UpdateMaintenanceDto, actorId: string) {
-    await this.findOne(id); // memastikan ada & belum dihapus
+    const current = await this.findOne(id); // memastikan ada & belum dihapus
 
     if (dto.technicianId) {
       await this.validateTechnician(dto.technicianId);
@@ -151,7 +154,7 @@ export class MaintenanceService {
       areaId = await this.resolveAreaId(dto.equipmentId); // sync ulang kalau equipment diganti
     }
 
-    await this.repository.update(id, dto, actorId, areaId);
+    await this.repository.update(id, dto, actorId, current.status, areaId);
     return this.findOne(id);
   }
 
@@ -159,5 +162,61 @@ export class MaintenanceService {
     await this.findOne(id);
     await this.repository.softDelete(id, actorId);
     return { id, deleted: true };
+  }
+
+  /** 4 summary card paling atas halaman list — lihat catatan asumsi di repository.getKpiSummary(). */
+  getKpiSummary() {
+    return this.repository.getKpiSummary();
+  }
+
+  /** Count per status untuk badge di tiap tab filter (Semua/Open/.../Cancelled). */
+  getStatusCounts(query: QueryMaintenanceDto) {
+    return this.repository.getStatusCounts(query);
+  }
+
+  /** Export Excel — semua baris yang cocok filter (TANPA pagination), 1 sheet. */
+  async exportToExcel(query: QueryMaintenanceDto): Promise<Buffer> {
+    const rows = await this.repository.findAllForExport(query);
+    const items = rows.map((row: MaintenanceWithRelations) => this.toListItem(row));
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Corrective Maintenance');
+    sheet.columns = [
+      { header: 'No. e-SPK', key: 'spkNumber', width: 18 },
+      { header: 'Tanggal', key: 'maintenanceDate', width: 14 },
+      { header: 'Tag Number', key: 'tagNumber', width: 16 },
+      { header: 'Service', key: 'service', width: 26 },
+      { header: 'Area', key: 'area', width: 14 },
+      { header: 'Failure Category', key: 'failureCategory', width: 18 },
+      { header: 'Problem Description', key: 'problemDescription', width: 40 },
+      { header: 'Priority', key: 'priority', width: 12 },
+      { header: 'Status', key: 'status', width: 16 },
+      { header: 'PIC', key: 'pic', width: 20 },
+      { header: 'Downtime (jam)', key: 'downtimeHours', width: 14 },
+      { header: 'Completion Date', key: 'completionDate', width: 16 },
+      { header: 'Remarks', key: 'remarks', width: 30 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+
+    for (const item of items) {
+      sheet.addRow({
+        spkNumber: item.spkNumber,
+        maintenanceDate: new Date(item.maintenanceDate).toLocaleDateString('id-ID'),
+        tagNumber: item.equipment.tagNumber,
+        service: item.equipment.service,
+        area: item.area.areaCode,
+        failureCategory: item.failureCategory,
+        problemDescription: item.problemDescription,
+        priority: item.priority,
+        status: item.status,
+        pic: item.technician.fullName,
+        downtimeHours: item.downtimeHours ?? '',
+        completionDate: item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '',
+        remarks: item.remarks ?? '',
+      });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }

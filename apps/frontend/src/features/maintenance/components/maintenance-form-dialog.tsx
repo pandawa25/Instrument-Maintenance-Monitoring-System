@@ -26,6 +26,7 @@ const EMPTY_FORM: MaintenanceFormValues = {
   downtimeHours: '',
   technicianId: '',
   additionalTechnicianIds: [],
+  priority: 'MEDIUM',
   status: 'OPEN',
   completionDate: '',
   remarks: '',
@@ -69,6 +70,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               downtimeHours: maintenance.downtimeHours ?? '',
               technicianId: maintenance.technician.id,
               additionalTechnicianIds: maintenance.additionalTechnicians.map((t) => t.id),
+              priority: maintenance.priority,
               status: maintenance.status,
               completionDate: maintenance.completionDate?.slice(0, 10) ?? '',
               remarks: maintenance.remarks ?? '',
@@ -168,6 +170,16 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+          {isEdit && maintenance && (
+            <div className="col-span-2">
+              <Label>No. e-SPK</Label>
+              <Input value={maintenance.spkNumber} disabled className="font-mono" />
+              <p className="mt-1 text-xs text-text-muted">
+                Nomor e-SPK dibuat otomatis saat data dibuat dan tidak bisa diubah.
+              </p>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="maintenanceDate">Maintenance Date</Label>
             <Input
@@ -217,7 +229,20 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
           </div>
 
           <div>
-            <Label htmlFor="technicianId">Technician</Label>
+            <Label htmlFor="priority">Priority</Label>
+            <Select
+              id="priority"
+              value={form.priority}
+              onChange={(e) => setForm({ ...form, priority: e.target.value as MaintenanceFormValues['priority'] })}
+            >
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="technicianId">Technician / PIC</Label>
             <Select
               id="technicianId"
               value={form.technicianId}
@@ -311,8 +336,15 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
             >
               <option value="OPEN">Open</option>
               <option value="IN_PROGRESS">In Progress</option>
+              <option value="WAITING_MATERIAL">Waiting Material</option>
               <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
             </Select>
+            {isEdit && form.status === 'CANCELLED' && maintenance?.needsSparePart && (
+              <p className="mt-1 text-xs text-warning">
+                Mengubah status ke Cancelled akan mengembalikan stock material yang sudah dipakai.
+              </p>
+            )}
           </div>
 
           <div>

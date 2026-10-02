@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Wrench } from 'lucide-react';
+import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,11 +9,19 @@ import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PageHeader } from '@/components/shared/page-header';
-import { useMaintenanceList, useDeleteMaintenance } from '../hooks/use-maintenance';
-import { useAreasLookup, useEquipmentLookup } from '../hooks/use-maintenance-lookups';
+import {
+  useMaintenanceList,
+  useDeleteMaintenance,
+  useMaintenanceKpiSummary,
+  useMaintenanceStatusCounts,
+} from '../hooks/use-maintenance';
+import { useAreasLookup } from '../hooks/use-maintenance-lookups';
+import { exportMaintenance } from '../api/maintenance.api';
 import { MaintenanceTable } from '../components/maintenance-table';
 import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
 import { MaintenanceDetailDialog } from '../components/maintenance-detail-dialog';
+import { MaintenanceSummaryCards } from '../components/maintenance-summary-cards';
+import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
 import { useAuthStore } from '@/store/auth.store';
 import type { Maintenance, MaintenanceQueryParams } from '../types/maintenance.types';
 
@@ -24,6 +32,7 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
   areaId: '',
   equipmentId: '',
   status: '',
+  priority: '',
   dateFrom: '',
   dateTo: '',
 };
@@ -37,10 +46,12 @@ export function MaintenanceListPage() {
   const [editingItem, setEditingItem] = useState<Maintenance | null>(null);
   const [viewingItem, setViewingItem] = useState<Maintenance | null>(null);
   const [deletingItem, setDeletingItem] = useState<Maintenance | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading } = useMaintenanceList(params);
+  const { data: kpiSummary, isLoading: kpiLoading } = useMaintenanceKpiSummary();
+  const { data: statusCounts } = useMaintenanceStatusCounts(params);
   const { data: areas } = useAreasLookup();
-  const { data: equipmentOptions } = useEquipmentLookup();
   const deleteMutation = useDeleteMaintenance();
 
   function openCreate() {
@@ -57,10 +68,21 @@ export function MaintenanceListPage() {
     if (!deletingItem) return;
     try {
       await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Data maintenance untuk "${deletingItem.equipment.tagNumber}" berhasil dihapus`);
+      toast.success(`Data maintenance "${deletingItem.spkNumber}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Gagal menghapus data maintenance');
+    }
+  }
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      await exportMaintenance(params);
+    } catch {
+      toast.error('Gagal export data ke Excel');
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -69,24 +91,58 @@ export function MaintenanceListPage() {
       <PageHeader
         icon={Wrench}
         title="Corrective Maintenance"
-        description="Riwayat perbaikan dan gangguan equipment di seluruh area."
+        description="Kelola dan pantau pekerjaan corrective maintenance instrumentasi."
         action={
           canEdit && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
-              Tambah Maintenance
+              Buat e-SPK
             </Button>
           )
         }
       />
 
+      <MaintenanceSummaryCards summary={kpiSummary} isLoading={kpiLoading} />
+
       <Card>
+        <MaintenanceStatusTabs
+          value={params.status ?? ''}
+          counts={statusCounts}
+          onChange={(status) => setParams((p) => ({ ...p, status, page: 1 }))}
+        />
+
         <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
           <SearchInput
             value={params.search ?? ''}
             onChange={(search) => setParams((p) => ({ ...p, search, page: 1 }))}
-            placeholder="Cari tag number / deskripsi masalah..."
+            placeholder="Cari No. e-SPK / tag number / deskripsi..."
           />
+
+          <Select
+            className="w-44"
+            value={params.areaId}
+            onChange={(e) => setParams((p) => ({ ...p, areaId: e.target.value, page: 1 }))}
+          >
+            <option value="">Semua Area</option>
+            {areas?.map((area) => (
+              <option key={area.id} value={area.id}>
+                {area.areaCode}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            className="w-36"
+            value={params.priority}
+            onChange={(e) =>
+              setParams((p) => ({ ...p, priority: e.target.value as MaintenanceQueryParams['priority'], page: 1 }))
+            }
+          >
+            <option value="">Semua Priority</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </Select>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-text-muted">Dari Tanggal</label>
@@ -108,44 +164,15 @@ export function MaintenanceListPage() {
             />
           </div>
 
-          <Select
-            className="w-44"
-            value={params.areaId}
-            onChange={(e) => setParams((p) => ({ ...p, areaId: e.target.value, page: 1 }))}
-          >
-            <option value="">Semua Area</option>
-            {areas?.map((area) => (
-              <option key={area.id} value={area.id}>
-                {area.areaCode}
-              </option>
-            ))}
-          </Select>
+          <Button variant="outline" onClick={() => setParams(DEFAULT_PARAMS)}>
+            <RotateCcw className="h-4 w-4" />
+            Reset
+          </Button>
 
-          <Select
-            className="w-52"
-            value={params.equipmentId}
-            onChange={(e) => setParams((p) => ({ ...p, equipmentId: e.target.value, page: 1 }))}
-          >
-            <option value="">Semua Equipment</option>
-            {equipmentOptions?.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.tagNumber}
-              </option>
-            ))}
-          </Select>
-
-          <Select
-            className="w-40"
-            value={params.status}
-            onChange={(e) =>
-              setParams((p) => ({ ...p, status: e.target.value as MaintenanceQueryParams['status'], page: 1 }))
-            }
-          >
-            <option value="">Semua Status</option>
-            <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="COMPLETED">Completed</option>
-          </Select>
+          <Button variant="outline" className="ml-auto" onClick={handleExport} disabled={isExporting}>
+            <Download className="h-4 w-4" />
+            {isExporting ? 'Mengekspor...' : 'Export'}
+          </Button>
         </div>
 
         <div className="overflow-x-auto">
@@ -177,9 +204,7 @@ export function MaintenanceListPage() {
         open={Boolean(deletingItem)}
         onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Hapus Data Maintenance"
-        description={`Data corrective maintenance untuk equipment "${deletingItem?.equipment.tagNumber}" pada tanggal ${
-          deletingItem ? new Date(deletingItem.maintenanceDate).toLocaleDateString('id-ID') : ''
-        } akan dihapus.`}
+        description={`Data corrective maintenance "${deletingItem?.spkNumber}" untuk equipment "${deletingItem?.equipment.tagNumber}" akan dihapus.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
       />

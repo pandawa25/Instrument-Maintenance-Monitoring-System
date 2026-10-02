@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { MaintenanceStatus } from '@prisma/client';
+import { Criticality, MaintenanceStatus } from '@prisma/client';
 import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
@@ -32,4 +32,9 @@ export class QueryMaintenanceDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(MaintenanceStatus)
   status?: MaintenanceStatus;
+
+  @ApiPropertyOptional({ enum: Criticality, description: 'Filter berdasarkan priority' })
+  @IsOptional()
+  @IsEnum(Criticality)
+  priority?: Criticality;
 }

@@ -7,7 +7,10 @@ export type FailureCategory =
   | 'CALIBRATION'
   | 'PROCESS';
 
-export type MaintenanceStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
+export type MaintenanceStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_MATERIAL' | 'COMPLETED' | 'CANCELLED';
+
+// Reuse skala yang sama dengan Equipment.criticality (HIGH/MEDIUM/LOW).
+export type MaintenancePriority = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface EquipmentRef {
   id: string;
@@ -42,6 +45,7 @@ export interface MaintenanceMaterial {
 
 export interface Maintenance {
   id: string;
+  spkNumber: string;
   maintenanceDate: string;
   equipment: EquipmentRef;
   area: AreaRef;
@@ -52,6 +56,7 @@ export interface Maintenance {
   downtimeHours: string | number | null;
   technician: TechnicianRef;
   additionalTechnicians: TechnicianRef[];
+  priority: MaintenancePriority;
   status: MaintenanceStatus;
   completionDate: string | null;
   createdBy: TechnicianRef;
@@ -84,6 +89,7 @@ export interface MaintenanceFormValues {
   downtimeHours?: number | string;
   technicianId: string;
   additionalTechnicianIds: string[];
+  priority: MaintenancePriority;
   status: MaintenanceStatus;
   completionDate?: string;
   remarks?: string;
@@ -104,6 +110,20 @@ export interface MaintenanceQueryParams {
   areaId?: string | '';
   equipmentId?: string | '';
   status?: MaintenanceStatus | '';
+  priority?: MaintenancePriority | '';
   dateFrom?: string;
   dateTo?: string;
 }
+
+export interface MaintenanceKpiSummary {
+  openCount: number;
+  overdueCount: number;
+  waitingMaterialCount: number;
+  waitingMaterialStuckCount: number;
+  completedThisMonth: number;
+  completedTrendPct: number;
+  totalThisMonth: number;
+  totalTrendPct: number;
+}
+
+export type MaintenanceStatusCounts = Record<'ALL' | MaintenanceStatus, number>;

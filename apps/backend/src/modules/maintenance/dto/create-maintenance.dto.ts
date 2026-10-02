@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { FailureCategory, MaintenanceStatus } from '@prisma/client';
+import { Criticality, FailureCategory, MaintenanceStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -22,6 +22,8 @@ import { MaterialInputDto } from './material-input.dto';
 // corrective_maintenance didenormalisasi dari instrument.area_id, dan disinkronkan
 // oleh MaintenanceService, bukan diinput langsung oleh client (lihat design-document.md).
 // createdById juga tidak di sini — diambil dari JWT user yang sedang login (CurrentUser).
+// spkNumber JUGA tidak di sini — di-generate otomatis di MaintenanceRepository.create(),
+// tidak pernah diterima dari client & tidak bisa diedit (lihat field spkNumber di schema).
 export class CreateMaintenanceDto {
   @ApiProperty({ example: '2026-09-20' })
   @IsDateString()
@@ -74,6 +76,11 @@ export class CreateMaintenanceDto {
   @IsArray()
   @IsUUID(undefined, { each: true })
   additionalTechnicianIds?: string[];
+
+  @ApiProperty({ enum: Criticality, default: Criticality.MEDIUM, required: false, description: 'Prioritas pekerjaan' })
+  @IsOptional()
+  @IsEnum(Criticality)
+  priority?: Criticality;
 
   @ApiProperty({ enum: MaintenanceStatus, default: MaintenanceStatus.OPEN, required: false })
   @IsOptional()

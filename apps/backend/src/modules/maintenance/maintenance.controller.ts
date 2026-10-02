@@ -9,9 +9,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { MaintenanceService } from './maintenance.service';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
@@ -34,6 +37,32 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'List corrective maintenance — filter date range/area/equipment/status, pagination' })
   findAll(@Query() query: QueryMaintenanceDto) {
     return this.maintenanceService.findAll(query);
+  }
+
+  // NOTE: path statis (dashboard/*, export) WAJIB didaftarkan sebelum ":id" di bawah —
+  // kalau tidak, Nest akan menganggap "dashboard"/"export" sebagai value :id.
+
+  @Get('dashboard/summary')
+  @ApiOperation({ summary: '4 KPI card teratas (Open/Overdue, Completed+trend, Waiting Material, Total+trend)' })
+  getKpiSummary() {
+    return this.maintenanceService.getKpiSummary();
+  }
+
+  @Get('dashboard/status-counts')
+  @ApiOperation({ summary: 'Count per status untuk badge tab filter (Semua/Open/In Progress/.../Cancelled)' })
+  getStatusCounts(@Query() query: QueryMaintenanceDto) {
+    return this.maintenanceService.getStatusCounts(query);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export Excel data corrective maintenance sesuai filter yang aktif' })
+  async exportExcel(@Query() query: QueryMaintenanceDto, @Res({ passthrough: true }) res: Response) {
+    const buffer = await this.maintenanceService.exportToExcel(query);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="corrective-maintenance-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Get(':id')

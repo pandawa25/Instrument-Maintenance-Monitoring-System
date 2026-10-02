@@ -5,16 +5,6 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { Maintenance } from '../types/maintenance.types';
 
-const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
-  INSTRUMENT: 'Instrument',
-  ELECTRICAL: 'Electrical',
-  MECHANICAL: 'Mechanical',
-  COMMUNICATION: 'Communication',
-  CONFIGURATION: 'Configuration',
-  CALIBRATION: 'Calibration',
-  PROCESS: 'Process',
-};
-
 interface Props {
   items: Maintenance[];
   isLoading: boolean;
@@ -37,27 +27,24 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-          <th className="px-4 py-2.5 font-medium">Maintenance Date</th>
+          <th className="px-4 py-2.5 font-medium">No. e-SPK</th>
+          <th className="px-4 py-2.5 font-medium">Tanggal</th>
           <th className="px-4 py-2.5 font-medium">Tag Number</th>
-          <th className="px-4 py-2.5 font-medium">Service</th>
-          <th className="px-4 py-2.5 font-medium">Area</th>
-          <th className="px-4 py-2.5 font-medium">Failure Category</th>
-          <th className="px-4 py-2.5 font-medium">Problem Description</th>
-          <th className="px-4 py-2.5 font-medium">Technician</th>
+          <th className="px-4 py-2.5 font-medium">Description</th>
+          <th className="px-4 py-2.5 font-medium">Priority</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
-          <th className="px-4 py-2.5 font-medium text-right">Action</th>
+          <th className="px-4 py-2.5 font-medium">PIC</th>
+          <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
         </tr>
       </thead>
       <tbody>
         {items.map((item) => (
           <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+            <td className="px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber}</td>
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}
             </td>
             <td className="px-4 py-2.5 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
-            <td className="px-4 py-2.5 text-text">{item.equipment.service}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
-            <td className="px-4 py-2.5 text-text-muted">{FAILURE_CATEGORY_LABEL[item.failureCategory]}</td>
             <td className="max-w-xs truncate px-4 py-2.5 text-text-muted" title={item.problemDescription}>
               <span className="inline-flex items-center gap-1.5">
                 {item.needsSparePart && (
@@ -68,10 +55,13 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
                 {item.problemDescription}
               </span>
             </td>
-            <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
+            <td className="px-4 py-2.5">
+              <StatusBadge value={item.priority} />
+            </td>
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
             </td>
+            <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
             <td className="px-4 py-2.5">
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" onClick={() => onView(item)} title="View detail">

@@ -37,7 +37,9 @@ enum FailureCategory {
 enum MaintenanceStatus {
   OPEN
   IN_PROGRESS
+  WAITING_MATERIAL // menunggu kedatangan spare part / material sebelum bisa lanjut
   COMPLETED
+  CANCELLED // dibatalkan — bukan selesai & bukan dihapus (tetap tercatat utk histori)
 }
 
 // Posisi fail-safe aktuator saat kehilangan sinyal/power — hanya relevan untuk
@@ -397,6 +399,11 @@ model PmExecutionChecklistResult {
 
 model CorrectiveMaintenance {
   id                 String            @id @default(uuid()) @db.Uuid
+  // Nomor identitas internal tiap pekerjaan (e-SPK = e-Surat Perintah Kerja), auto-generated
+  // saat create lewat NumberSequence — format "ESPK-{tahun}-{urut 4 digit}", mis. "ESPK-2026-0001".
+  // Ini BUKAN field yang sama dengan workOrderNumber di bawah (itu referensi WO dari ERP/SAP PM,
+  // manual & opsional) — e-SPK adalah nomor tiket internal aplikasi ini, selalu ada & immutable.
+  spkNumber          String            @unique @map("spk_number") @db.VarChar(50)
   maintenanceDate    DateTime          @map("maintenance_date") @db.Date
   equipmentId        String            @map("equipment_id") @db.Uuid
   areaId             String            @map("area_id") @db.Uuid
@@ -406,6 +413,9 @@ model CorrectiveMaintenance {
   actionTaken        String?           @map("action_taken") @db.VarChar(1000)
   downtimeHours      Decimal?          @map("downtime_hours") @db.Decimal(6, 2)
   technicianId       String            @map("technician_id") @db.Uuid
+  // Reuse enum Criticality (HIGH/MEDIUM/LOW) yang sudah dipakai di Equipment — skala yang sama,
+  // tidak perlu enum terpisah.
+  priority           Criticality       @default(MEDIUM)
   status             MaintenanceStatus @default(OPEN)
   completionDate     DateTime?         @map("completion_date") @db.Date
   needsSparePart     Boolean           @default(false) @map("needs_spare_part")
@@ -436,8 +446,23 @@ model CorrectiveMaintenance {
   @@index([equipmentId])
   @@index([areaId])
   @@index([status])
+  @@index([priority])
   @@index([areaId, maintenanceDate])
   @@map("corrective_maintenance")
+}
+
+// Counter generik untuk nomor urut auto-generated (mis. e-SPK Corrective Maintenance).
+// "key" biasanya berupa "<prefix>-<tahun>" (contoh "SPK-2026") supaya nomor reset tiap tahun.
+// Increment dilakukan lewat upsert 1-statement (atomic di level DB) supaya aman dari race
+// condition saat dua request create berbarengan — lihat MaintenanceRepository.generateSpkNumber().
+model NumberSequence {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique @db.VarChar(50)
+  lastValue Int      @default(0) @map("last_value")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("number_sequences")
 }
 
 // Master Spare Part / Material — "kimap" adalah nama field untuk kode/nomor part
