@@ -45,7 +45,9 @@ export interface MaintenanceMaterial {
 
 export interface Maintenance {
   id: string;
-  spkNumber: string;
+  // Nullable — data lama (sebelum field ini ada) belum punya nomor e-SPK asli, lihat
+  // catatan di schema.prisma. Record baru selalu diisi (wajib di form create).
+  spkNumber: string | null;
   maintenanceDate: string;
   equipment: EquipmentRef;
   area: AreaRef;

@@ -40,7 +40,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
       <tbody>
         {items.map((item) => (
           <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-            <td className="px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber}</td>
+            <td className="px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber ?? '-'}</td>
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}
             </td>

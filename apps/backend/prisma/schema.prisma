@@ -400,11 +400,16 @@ model PmExecutionChecklistResult {
 model CorrectiveMaintenance {
   id                 String            @id @default(uuid()) @db.Uuid
   // Nomor e-SPK (e-Surat Perintah Kerja) — diisi MANUAL oleh user, diambil dari aplikasi
-  // e-SPK eksternal (bukan di-generate oleh sistem ini). Wajib & unik supaya tiap pekerjaan
-  // tetap punya 1 identitas yang bisa ditelusuri balik ke sistem e-SPK sumbernya.
+  // e-SPK eksternal (bukan di-generate oleh sistem ini). Unik supaya tiap pekerjaan tetap
+  // punya 1 identitas yang bisa ditelusuri balik ke sistem e-SPK sumbernya.
+  // NULLABLE di level DB (meski WAJIB diisi di CreateMaintenanceDto untuk record baru) —
+  // supaya deploy via `prisma db push` (lihat docker/Dockerfile.backend) tidak gagal kalau
+  // tabel sudah berisi data lama yang belum punya nomor e-SPK; data lama tersebut tetap
+  // NULL sampai dikoreksi manual lewat form edit. Unique index Postgres mengizinkan banyak
+  // baris NULL sekaligus, jadi ini aman.
   // Ini BUKAN field yang sama dengan workOrderNumber di bawah (itu referensi WO dari ERP/SAP PM,
   // juga manual & terpisah — keduanya referensi ke sistem eksternal yang berbeda).
-  spkNumber          String            @unique @map("spk_number") @db.VarChar(50)
+  spkNumber          String?           @unique @map("spk_number") @db.VarChar(50)
   maintenanceDate    DateTime          @map("maintenance_date") @db.Date
   equipmentId        String            @map("equipment_id") @db.Uuid
   areaId             String            @map("area_id") @db.Uuid

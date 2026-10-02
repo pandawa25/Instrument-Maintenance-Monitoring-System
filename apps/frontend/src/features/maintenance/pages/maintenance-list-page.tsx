@@ -68,7 +68,7 @@ export function MaintenanceListPage() {
     if (!deletingItem) return;
     try {
       await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Data maintenance "${deletingItem.spkNumber}" berhasil dihapus`);
+      toast.success(`Data maintenance "${deletingItem.spkNumber ?? deletingItem.equipment.tagNumber}" berhasil dihapus`);
       setDeletingItem(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Gagal menghapus data maintenance');
@@ -204,7 +204,7 @@ export function MaintenanceListPage() {
         open={Boolean(deletingItem)}
         onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Hapus Data Maintenance"
-        description={`Data corrective maintenance "${deletingItem?.spkNumber}" untuk equipment "${deletingItem?.equipment.tagNumber}" akan dihapus.`}
+        description={`Data corrective maintenance ${deletingItem?.spkNumber ? `"${deletingItem.spkNumber}" ` : ''}untuk equipment "${deletingItem?.equipment.tagNumber}" akan dihapus.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
       />

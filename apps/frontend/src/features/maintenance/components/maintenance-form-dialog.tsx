@@ -62,7 +62,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
       setForm(
         maintenance
           ? {
-              spkNumber: maintenance.spkNumber,
+              spkNumber: maintenance.spkNumber ?? '',
               maintenanceDate: maintenance.maintenanceDate.slice(0, 10),
               equipmentId: maintenance.equipment.id,
               failureCategory: maintenance.failureCategory,
