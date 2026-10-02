@@ -47,17 +47,31 @@ RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 # npm workspaces meng-hoist semua dependency ke node_modules di ROOT repo,
 # bukan ke apps/backend/node_modules — copy dari sana, bukan dari path per-workspace.
-COPY --from=build /app/node_modules ./node_modules
+# --chown=node:node di tiap COPY (bukan satu RUN chown -R di akhir) supaya tidak
+# nge-copy layer cache raksasa (node_modules) dua kali hanya untuk ganti owner.
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
 # node_modules/@imms/shared-utils adalah SYMLINK npm workspace ke ../../packages/shared-utils
 # (relatif terhadap /app) — tanpa baris ini symlink-nya putus di runtime image dan container
 # gagal start dengan "Cannot find module '@imms/shared-utils'". Cukup dist/ + package.json,
 # tidak perlu source .ts-nya.
-COPY --from=build /app/packages/shared-utils/dist ./packages/shared-utils/dist
-COPY --from=build /app/packages/shared-utils/package.json ./packages/shared-utils/package.json
-COPY --from=build /app/apps/backend/dist ./dist
-COPY --from=build /app/apps/backend/prisma ./prisma
-COPY --from=build /app/apps/backend/package.json ./package.json
-COPY --from=build /app/apps/backend/dist-seed/seed.js ./seed.js
+COPY --from=build --chown=node:node /app/packages/shared-utils/dist ./packages/shared-utils/dist
+COPY --from=build --chown=node:node /app/packages/shared-utils/package.json ./packages/shared-utils/package.json
+COPY --from=build --chown=node:node /app/apps/backend/dist ./dist
+COPY --from=build --chown=node:node /app/apps/backend/prisma ./prisma
+COPY --from=build --chown=node:node /app/apps/backend/package.json ./package.json
+COPY --from=build --chown=node:node /app/apps/backend/dist-seed/seed.js ./seed.js
+# Siapkan KEDUA kemungkinan lokasi UPLOAD_DIR (lihat config/app.config.ts) dan
+# chown ke `node` di level IMAGE (sebelum Volume di-mount) — Docker/Railway
+# meng-copy ownership+isi folder ini dari image ke Volume baru yang masih kosong
+# saat pertama kali di-mount, jadi Volume ikut kebagian ownership `node` juga.
+# Tanpa ini, Volume baru default dimiliki root dan container gagal start dengan
+# EACCES begitu backend coba nulis file lampiran pertamanya.
+RUN mkdir -p uploads /data/uploads && chown -R node:node uploads /data/uploads
+
+# node:20-alpine sudah menyediakan user `node` (uid 1000) bawaan — jalan sebagai
+# non-root di runtime mengecilkan blast radius kalau suatu saat ada RCE/dependency
+# vulnerability.
+USER node
 
 EXPOSE 3000
 # CATATAN SEMENTARA: memakai `db push` (bukan `migrate deploy`) karena belum ada

@@ -19,15 +19,21 @@ COPY apps/frontend ./apps/frontend
 RUN npm run build --workspace=apps/frontend
 
 # ===== Runtime (static via nginx) =====
-FROM nginx:1.27-alpine AS runtime
+# Varian "-unprivileged" (bukan image nginx biasa) — sudah dikonfigurasi upstream
+# untuk jalan sebagai user non-root (uid 101) dari awal tanpa perlu `USER`/chown
+# manual: /etc/nginx, /var/cache/nginx, dan port default-nya (8080, bukan 80)
+# semua sudah dimiliki user tersebut. Master process nginx biasa WAJIB root untuk
+# bind port <1024; image ini menghindarinya sepenuhnya.
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 # Railway (dan platform PaaS lain) assign port publik secara dinamis lewat env $PORT —
-# container WAJIB listen di port itu, bukan port 80 hardcoded, atau request dari edge
-# proxy tidak akan sampai ("Application failed to respond" / 502).
+# container WAJIB listen di port itu, bukan port hardcoded, atau request dari edge
+# proxy tidak akan sampai ("Application failed to respond" / 502). Default di bawah
+# cuma fallback untuk `docker run` lokal tanpa $PORT; HARUS >1024 karena non-root.
 # Taruh config di /etc/nginx/templates/*.template — entrypoint bawaan image nginx
 # otomatis menjalankan envsubst untuk mengganti ${PORT} sebelum nginx start.
-ENV PORT=80
+ENV PORT=8080
 COPY docker/nginx.frontend.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

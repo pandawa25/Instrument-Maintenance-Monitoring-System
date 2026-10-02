@@ -53,7 +53,9 @@ services:
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      # Container listen di 8080 (lihat ENV PORT di Dockerfile.frontend — image
+      # nginx-unprivileged tidak bisa bind port <1024 sebagai non-root).
+      - "5173:8080"
 
 volumes:
   imms_pg_data:
