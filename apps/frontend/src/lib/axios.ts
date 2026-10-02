@@ -100,6 +100,26 @@ api.interceptors.response.use(
 );
 
 /**
+ * Dipanggil sekali saat aplikasi pertama dimuat (lihat App.tsx) — access token
+ * sengaja tidak di-persist (lihat auth.store.ts), jadi tiap reload halaman kita
+ * "re-hydrate" sesi dengan menukar refresh token (httpOnly cookie, otomatis
+ * terkirim browser) jadi access token baru lewat endpoint yang sama dipakai
+ * interceptor 401 di bawah. Gagal (cookie tidak ada/kedaluwarsa) berarti
+ * memang belum login — itu kondisi normal, bukan error untuk ditampilkan.
+ */
+export async function bootstrapAuth(): Promise<void> {
+  try {
+    const { data } = await refreshClient.post('/auth/refresh');
+    const { accessToken, user } = data.data;
+    useAuthStore.getState().setSession(accessToken, user);
+  } catch {
+    useAuthStore.getState().logout();
+  } finally {
+    useAuthStore.getState().setHydrated(true);
+  }
+}
+
+/**
  * Ekstrak pesan error yang paling informatif dari response API.
  *
  * GlobalExceptionFilter backend mengirim `{ message: "Validation failed", errors: [...] }`
