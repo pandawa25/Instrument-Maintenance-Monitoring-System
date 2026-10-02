@@ -80,6 +80,7 @@ export interface MaterialFormItem {
 }
 
 export interface MaintenanceFormValues {
+  spkNumber: string;
   maintenanceDate: string;
   equipmentId: string;
   failureCategory: FailureCategory;

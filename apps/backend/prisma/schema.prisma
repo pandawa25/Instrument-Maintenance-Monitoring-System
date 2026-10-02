@@ -399,10 +399,11 @@ model PmExecutionChecklistResult {
 
 model CorrectiveMaintenance {
   id                 String            @id @default(uuid()) @db.Uuid
-  // Nomor identitas internal tiap pekerjaan (e-SPK = e-Surat Perintah Kerja), auto-generated
-  // saat create lewat NumberSequence — format "ESPK-{tahun}-{urut 4 digit}", mis. "ESPK-2026-0001".
+  // Nomor e-SPK (e-Surat Perintah Kerja) — diisi MANUAL oleh user, diambil dari aplikasi
+  // e-SPK eksternal (bukan di-generate oleh sistem ini). Wajib & unik supaya tiap pekerjaan
+  // tetap punya 1 identitas yang bisa ditelusuri balik ke sistem e-SPK sumbernya.
   // Ini BUKAN field yang sama dengan workOrderNumber di bawah (itu referensi WO dari ERP/SAP PM,
-  // manual & opsional) — e-SPK adalah nomor tiket internal aplikasi ini, selalu ada & immutable.
+  // juga manual & terpisah — keduanya referensi ke sistem eksternal yang berbeda).
   spkNumber          String            @unique @map("spk_number") @db.VarChar(50)
   maintenanceDate    DateTime          @map("maintenance_date") @db.Date
   equipmentId        String            @map("equipment_id") @db.Uuid
@@ -449,20 +450,6 @@ model CorrectiveMaintenance {
   @@index([priority])
   @@index([areaId, maintenanceDate])
   @@map("corrective_maintenance")
-}
-
-// Counter generik untuk nomor urut auto-generated (mis. e-SPK Corrective Maintenance).
-// "key" biasanya berupa "<prefix>-<tahun>" (contoh "SPK-2026") supaya nomor reset tiap tahun.
-// Increment dilakukan lewat upsert 1-statement (atomic di level DB) supaya aman dari race
-// condition saat dua request create berbarengan — lihat MaintenanceRepository.generateSpkNumber().
-model NumberSequence {
-  id        String   @id @default(uuid()) @db.Uuid
-  key       String   @unique @db.VarChar(50)
-  lastValue Int      @default(0) @map("last_value")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("number_sequences")
 }
 
 // Master Spare Part / Material — "kimap" adalah nama field untuk kode/nomor part

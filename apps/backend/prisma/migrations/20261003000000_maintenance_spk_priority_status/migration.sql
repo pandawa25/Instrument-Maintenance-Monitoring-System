@@ -5,34 +5,21 @@
 ALTER TYPE "MaintenanceStatus" ADD VALUE 'WAITING_MATERIAL';
 ALTER TYPE "MaintenanceStatus" ADD VALUE 'CANCELLED';
 
--- CreateTable: counter generik untuk nomor urut auto-generated (dipakai e-SPK, bisa dipakai
--- fitur lain di masa depan). Lihat komentar di schema.prisma model NumberSequence.
-CREATE TABLE "number_sequences" (
-    "id" UUID NOT NULL,
-    "key" VARCHAR(50) NOT NULL,
-    "last_value" INTEGER NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "number_sequences_pkey" PRIMARY KEY ("id")
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "number_sequences_key_key" ON "number_sequences"("key");
-
 -- AlterTable: priority (reuse enum Criticality yang sudah ada) — default MEDIUM, non-breaking.
 ALTER TABLE "corrective_maintenance" ADD COLUMN "priority" "Criticality" NOT NULL DEFAULT 'MEDIUM';
 
 -- CreateIndex
 CREATE INDEX "corrective_maintenance_priority_idx" ON "corrective_maintenance"("priority");
 
--- AlterTable: spk_number — tambah dulu sebagai NULLABLE supaya bisa di-backfill untuk
--- data lama, baru di-set NOT NULL + UNIQUE setelah backfill selesai di bawah.
+-- AlterTable: spk_number — diisi MANUAL oleh user (nomor dari aplikasi e-SPK eksternal, lihat
+-- komentar di schema.prisma). Tambah dulu sebagai NULLABLE supaya bisa di-backfill untuk data
+-- lama (yang dibuat sebelum field ini ada), baru di-set NOT NULL + UNIQUE setelah itu.
 ALTER TABLE "corrective_maintenance" ADD COLUMN "spk_number" VARCHAR(50);
 
--- DataMigration: backfill spk_number untuk data lama, diurutkan per tahun maintenance_date
--- (konsisten dengan cara penomoran yang dipakai utk record baru — lihat
--- MaintenanceRepository.generateSpkNumber(), yang pakai tahun saat record dibuat).
+-- DataMigration: backfill spk_number untuk data lama dengan placeholder "LEGACY-..." (bukan
+-- nomor e-SPK asli — data lama ini dibuat sebelum e-SPK dicatat di sistem, jadi tidak ada
+-- nomor asli untuk diisi). User bisa edit manual ke nomor e-SPK yang benar via form edit kalau
+-- perlu. Diurutkan per tahun maintenance_date supaya placeholder tetap unik & rapi.
 CREATE TEMP TABLE "_spk_backfill" AS
 SELECT
   "id",
@@ -44,23 +31,9 @@ SELECT
 FROM "corrective_maintenance";
 
 UPDATE "corrective_maintenance" cm
-SET "spk_number" = 'ESPK-' || b."yr" || '-' || LPAD(b."rn"::text, 4, '0')
+SET "spk_number" = 'LEGACY-' || b."yr" || '-' || LPAD(b."rn"::text, 4, '0')
 FROM "_spk_backfill" b
 WHERE cm."id" = b."id";
-
--- Seed number_sequences supaya nomor berikutnya yang di-generate aplikasi melanjutkan
--- dari nomor terakhir hasil backfill (bukan mulai dari 1 lagi / bentrok).
--- UUID dibuat tanpa extension (md5+random) karena tidak ada jaminan pgcrypto/uuid-ossp
--- aktif di semua environment deploy.
-INSERT INTO "number_sequences" ("id", "key", "last_value", "created_at", "updated_at")
-SELECT
-  md5(random()::text || clock_timestamp()::text)::uuid,
-  'SPK-' || "yr",
-  MAX("rn"),
-  now(),
-  now()
-FROM "_spk_backfill"
-GROUP BY "yr";
 
 DROP TABLE "_spk_backfill";
 

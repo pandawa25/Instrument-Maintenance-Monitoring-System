@@ -114,22 +114,6 @@ export class MaintenanceRepository {
   }
 
   /**
-   * Generate nomor e-SPK berikutnya untuk tahun berjalan, atomic lewat upsert
-   * increment di tabel number_sequences (1 statement, aman dari race condition
-   * walau ada 2 request create() yang berbarengan). HARUS dipanggil di dalam
-   * `tx` yang sama dengan insert CorrectiveMaintenance-nya (lihat create() di bawah).
-   */
-  private async generateSpkNumber(tx: any, year: number): Promise<string> {
-    const key = `SPK-${year}`;
-    const seq = await tx.numberSequence.upsert({
-      where: { key },
-      create: { key, lastValue: 1 },
-      update: { lastValue: { increment: 1 } },
-    });
-    return `ESPK-${year}-${String(seq.lastValue).padStart(4, '0')}`;
-  }
-
-  /**
    * Kurangi stock tiap spare part yang dipakai (quantity dibulatkan ke integer
    * terdekat — stock master dalam satuan bulat/pcs), lewat SparePartsRepository
    * .recordMovement() supaya tercatat di ledger (tipe MAINTENANCE_USAGE) dan
@@ -189,14 +173,12 @@ export class MaintenanceRepository {
       completionDate ? new Date(completionDate) : resolvedStatus === 'COMPLETED' ? new Date() : undefined;
 
     return this.prisma.$transaction(async (tx: any) => {
-      // Nomor e-SPK selalu memakai tahun SAAT record dibuat (bukan tahun maintenanceDate,
-      // yang bisa diisi mundur/maju) — mencerminkan kapan SPK "diterbitkan".
-      const spkNumber = await this.generateSpkNumber(tx, new Date().getFullYear());
-
+      // spkNumber diisi manual oleh user (dari aplikasi e-SPK eksternal) — sudah ikut
+      // ter-spread via ...rest (field wajib di CreateMaintenanceDto), tidak perlu
+      // di-generate di sini.
       const created = await tx.correctiveMaintenance.create({
         data: {
           ...rest,
-          spkNumber,
           maintenanceDate: new Date(maintenanceDate),
           completionDate: resolvedCompletionDate,
           notificationDate: notificationDate ? new Date(notificationDate) : undefined,

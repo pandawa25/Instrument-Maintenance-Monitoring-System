@@ -31,7 +31,18 @@ const STATUS_STYLES: Record<string, string> = {
   INSUFFICIENT_DATA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
 };
 
-export function StatusBadge({ value }: { value: string }) {
+export function StatusBadge({ value }: { value: string | null | undefined }) {
+  // Defensive: kalau API belum dimigrate/di-deploy serentak dengan frontend (mis. field baru
+  // belum ada di response lama), value bisa undefined/null sesaat — jangan sampai crash
+  // seluruh halaman karena satu badge, tampilkan "-" saja.
+  if (!value) {
+    return (
+      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-surface-2 text-text-muted border-border">
+        -
+      </span>
+    );
+  }
+
   return (
     <span
       className={cn(

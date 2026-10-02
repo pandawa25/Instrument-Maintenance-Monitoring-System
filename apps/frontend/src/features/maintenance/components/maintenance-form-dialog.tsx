@@ -17,6 +17,7 @@ import {
 import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
 
 const EMPTY_FORM: MaintenanceFormValues = {
+  spkNumber: '',
   maintenanceDate: '',
   equipmentId: '',
   failureCategory: 'INSTRUMENT',
@@ -61,6 +62,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
       setForm(
         maintenance
           ? {
+              spkNumber: maintenance.spkNumber,
               maintenanceDate: maintenance.maintenanceDate.slice(0, 10),
               equipmentId: maintenance.equipment.id,
               failureCategory: maintenance.failureCategory,
@@ -127,6 +129,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
     try {
       const payload: MaintenanceFormValues = {
         ...form,
+        spkNumber: form.spkNumber.trim(),
         downtimeHours: form.downtimeHours === '' ? undefined : Number(form.downtimeHours),
         completionDate: form.completionDate || undefined,
         rootCause: form.rootCause || undefined,
@@ -170,15 +173,21 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-          {isEdit && maintenance && (
-            <div className="col-span-2">
-              <Label>No. e-SPK</Label>
-              <Input value={maintenance.spkNumber} disabled className="font-mono" />
-              <p className="mt-1 text-xs text-text-muted">
-                Nomor e-SPK dibuat otomatis saat data dibuat dan tidak bisa diubah.
-              </p>
-            </div>
-          )}
+          <div className="col-span-2">
+            <Label htmlFor="spkNumber">No. e-SPK</Label>
+            <Input
+              id="spkNumber"
+              value={form.spkNumber}
+              onChange={(e) => setForm({ ...form, spkNumber: e.target.value })}
+              placeholder="mis. ESPK-2026-0001"
+              maxLength={50}
+              className="font-mono"
+              required
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Salin nomor e-SPK dari aplikasi e-SPK (sistem ini tidak generate otomatis).
+            </p>
+          </div>
 
           <div>
             <Label htmlFor="maintenanceDate">Maintenance Date</Label>

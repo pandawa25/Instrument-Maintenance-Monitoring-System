@@ -22,9 +22,17 @@ import { MaterialInputDto } from './material-input.dto';
 // corrective_maintenance didenormalisasi dari instrument.area_id, dan disinkronkan
 // oleh MaintenanceService, bukan diinput langsung oleh client (lihat design-document.md).
 // createdById juga tidak di sini — diambil dari JWT user yang sedang login (CurrentUser).
-// spkNumber JUGA tidak di sini — di-generate otomatis di MaintenanceRepository.create(),
-// tidak pernah diterima dari client & tidak bisa diedit (lihat field spkNumber di schema).
 export class CreateMaintenanceDto {
+  @ApiProperty({
+    example: 'ESPK-2026-0001',
+    maxLength: 50,
+    description: 'Nomor e-SPK — diisi manual, diambil dari aplikasi e-SPK eksternal (bukan di-generate sistem ini)',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  spkNumber!: string;
+
   @ApiProperty({ example: '2026-09-20' })
   @IsDateString()
   maintenanceDate!: string;
