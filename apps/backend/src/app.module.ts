@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { appConfig } from './config/app.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -20,6 +22,16 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
+    // Rate limit global default — proteksi dasar di semua endpoint. Endpoint
+    // login punya limit lebih ketat sendiri lewat @Throttle() di AuthController
+    // (lihat catatan di sana) karena brute-force password jauh lebih murah
+    // dilakukan attacker dibanding abuse endpoint biasa.
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000, // 1 menit
+        limit: 100, // 100 request/menit/IP untuk endpoint umum
+      },
+    ]),
     PrismaModule,
     AuthModule,
     AreasModule,
@@ -35,6 +47,11 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
     SparePartsModule,
     DashboardModule,
     AttachmentsModule,
+  ],
+  providers: [
+    // Aktif sebagai guard global — tiap route otomatis kena limit default di
+    // atas, kecuali route yang pasang @Throttle() sendiri (override per-route).
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

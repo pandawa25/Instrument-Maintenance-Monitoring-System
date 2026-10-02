@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -45,6 +46,10 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Limit jauh lebih ketat dari default global (lihat app.module.ts) — endpoint
+  // ini target utama brute-force password. 5 percobaan/menit/IP cukup longgar
+  // untuk user asli yang salah ketik, tapi bikin brute-force tidak praktis.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Login — dapat access token (response body) + refresh token (httpOnly cookie)' })
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(dto, this.requestMeta(req));
@@ -54,6 +59,10 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  // Lebih longgar dari login (dipanggil otomatis oleh interceptor axios tiap
+  // access token kedaluwarsa/15 menit), tapi tetap dibatasi untuk cegah abuse
+  // percobaan tebak refresh token.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Tukar refresh token (cookie) dengan access token baru — refresh token ikut dirotasi' })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
