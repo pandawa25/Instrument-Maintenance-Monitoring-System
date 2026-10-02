@@ -39,11 +39,15 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Menu dikelompokkan sesuai struktur informasi: Dashboard berdiri sendiri,
-// lalu Kegiatan Maintenance, Master Data, dan Administrasi (Admin only).
+// Menu dikelompokkan sesuai struktur informasi: Dashboard (utama + Inventory)
+// berdiri sendiri di atas, lalu Kegiatan Maintenance, Master Data, Spare Part /
+// Material, dan Administrasi (Admin only).
 const NAV_GROUPS: NavGroup[] = [
   {
-    items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Viewer'] }],
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Viewer'] },
+      { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, roles: ['Admin', 'Viewer'] },
+    ],
   },
   {
     label: 'Kegiatan Maintenance',
@@ -68,7 +72,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/spare-parts', label: 'Master Spare Part', icon: PackageSearch, roles: ['Admin', 'Viewer'], end: true },
       { to: '/spare-parts/stock-in', label: 'Stock In', icon: ArrowDownToLine, roles: ['Admin', 'Viewer'] },
       { to: '/spare-parts/stock-out', label: 'Stock Out', icon: ArrowUpFromLine, roles: ['Admin', 'Viewer'] },
-      { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, roles: ['Admin', 'Viewer'] },
     ],
   },
   {
