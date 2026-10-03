@@ -51,15 +51,15 @@ export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView 
             </td>
             <td className="px-4 py-2.5">
               <div className="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" onClick={() => onView(area)} title="View detail">
+                <Button variant="ghost" size="icon" onClick={() => onView(area)} title="View detail" aria-label="View detail">
                   <Eye className="h-4 w-4" />
                 </Button>
                 {canEdit && (
                   <>
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(area)} title="Edit">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(area)} title="Edit" aria-label="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(area)} title="Delete">
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(area)} title="Delete" aria-label="Delete">
                       <Trash2 className="h-4 w-4 text-danger" />
                     </Button>
                   </>

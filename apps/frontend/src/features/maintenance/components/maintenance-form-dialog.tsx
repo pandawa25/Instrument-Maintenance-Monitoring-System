@@ -428,7 +428,7 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
                       value={material.quantity}
                       onChange={(e) => updateMaterialRow(index, { quantity: e.target.value })}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialRow(index)} title="Hapus baris">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialRow(index)} title="Hapus baris" aria-label="Hapus baris">
                       <Trash2 className="h-4 w-4 text-danger" />
                     </Button>
                   </div>

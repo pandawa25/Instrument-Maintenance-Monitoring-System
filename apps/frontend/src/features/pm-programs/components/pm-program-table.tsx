@@ -64,15 +64,15 @@ export function PmProgramTable({ programs, isLoading, canEdit, onEdit, onDelete,
             </td>
             <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" onClick={() => onView(program)} title="Lihat Periode">
+                <Button variant="ghost" size="icon" onClick={() => onView(program)} title="Lihat Periode" aria-label="Lihat Periode">
                   <Eye className="h-4 w-4" />
                 </Button>
                 {canEdit && (
                   <>
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(program)} title="Edit">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(program)} title="Edit" aria-label="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(program)} title="Delete">
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(program)} title="Delete" aria-label="Delete">
                       <Trash2 className="h-4 w-4 text-danger" />
                     </Button>
                   </>

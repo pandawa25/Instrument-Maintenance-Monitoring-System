@@ -18,7 +18,14 @@ export function Pagination({ meta, onPageChange }: Props) {
         Menampilkan {from}–{to} dari {total} data
       </span>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          aria-label="Halaman sebelumnya"
+          title="Halaman sebelumnya"
+        >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="min-w-[70px] text-center">
@@ -29,6 +36,8 @@ export function Pagination({ meta, onPageChange }: Props) {
           size="icon"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
+          aria-label="Halaman berikutnya"
+          title="Halaman berikutnya"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

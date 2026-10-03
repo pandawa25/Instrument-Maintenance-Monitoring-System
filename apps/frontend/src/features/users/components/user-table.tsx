@@ -54,7 +54,7 @@ export function UserTable({ users, isLoading, currentUserId, onEdit, onChangePas
               </td>
               <td className="px-4 py-2.5">
                 <div className="flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(user)} title="Edit">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(user)} title="Edit" aria-label="Edit">
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
@@ -62,6 +62,7 @@ export function UserTable({ users, isLoading, currentUserId, onEdit, onChangePas
                     size="icon"
                     onClick={() => onChangePassword(user)}
                     title="Reset Password"
+                    aria-label="Reset Password"
                   >
                     <KeyRound className="h-4 w-4" />
                   </Button>
@@ -70,6 +71,7 @@ export function UserTable({ users, isLoading, currentUserId, onEdit, onChangePas
                     size="icon"
                     onClick={() => onDelete(user)}
                     title={isSelf ? 'Tidak bisa menghapus akun sendiri' : 'Delete'}
+                    aria-label={isSelf ? 'Tidak bisa menghapus akun sendiri' : 'Delete'}
                     disabled={isSelf}
                   >
                     <Trash2 className={isSelf ? 'h-4 w-4 text-text-muted' : 'h-4 w-4 text-danger'} />

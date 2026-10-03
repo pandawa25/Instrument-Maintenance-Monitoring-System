@@ -294,7 +294,7 @@ export function PmProgramFormDialog({ open, onOpenChange, programId }: Props) {
                     placeholder="Catatan tambahan (opsional)"
                     maxLength={255}
                   />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeChecklistItem(index)}>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeChecklistItem(index)} aria-label="Hapus item checklist">
                     <Trash2 className="h-4 w-4 text-danger" />
                   </Button>
                 </div>
