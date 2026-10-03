@@ -3,6 +3,10 @@
 **Scope:** Backend (NestJS), Frontend (React), DevOps/Deployment & Database Schema
 **Metode:** Code review menyeluruh (read-only), tidak ada perubahan kode dalam audit ini
 
+> **Status implementasi — update 3 Oktober 2026:** Sprint 1 (5 isu Security Critical/High)
+> **✅ SELESAI** — commit `b3f80af`..`7dbc634`, sudah di-push ke `main`. Detail per item ada
+> di tabel masing-masing di bawah (ditandai ✅). Sprint 2 & 3 masih open.
+
 ---
 
 ## Ringkasan Eksekutif
@@ -11,12 +15,12 @@ Codebase secara umum **solid untuk tahap MVP** — RBAC konsisten, parameterized
 
 **4 isu Critical/High yang berdampak langsung ke keamanan atau operasional:**
 
-| # | Temuan | Dampak | Area |
-|---|--------|--------|------|
-| 1 | `JWT_SECRET` fallback hardcoded tanpa validasi startup | Attacker bisa forge token ber-role apapun kalau env var lupa di-set | Security (Backend) |
-| 2 | Tidak ada rate limiting di `/auth/login` | Brute-force password tanpa batas | Security (Backend) |
-| 3 | Access token JWT disimpan di `localStorage` | Exposure penuh token kalau ada XSS | Security (Frontend) |
-| 4 | Container jalan sebagai root (tanpa `USER` di Dockerfile) | Blast radius lebih besar kalau ada RCE | DevOps |
+| # | Temuan | Dampak | Area | Status |
+|---|--------|--------|------|--------|
+| 1 | `JWT_SECRET` fallback hardcoded tanpa validasi startup | Attacker bisa forge token ber-role apapun kalau env var lupa di-set | Security (Backend) | ✅ Fixed (`b3f80af`) |
+| 2 | Tidak ada rate limiting di `/auth/login` | Brute-force password tanpa batas | Security (Backend) | ✅ Fixed (`c029835`) |
+| 3 | Access token JWT disimpan di `localStorage` | Exposure penuh token kalau ada XSS | Security (Frontend) | ✅ Fixed (`f07c8f3`) |
+| 4 | Container jalan sebagai root (tanpa `USER` di Dockerfile) | Blast radius lebih besar kalau ada RCE | DevOps | ✅ Fixed (`c33c196`) |
 
 Detail lengkap dan rekomendasi per kategori ada di bawah.
 
@@ -26,21 +30,21 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ### Backend
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | `JWT_SECRET` fallback ke string hardcoded (`'dev_secret_change_me'`) tanpa validasi saat boot | `apps/backend/src/config/app.config.ts:6` | Validasi env wajib di `ConfigModule.forRoot({ validationSchema })` (Joi/class-validator) — `throw` kalau `JWT_SECRET` tidak di-set atau terlalu pendek saat `NODE_ENV=production` |
-| 🔴 High | Tidak ada rate limiting di endpoint login/refresh | `apps/backend/src/modules/auth/auth.controller.ts` | Pasang `@nestjs/throttler`, limit lebih ketat khusus `/auth/login` (mis. 5 req/menit/IP) |
-| 🟡 Medium | `sortBy` dari query param dipakai langsung sebagai Prisma `orderBy` key tanpa whitelist | `common/dto/pagination-query.dto.ts:31-34`, dipakai di ≥10 repository | Tambah `@IsIn([...allowedColumns])` per-DTO, bukan `@IsString()` generik |
-| 🟡 Medium | `GlobalExceptionFilter` mengembalikan `exception.message` mentah untuk error non-Prisma-known (termasuk `PrismaClientValidationError` dari poin di atas) — bocorkan detail skema DB ke client | `common/filters/global-exception.filter.ts:47-50` | Untuk cabang `instanceof Error` yang tidak dikenali, return pesan generik ke client; detail asli cukup di log |
-| 🟢 Low | Cookie refresh token `sameSite: 'lax'`, bukan `strict` | auth config | Risiko kecil (scoped ke POST), tidak mendesak |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | `JWT_SECRET` fallback ke string hardcoded (`'dev_secret_change_me'`) tanpa validasi saat boot | `apps/backend/src/config/app.config.ts:6` | Validasi env wajib di `ConfigModule.forRoot({ validationSchema })` (Joi/class-validator) — `throw` kalau `JWT_SECRET` tidak di-set atau terlalu pendek saat `NODE_ENV=production` | ✅ Fixed (`b3f80af`) — boot refuse di production kalau <32 char |
+| 🔴 High | Tidak ada rate limiting di endpoint login/refresh | `apps/backend/src/modules/auth/auth.controller.ts` | Pasang `@nestjs/throttler`, limit lebih ketat khusus `/auth/login` (mis. 5 req/menit/IP) | ✅ Fixed (`c029835`) — login 5/menit, refresh 20/menit, global 100/menit |
+| 🟡 Medium | `sortBy` dari query param dipakai langsung sebagai Prisma `orderBy` key tanpa whitelist | `common/dto/pagination-query.dto.ts:31-34`, dipakai di ≥10 repository | Tambah `@IsIn([...allowedColumns])` per-DTO, bukan `@IsString()` generik | ✅ Fixed (`7dbc634`) — `buildSafeOrderBy()` util, diterapkan di 10 repository |
+| 🟡 Medium | `GlobalExceptionFilter` mengembalikan `exception.message` mentah untuk error non-Prisma-known (termasuk `PrismaClientValidationError` dari poin di atas) — bocorkan detail skema DB ke client | `common/filters/global-exception.filter.ts:47-50` | Untuk cabang `instanceof Error` yang tidak dikenali, return pesan generik ke client; detail asli cukup di log | ✅ Fixed (`7dbc634`) |
+| 🟢 Low | Cookie refresh token `sameSite: 'lax'`, bukan `strict` | auth config | Risiko kecil (scoped ke POST), tidak mendesak | Open (Low, belum dikerjakan) |
 
 **Sudah baik (dikonfirmasi, bukan temuan):** RBAC (`@Roles()`) konsisten di semua controller sensitif; semua `$queryRaw` pakai tagged template (aman dari SQL injection); `passwordHash` tidak pernah ikut ter-return (select eksplisit); file upload sudah validasi MIME+size+filename randomized; bcrypt rounds=10 wajar.
 
 ### Frontend
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | Access token JWT disimpan di `localStorage` via Zustand persist — rawan dibaca kalau ada XSS | `src/store/auth.store.ts:21-32` | Simpan access token di memory saja (state tanpa persist); pakai cookie httpOnly refresh token + panggil `/auth/refresh` sekali saat app mount untuk re-hydrate. Infrastruktur refresh sudah ada di `axios.ts:44-58`, tinggal dipanggil di startup |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | Access token JWT disimpan di `localStorage` via Zustand persist — rawan dibaca kalau ada XSS | `src/store/auth.store.ts:21-32` | Simpan access token di memory saja (state tanpa persist); pakai cookie httpOnly refresh token + panggil `/auth/refresh` sekali saat app mount untuk re-hydrate. Infrastruktur refresh sudah ada di `axios.ts:44-58`, tinggal dipanggil di startup | ✅ Fixed (`f07c8f3`) — `bootstrapAuth()` + `isHydrated` gate |
 
 **Dikonfirmasi aman:** tidak ada `dangerouslySetInnerHTML` di seluruh frontend; role-check di UI memang cuma cosmetic (backend yang enforce) — sesuai desain yang benar.
 
@@ -93,10 +97,10 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ## 5. DEVOPS / DEPLOYMENT
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | Container backend & frontend (nginx) jalan sebagai **root** — tidak ada instruksi `USER` | `docker/Dockerfile.backend`, `docker/Dockerfile.frontend` | Tambah `USER node` (backend) / `USER nginx` (frontend) sebelum `CMD` |
-| 🔴 High | Tidak ada strategi rollback schema terdokumentasi — karena pakai `db push`, rollback container ke image lama tidak otomatis mengembalikan kolom yang **dihapus** oleh deploy baru | README/runbook | Dokumentasikan prosedur backup manual sebelum deploy yang mengubah schema |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | Container backend & frontend (nginx) jalan sebagai **root** — tidak ada instruksi `USER` | `docker/Dockerfile.backend`, `docker/Dockerfile.frontend` | Tambah `USER node` (backend) / `USER nginx` (frontend) sebelum `CMD` | ✅ Fixed (`c33c196`) — backend `USER node`, frontend `nginx-unprivileged` |
+| 🔴 High | Tidak ada strategi rollback schema terdokumentasi — karena pakai `db push`, rollback container ke image lama tidak otomatis mengembalikan kolom yang **dihapus** oleh deploy baru | README/runbook | Dokumentasikan prosedur backup manual sebelum deploy yang mengubah schema | Open — Sprint 2 |
 | 🟡 Medium | Tidak ada `HEALTHCHECK`/endpoint health sama sekali | Dockerfile, backend routes | Tambah `GET /api/health` (cek DB via `$queryRaw`) + `HEALTHCHECK CMD` di Dockerfile |
 | 🟡 Medium | Tidak ada strategi backup database yang disebutkan di mana pun | README, docker-compose | Dokumentasikan backup bawaan Railway Postgres, atau cron `pg_dump` |
 | 🟡 Medium | Logging masih `console.log` polos, bukan structured (JSON) | `main.ts:63` | Pakai NestJS Logger/Pino dengan format JSON — naik prioritas begitu scale multi-instance |
@@ -110,11 +114,16 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ## Rencana Tindak Lanjut yang Disarankan (urutan prioritas)
 
-**Sprint 1 — Security hardening (sebelum data produksi nyata masuk):**
-1. Validasi `JWT_SECRET` wajib saat boot + rate limiting `/auth/login`
-2. Pindahkan access token dari `localStorage` ke memory-only
-3. Container non-root (`USER node`/`USER nginx`)
-4. Whitelist `sortBy` + perbaiki `GlobalExceptionFilter` agar tidak bocorkan pesan internal
+**Sprint 1 — Security hardening (sebelum data produksi nyata masuk): ✅ SELESAI (3 Okt 2026)**
+1. ✅ Validasi `JWT_SECRET` wajib saat boot + rate limiting `/auth/login` (`b3f80af`, `c029835`)
+2. ✅ Pindahkan access token dari `localStorage` ke memory-only (`f07c8f3`)
+3. ✅ Container non-root (`USER node`/`nginx-unprivileged`) (`c33c196`)
+4. ✅ Whitelist `sortBy` + perbaiki `GlobalExceptionFilter` agar tidak bocorkan pesan internal (`7dbc634`)
+
+> Semua sudah di-push ke `main` dan akan auto-deploy via Railway. Catatan operasional:
+> `JWT_SECRET` di Railway env var wajib ≥32 karakter atau aplikasi refuse boot; semua
+> sesi login lama akan ter-logout (localStorage lama tidak dipakai lagi); verifikasi
+> ownership Volume `/data/uploads` setelah deploy pertama pasca switch ke non-root.
 
 **Sprint 2 — Correctness & stabilitas:**
 5. State-machine validation untuk `MaintenanceStatus` + requirement `completionDate`
