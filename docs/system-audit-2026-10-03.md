@@ -6,8 +6,9 @@
 > **Status implementasi — update 3 Oktober 2026:**
 > - Sprint 1 (5 isu Security Critical/High) **✅ SELESAI** — commit `b3f80af`..`7dbc634`.
 > - Sprint 2 (Correctness & stabilitas, 3 item) **✅ SELESAI** — commit `5270e90`, `2eafef7`, `0043c11`.
+> - Sprint 3 (UX & performance, 3 item) **✅ SELESAI** — commit `aea4a73`, `4c5e362`, `60c1364`.
 > - Semua sudah di-push ke `main`. Detail per item ada di tabel masing-masing di bawah
->   (ditandai ✅). Sprint 3 (UX & performance) masih open.
+>   (ditandai ✅). Sisa backlog (tidak mendesak untuk MVP) ada di bagian paling bawah.
 
 ---
 
@@ -62,9 +63,9 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ## 2. PERFORMANCE
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | **Tidak ada debounce di semua input pencarian** — tiap keystroke memicu request API baru, dipakai di 22 list page | `src/components/shared/search-input.tsx:10-22` | Buat `useDebouncedValue(value, 300)`, terapkan di `SearchInput` |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | **Tidak ada debounce di semua input pencarian** — tiap keystroke memicu request API baru, dipakai di 22 list page | `src/components/shared/search-input.tsx:10-22` | Buat `useDebouncedValue(value, 300)`, terapkan di `SearchInput` | ✅ Fixed (`aea4a73`) |
 | 🟡 Medium | N+1 query backend saat validasi material/technician tambahan di Corrective Maintenance (1 query per item, bukan batch) | `maintenance.service.ts:78-87, 112-117` | Ganti jadi `findMany({ where: { id: { in: [...] } } })` sekali, bandingkan jumlah hasil |
 | 🟡 Medium | N+1 **request** dari frontend saat "Isi Massal" PM Execution — satu PUT per equipment terpilih, paralel | `pm-bulk-execution-form-dialog.tsx:99-123` | Sediakan endpoint bulk-update tunggal di backend |
 | 🟡 Medium | Dashboard memicu 5+ query paralel independen tanpa agregasi | `dashboard-page.tsx:13-16`, dst | Kandidat konsolidasi endpoint ke depan (belum mendesak untuk MVP) |
@@ -88,10 +89,10 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ## 4. UI/UX
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | `SearchableSelect` **tidak bisa dioperasikan tanpa mouse** — tanpa `role="combobox"`, tanpa keyboard nav (Arrow/Enter), tombol clear malah `tabIndex={-1}` (dihapus dari tab order) | `src/components/shared/searchable-select.tsx:75-144` | Tambah `role="combobox"` + `aria-expanded`, dukung Arrow Up/Down/Enter/Escape, ganti clear-button jadi `<button tabIndex={0}>` |
-| 🟡 Medium | Bulk PM execution: `Promise.all` pada partial failure langsung reject tanpa rollback/indikasi mana yang gagal — user tidak tahu equipment mana yang sudah tersimpan vs belum | `pm-bulk-execution-form-dialog.tsx:99-123` | Ganti `Promise.allSettled`, tampilkan ringkasan "X berhasil, Y gagal" + daftar yang gagal |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | `SearchableSelect` **tidak bisa dioperasikan tanpa mouse** — tanpa `role="combobox"`, tanpa keyboard nav (Arrow/Enter), tombol clear malah `tabIndex={-1}` (dihapus dari tab order) | `src/components/shared/searchable-select.tsx:75-144` | Tambah `role="combobox"` + `aria-expanded`, dukung Arrow Up/Down/Enter/Escape, ganti clear-button jadi `<button tabIndex={0}>` | ✅ Fixed (`4c5e362`) |
+| 🟡 Medium | Bulk PM execution: `Promise.all` pada partial failure langsung reject tanpa rollback/indikasi mana yang gagal — user tidak tahu equipment mana yang sudah tersimpan vs belum | `pm-bulk-execution-form-dialog.tsx:99-123` | Ganti `Promise.allSettled`, tampilkan ringkasan "X berhasil, Y gagal" + daftar yang gagal | ✅ Fixed (`60c1364`) |
 | 🟡 Medium | Dialog tanpa `DialogDescription` — Radix warning aksesibilitas, screen reader tidak dapat konteks | `components/ui/dialog.tsx`, semua form dialog | Tambah `DialogDescription` (boleh visually-hidden) |
 | 🟢 Low | Inkonsistensi `<select>` native vs komponen `<Select>` shadcn di halaman dashboard yang sama | `health-index-section.tsx:64-74` vs `kpi-section.tsx:179` | Samakan ke komponen `<Select>` |
 
@@ -132,10 +133,12 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 6. ✅ Error Boundary global di frontend (`2eafef7`)
 7. ✅ Dokumentasi rollback & backup strategy database (`0043c11`)
 
-**Sprint 3 — UX & performance:**
-8. Debounce search input (dampak besar, effort kecil)
-9. Keyboard accessibility untuk `SearchableSelect`
-10. Bulk PM execution: `Promise.allSettled` + endpoint bulk-update
+**Sprint 3 — UX & performance: ✅ SELESAI (3 Okt 2026)**
+8. ✅ Debounce search input (`aea4a73`)
+9. ✅ Keyboard accessibility untuk `SearchableSelect` (`4c5e362`)
+10. ✅ Bulk PM execution: `Promise.allSettled` + ringkasan hasil (`60c1364`) — endpoint
+    bulk-update tunggal di backend TIDAK dikerjakan (di luar scope minimal item ini,
+    tetap di backlog sebagai optimasi N+1 request kalau skala makin besar)
 
 **Backlog (tidak mendesak untuk MVP, tapi dicatat untuk pengembangan jangka panjang):**
 - Refactor duplikasi form-dialog jadi shared hook
