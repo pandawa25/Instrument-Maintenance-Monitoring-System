@@ -10,7 +10,8 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
       <select
         ref={ref}
         className={cn(
-          'h-9 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-8 text-sm text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          // text-base (16px) di mobile mencegah auto-zoom iOS Safari saat fokus; text-sm di sm+.
+          'h-9 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-8 text-base text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:text-sm',
           className,
         )}
         {...props}

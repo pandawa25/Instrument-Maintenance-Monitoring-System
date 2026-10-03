@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, Gauge, Plus, RotateCcw, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ export function EquipmentListPage() {
 
   const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [showMoreFilter, setShowMoreFilter] = useState(false);
+  const criticalityFilterRef = useRef<HTMLSelectElement>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
@@ -50,6 +51,15 @@ export function EquipmentListPage() {
   const { data: instrumentNames } = useInstrumentNames();
   const { data: manufacturers } = useManufacturers();
   const deleteMutation = useDeleteEquipment();
+
+  // Pindahkan fokus ke field pertama saat panel "More Filter" dibuka — tanpa ini,
+  // fokus keyboard tetap di tombol "More Filter" sehingga user screen reader/keyboard
+  // tidak sadar panel baru saja muncul (focus management saat disclosure dibuka).
+  useEffect(() => {
+    if (showMoreFilter) {
+      criticalityFilterRef.current?.focus();
+    }
+  }, [showMoreFilter]);
 
   async function handleExport() {
     setIsExporting(true);
@@ -169,7 +179,12 @@ export function EquipmentListPage() {
             <option value="OUT_OF_SERVICE">Out Of Service</option>
           </Select>
 
-          <Button variant="outline" onClick={() => setShowMoreFilter((v) => !v)}>
+          <Button
+            variant="outline"
+            onClick={() => setShowMoreFilter((v) => !v)}
+            aria-expanded={showMoreFilter}
+            aria-controls="equipment-more-filter-panel"
+          >
             <SlidersHorizontal className="h-4 w-4" />
             More Filter
           </Button>
@@ -188,10 +203,11 @@ export function EquipmentListPage() {
         </div>
 
         {showMoreFilter && (
-          <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/40 p-4">
+          <div id="equipment-more-filter-panel" className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/40 p-4">
             <div>
               <label className="mb-1 block text-xs font-medium text-text-muted">Criticality</label>
               <Select
+                ref={criticalityFilterRef}
                 className="w-40"
                 value={params.criticality}
                 onChange={(e) =>
