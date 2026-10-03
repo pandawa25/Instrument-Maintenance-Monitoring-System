@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Download, Gauge, Plus, RotateCcw, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-looku
 import { exportEquipment } from '../api/equipment.api';
 import { EquipmentTable } from '../components/equipment-table';
 import { EquipmentFormDialog } from '../components/equipment-form-dialog';
-import { EquipmentDetailDialog } from '../components/equipment-detail-dialog';
 import { EquipmentBulkUploadDialog } from '../components/equipment-bulk-upload-dialog';
 import { EquipmentSummaryCards } from '../components/equipment-summary-cards';
 import { useAuthStore } from '@/store/auth.store';
@@ -32,16 +32,17 @@ const DEFAULT_PARAMS: EquipmentQueryParams = {
 };
 
 export function EquipmentListPage() {
+  const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
   const canEdit = role === 'Admin';
 
   const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [showMoreFilter, setShowMoreFilter] = useState(false);
   const criticalityFilterRef = useRef<HTMLSelectElement>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  // Dialog ini sekarang cuma dipakai untuk "Tambah Equipment" (create) — View & Edit
+  // sudah pindah ke halaman penuh EquipmentDetailPage (/equipment/:id).
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Equipment | null>(null);
-  const [viewingItem, setViewingItem] = useState<Equipment | null>(null);
   const [deletingItem, setDeletingItem] = useState<Equipment | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -70,16 +71,6 @@ export function EquipmentListPage() {
     } finally {
       setIsExporting(false);
     }
-  }
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: Equipment) {
-    setEditingItem(item);
-    setFormOpen(true);
   }
 
   async function confirmDelete() {
@@ -111,7 +102,7 @@ export function EquipmentListPage() {
                   <UploadCloud className="h-4 w-4" />
                   Bulk Upload
                 </Button>
-                <Button onClick={openCreate}>
+                <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Tambah Equipment
                 </Button>
@@ -232,9 +223,9 @@ export function EquipmentListPage() {
             equipment={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={(item) => navigate(`/equipment/${item.id}`, { state: { mode: 'edit' } })}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={(item) => navigate(`/equipment/${item.id}`)}
           />
         </div>
 
@@ -243,15 +234,9 @@ export function EquipmentListPage() {
         )}
       </Card>
 
-      <EquipmentFormDialog open={formOpen} onOpenChange={setFormOpen} equipment={editingItem} />
+      <EquipmentFormDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <EquipmentBulkUploadDialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} />
-
-      <EquipmentDetailDialog
-        open={Boolean(viewingItem)}
-        onOpenChange={(open) => !open && setViewingItem(null)}
-        equipment={viewingItem}
-      />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

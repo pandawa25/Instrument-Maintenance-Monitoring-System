@@ -1,7 +1,17 @@
-import { Wrench } from 'lucide-react';
-import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
+import { useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Pencil, Wrench } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { PageHeader } from '@/components/shared/page-header';
+import { LoadingState } from '@/components/shared/loading-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
+import { useMaintenanceById } from '../hooks/use-maintenance';
+import { MaintenanceForm } from '../components/maintenance-form';
+import { useAuthStore } from '@/store/auth.store';
 import type { Maintenance } from '../types/maintenance.types';
 
 const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
@@ -14,15 +24,57 @@ const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
   PROCESS: 'Process',
 };
 
-interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  maintenance: Maintenance | null;
-  canEdit: boolean;
-}
+// Halaman View/Edit Corrective Maintenance (1 URL, mode toggle) — menggantikan
+// MaintenanceDetailDialog + MaintenanceFormDialog (mode edit) yang sebelumnya dipakai
+// dari list page. Dipindah ke halaman penuh karena kontennya paling berat di aplikasi
+// (6 section + lampiran di detail, ±529 baris form) — lihat roadmap Risk register.
+//
+// Dibuka dari MaintenanceListPage: tombol "View" -> mode 'view' (default), tombol "Edit"
+// -> navigate dengan state { mode: 'edit' } supaya langsung masuk mode form.
+export function MaintenanceDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const role = useAuthStore((s) => s.user?.role);
+  const canEdit = role === 'Admin';
 
-export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEdit }: Props) {
-  if (!maintenance) return null;
+  const [mode, setMode] = useState<'view' | 'edit'>(
+    (location.state as { mode?: 'view' | 'edit' } | null)?.mode === 'edit' && canEdit ? 'edit' : 'view',
+  );
+
+  const { data: maintenance, isLoading } = useMaintenanceById(id);
+
+  function backToList() {
+    navigate('/maintenance');
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={backToList}>
+          <ArrowLeft className="h-4 w-4" />
+          Kembali ke Daftar Corrective Maintenance
+        </Button>
+        <Card>
+          <LoadingState />
+        </Card>
+      </div>
+    );
+  }
+
+  if (!maintenance) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={backToList}>
+          <ArrowLeft className="h-4 w-4" />
+          Kembali ke Daftar Corrective Maintenance
+        </Button>
+        <Card>
+          <EmptyState icon={Wrench} message="Data maintenance tidak ditemukan — mungkin sudah dihapus." />
+        </Card>
+      </div>
+    );
+  }
 
   // Referensi ERP semuanya opsional/manual — section ini cuma ditampilkan kalau ada
   // minimal satu yang terisi, supaya tidak jadi 6 box "—" kosong di mayoritas record
@@ -37,14 +89,9 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
   );
 
   const fields: DetailField[] = [
-    // --- Info Utama ---
     { section: 'Info Utama', label: 'No. e-SPK', value: maintenance.spkNumber },
     { section: 'Info Utama', label: 'Maintenance Date', value: new Date(maintenance.maintenanceDate).toLocaleDateString('id-ID') },
-    {
-      section: 'Info Utama',
-      label: 'Equipment',
-      value: `${maintenance.equipment.tagNumber} — ${maintenance.equipment.service}`,
-    },
+    { section: 'Info Utama', label: 'Equipment', value: `${maintenance.equipment.tagNumber} — ${maintenance.equipment.service}` },
     { section: 'Info Utama', label: 'Area', value: `${maintenance.area.areaCode} — ${maintenance.area.areaName}` },
     { section: 'Info Utama', label: 'Failure Category', value: FAILURE_CATEGORY_LABEL[maintenance.failureCategory] },
     { section: 'Info Utama', label: 'Technician / PIC', value: maintenance.technician.fullName },
@@ -57,7 +104,6 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
           : null,
     },
 
-    // --- Problem & Tindakan ---
     { section: 'Problem & Tindakan', label: 'Problem Description', value: maintenance.problemDescription, fullWidth: true },
     { section: 'Problem & Tindakan', label: 'Root Cause', value: maintenance.rootCause, fullWidth: true },
     { section: 'Problem & Tindakan', label: 'Action Taken', value: maintenance.actionTaken, fullWidth: true },
@@ -73,7 +119,6 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
     },
     { section: 'Problem & Tindakan', label: 'Remarks', value: maintenance.remarks, fullWidth: true },
 
-    // --- Material ---
     {
       section: 'Material',
       label: 'Butuh Spare Part / Material',
@@ -96,7 +141,6 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
         ) : null,
     },
 
-    // --- Referensi ERP (hanya kalau ada isinya) ---
     ...(hasErpInfo
       ? ([
           { section: 'Referensi Notifikasi & WO (ERP)', label: 'No. Notifikasi', value: maintenance.notificationNumber },
@@ -118,31 +162,49 @@ export function MaintenanceDetailDialog({ open, onOpenChange, maintenance, canEd
         ] satisfies DetailField[])
       : []),
 
-    // --- Audit trail (ringan, tanpa box) ---
     { section: 'Audit', label: 'Dicatat Oleh', value: maintenance.createdBy.fullName, compact: true },
     { section: 'Audit', label: 'Dibuat Pada', value: new Date(maintenance.createdAt).toLocaleString('id-ID'), compact: true },
     { section: 'Audit', label: 'Terakhir Diubah', value: new Date(maintenance.updatedAt).toLocaleString('id-ID'), compact: true },
   ];
 
   return (
-    <DetailDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      icon={Wrench}
-      title="Detail Corrective Maintenance"
-      subtitle={maintenance.equipment.tagNumber}
-      fields={fields}
-      headerContent={
-        <div className="-mt-2 flex items-center gap-2">
-          <StatusBadge value={maintenance.status} />
-          <StatusBadge value={maintenance.priority} />
-        </div>
-      }
-    >
-      <div className="mt-4 border-t border-border/60 pt-4">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Lampiran</h4>
-        <AttachmentsSection entityType="CORRECTIVE_MAINTENANCE" entityId={maintenance.id} canEdit={canEdit} />
-      </div>
-    </DetailDialog>
+    <div className="space-y-4">
+      <Button variant="ghost" onClick={backToList}>
+        <ArrowLeft className="h-4 w-4" />
+        Kembali ke Daftar Corrective Maintenance
+      </Button>
+
+      <PageHeader
+        icon={Wrench}
+        title={maintenance.spkNumber || maintenance.equipment.tagNumber}
+        description={maintenance.equipment.tagNumber}
+        action={
+          mode === 'view' && canEdit ? (
+            <Button onClick={() => setMode('edit')}>
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <Card className="p-5">
+        {mode === 'view' ? (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <StatusBadge value={maintenance.status} />
+              <StatusBadge value={maintenance.priority} />
+            </div>
+            <DetailFieldsGrid fields={fields} />
+            <div className="mt-4 border-t border-border/60 pt-4">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Lampiran</h4>
+              <AttachmentsSection entityType="CORRECTIVE_MAINTENANCE" entityId={maintenance.id} canEdit={canEdit} />
+            </div>
+          </>
+        ) : (
+          <MaintenanceForm maintenance={maintenance} onSuccess={() => setMode('view')} onCancel={() => setMode('view')} />
+        )}
+      </Card>
+    </div>
   );
 }

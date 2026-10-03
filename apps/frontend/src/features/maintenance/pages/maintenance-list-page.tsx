@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,6 @@ import { useAreasLookup } from '../hooks/use-maintenance-lookups';
 import { exportMaintenance } from '../api/maintenance.api';
 import { MaintenanceTable } from '../components/maintenance-table';
 import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
-import { MaintenanceDetailDialog } from '../components/maintenance-detail-dialog';
 import { MaintenanceSummaryCards } from '../components/maintenance-summary-cards';
 import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
 import { useAuthStore } from '@/store/auth.store';
@@ -39,13 +39,14 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
 };
 
 export function MaintenanceListPage() {
+  const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
   const canEdit = role === 'Admin';
 
   const [params, setParams] = useState<MaintenanceQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Maintenance | null>(null);
-  const [viewingItem, setViewingItem] = useState<Maintenance | null>(null);
+  // Dialog ini sekarang cuma dipakai untuk "Buat e-SPK" (create) — View & Edit sudah
+  // pindah ke halaman penuh MaintenanceDetailPage (/maintenance/:id).
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<Maintenance | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -54,16 +55,6 @@ export function MaintenanceListPage() {
   const { data: statusCounts } = useMaintenanceStatusCounts(params);
   const { data: areas } = useAreasLookup();
   const deleteMutation = useDeleteMaintenance();
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: Maintenance) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
 
   async function confirmDelete() {
     if (!deletingItem) return;
@@ -95,7 +86,7 @@ export function MaintenanceListPage() {
         description="Kelola dan pantau pekerjaan corrective maintenance instrumentasi."
         action={
           canEdit && (
-            <Button onClick={openCreate}>
+            <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               Buat e-SPK
             </Button>
@@ -181,9 +172,9 @@ export function MaintenanceListPage() {
             items={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: { mode: 'edit' } })}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={(item) => navigate(`/maintenance/${item.id}`)}
           />
         </div>
 
@@ -192,14 +183,7 @@ export function MaintenanceListPage() {
         )}
       </Card>
 
-      <MaintenanceFormDialog open={formOpen} onOpenChange={setFormOpen} maintenance={editingItem} />
-
-      <MaintenanceDetailDialog
-        open={Boolean(viewingItem)}
-        onOpenChange={(open) => !open && setViewingItem(null)}
-        maintenance={viewingItem}
-        canEdit={canEdit}
-      />
+      <MaintenanceFormDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

@@ -4,6 +4,7 @@ import {
   createEquipment,
   deleteEquipment,
   fetchEquipment,
+  fetchEquipmentById,
   fetchEquipmentStatusCounts,
   fetchImportBatchRows,
   fetchManufacturers,
@@ -30,6 +31,15 @@ export function useEquipmentStatusCounts(params: EquipmentQueryParams) {
     queryKey: [EQUIPMENT_KEY, 'status-counts', params],
     queryFn: () => fetchEquipmentStatusCounts(params),
     placeholderData: (prev) => prev,
+  });
+}
+
+// Dipakai EquipmentDetailPage (halaman View/Edit) — bukan oleh list page.
+export function useEquipmentById(id: string | undefined) {
+  return useQuery({
+    queryKey: [EQUIPMENT_KEY, id],
+    queryFn: () => fetchEquipmentById(id as string),
+    enabled: Boolean(id),
   });
 }
 

@@ -2,20 +2,13 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { DetailFieldsGrid, type DetailField } from './detail-fields-grid';
 
-export interface DetailField {
-  label: string;
-  value: ReactNode;
-  fullWidth?: boolean;
-  // Nama section untuk mengelompokkan field (mis. "Info Utama", "Referensi ERP"). Field
-  // tanpa section masuk ke grup default (tidak dapat heading) — 100% backward compatible
-  // untuk modul yang belum butuh pengelompokan (Area, Instrument, dsb).
-  section?: string;
-  // Tampilan ringan tanpa border/bg box, dipakai untuk metadata sekunder (audit trail —
-  // dibuat/diubah) yang tidak perlu bobot visual sama dengan field operasional.
-  compact?: boolean;
-}
+// Re-export supaya semua modul yang sudah `import { type DetailField } from
+// '@/components/shared/detail-dialog'` tetap jalan tanpa ubah import path (grid field
+// read-only kini dipisah ke detail-fields-grid.tsx supaya bisa dipakai juga di halaman
+// penuh — lihat EquipmentDetailPage/MaintenanceDetailPage).
+export type { DetailField };
 
 interface Props {
   open: boolean;
@@ -32,49 +25,12 @@ interface Props {
   headerContent?: ReactNode;
 }
 
-function FieldBox({ field }: { field: DetailField }) {
-  const isEmpty = field.value === null || field.value === undefined || field.value === '';
-
-  if (field.compact) {
-    return (
-      <div className={cn('text-xs text-text-muted', field.fullWidth && 'sm:col-span-2')}>
-        <span className="font-medium">{field.label}:</span>{' '}
-        {isEmpty ? '—' : field.value}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        'rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2.5',
-        field.fullWidth && 'sm:col-span-2',
-      )}
-    >
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-text-muted">{field.label}</dt>
-      <dd className="mt-1 whitespace-pre-line text-sm text-text">
-        {isEmpty ? <span className="text-text-muted">—</span> : field.value}
-      </dd>
-    </div>
-  );
-}
-
-// Dialog read-only generik untuk "View Detail" — dipakai semua modul (Area, Instrument,
-// Corrective Maintenance) supaya tampilannya konsisten dan terpisah dari form Create/Edit.
+// Dialog read-only generik untuk "View Detail" — dipakai modul dengan field flat/sedikit
+// (Area, Vendor, Instrument Name, PM Activity Type, Spare Part). Equipment & Corrective
+// Maintenance pindah ke halaman penuh (lihat roadmap Risk register) karena datanya lebih
+// berat (banyak section + lampiran) — DetailFieldsGrid tetap dipakai bersama supaya
+// tampilan field konsisten antara dialog dan halaman.
 export function DetailDialog({ open, onOpenChange, title, subtitle, icon: Icon, fields, children, headerContent }: Props) {
-  // Kelompokkan field berurutan sesuai kemunculan section pertama kali — field tanpa
-  // `section` dikumpulkan di grup tanpa nama (key kosong, tidak dapat heading).
-  const groups: { section: string; fields: DetailField[] }[] = [];
-  for (const field of fields) {
-    const section = field.section ?? '';
-    let group = groups.find((g) => g.section === section);
-    if (!group) {
-      group = { section, fields: [] };
-      groups.push(group);
-    }
-    group.fields.push(field);
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -94,22 +50,7 @@ export function DetailDialog({ open, onOpenChange, title, subtitle, icon: Icon, 
 
         {headerContent}
 
-        <div className="space-y-4">
-          {groups.map((group, i) => (
-            <div key={group.section || `__default-${i}`} className={cn(i > 0 && 'border-t border-border/60 pt-4')}>
-              {group.section && (
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  {group.section}
-                </h4>
-              )}
-              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {group.fields.map((field) => (
-                  <FieldBox key={field.label} field={field} />
-                ))}
-              </dl>
-            </div>
-          ))}
-        </div>
+        <DetailFieldsGrid fields={fields} />
 
         {children}
 

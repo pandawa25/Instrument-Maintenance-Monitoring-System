@@ -5,8 +5,10 @@ import { LoginPage } from '@/features/auth/pages/login-page';
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page';
 import { AreaListPage } from '@/features/areas/pages/area-list-page';
 import { EquipmentListPage } from '@/features/equipment/pages/equipment-list-page';
+import { EquipmentDetailPage } from '@/features/equipment/pages/equipment-detail-page';
 import { InstrumentNameListPage } from '@/features/instrument-names/pages/instrument-name-list-page';
 import { MaintenanceListPage } from '@/features/maintenance/pages/maintenance-list-page';
+import { MaintenanceDetailPage } from '@/features/maintenance/pages/maintenance-detail-page';
 import { UserManagementPage } from '@/features/users/pages/user-management-page';
 import { VendorListPage } from '@/features/vendors/pages/vendor-list-page';
 import { PmActivityTypeListPage } from '@/features/pm-activity-types/pages/pm-activity-type-list-page';
@@ -33,7 +35,10 @@ export const router = createBrowserRouter([
       },
       {
         element: <DashboardLayout title="Master Equipment" />,
-        children: [{ path: '/equipment', element: <EquipmentListPage /> }],
+        children: [
+          { path: '/equipment', element: <EquipmentListPage /> },
+          { path: '/equipment/:id', element: <EquipmentDetailPage /> },
+        ],
       },
       {
         element: <DashboardLayout title="Master Instrument Name" />,
@@ -41,7 +46,10 @@ export const router = createBrowserRouter([
       },
       {
         element: <DashboardLayout title="Corrective Maintenance" />,
-        children: [{ path: '/maintenance', element: <MaintenanceListPage /> }],
+        children: [
+          { path: '/maintenance', element: <MaintenanceListPage /> },
+          { path: '/maintenance/:id', element: <MaintenanceDetailPage /> },
+        ],
       },
       {
         element: <DashboardLayout title="Master Vendor" />,

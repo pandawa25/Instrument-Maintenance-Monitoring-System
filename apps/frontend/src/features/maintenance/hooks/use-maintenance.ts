@@ -3,6 +3,7 @@ import {
   createMaintenance,
   deleteMaintenance,
   fetchMaintenance,
+  fetchMaintenanceById,
   fetchMaintenanceKpiSummary,
   fetchMaintenanceStatusCounts,
   updateMaintenance,
@@ -16,6 +17,15 @@ export function useMaintenanceList(params: MaintenanceQueryParams) {
     queryKey: [MAINTENANCE_KEY, params],
     queryFn: () => fetchMaintenance(params),
     placeholderData: (prev) => prev,
+  });
+}
+
+// Dipakai MaintenanceDetailPage (halaman View/Edit) — bukan oleh list page.
+export function useMaintenanceById(id: string | undefined) {
+  return useQuery({
+    queryKey: [MAINTENANCE_KEY, id],
+    queryFn: () => fetchMaintenanceById(id as string),
+    enabled: Boolean(id),
   });
 }
 
