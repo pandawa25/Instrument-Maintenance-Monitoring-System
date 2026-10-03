@@ -35,4 +35,5 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install --workspace=apps/frontend
+      - run: npm test --workspace=apps/frontend
       - run: npm run build --workspace=apps/frontend
