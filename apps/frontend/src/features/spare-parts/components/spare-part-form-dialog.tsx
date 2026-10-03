@@ -116,6 +116,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
                 id="stock"
                 type="number"
                 min={0}
+                step={0.01}
                 value={form.stock}
                 disabled={isEdit}
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
@@ -145,6 +146,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
               id="minStock"
               type="number"
               min={0}
+              step={0.01}
               value={form.minStock}
               onChange={(e) => setForm({ ...form, minStock: e.target.value })}
               placeholder="0"

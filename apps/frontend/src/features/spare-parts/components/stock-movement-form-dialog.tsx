@@ -102,7 +102,8 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
               <Input
                 id="quantity"
                 type="number"
-                min={1}
+                min={0.01}
+                step={0.01}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="10"

@@ -102,6 +102,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                 <Input
                   id="movement-qty"
                   type="number"
+                  step={0.01}
                   value={form.quantityDelta || ''}
                   onChange={(e) => setForm({ ...form, quantityDelta: Number(e.target.value) })}
                   placeholder={form.type === 'ADJUSTMENT' ? '-2 atau 5' : '10'}
