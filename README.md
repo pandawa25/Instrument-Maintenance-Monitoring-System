@@ -50,15 +50,10 @@ docker compose -f docker/docker-compose.yml up -d db
 
 ### 3. Migration & Seed
 
-> **Catatan**: file migration formal (`prisma/migrations/`) belum ada di repo ini —
-> environment development awal terblokir akses ke `binaries.prisma.sh` sehingga
-> `prisma migrate dev` belum sempat dijalankan. Jalankan sekali di komputer dengan
-> akses internet penuh, lalu commit folder `prisma/migrations/` yang dihasilkan:
-> ```bash
-> npx prisma migrate dev --name init --schema=apps/backend/prisma/schema.prisma
-> ```
-> Sebelum itu ada, deployment (termasuk Docker) memakai `prisma db push` sebagai
-> pengganti sementara — lihat komentar di `docker/Dockerfile.backend`.
+File migration formal ada di `apps/backend/prisma/migrations/` (14 migration, mulai
+`20260928000000_init` sampai perubahan terbaru) dan production di-deploy lewat
+`prisma migrate deploy` (lihat `docker/Dockerfile.backend` CMD) — bukan lagi `db push`.
+Untuk setup lokal:
 
 ```bash
 npm run prisma:migrate
@@ -99,13 +94,15 @@ Railway bersifat ephemeral).
 
 ## Backup & Rollback Database (Railway / PostgreSQL)
 
-Deployment saat ini pakai `prisma db push --accept-data-loss` di startup container
-(lihat `docker/Dockerfile.backend`), **bukan** `prisma migrate deploy` — artinya
-rollback container ke image lama (mis. lewat Railway "Redeploy" versi sebelumnya)
-**TIDAK otomatis mengembalikan schema database**. Kalau deploy baru menghapus/ubah
-kolom, rollback container tanpa rollback database akan membuat kode lama error
-(kolom yang diharapkan sudah tidak ada) atau diam-diam kehilangan data (kolom yang
-dihapus `db push` sebelumnya tidak bisa dikembalikan dari container lama).
+Deployment sejak 3 Okt 2026 pakai `prisma migrate deploy` di startup container
+(lihat `docker/Dockerfile.backend`) — bukan lagi `db push`. Ini menjalankan file
+migration formal di `prisma/migrations/` secara berurutan, dengan riwayat yang bisa
+di-review seperti code review biasa. **Tapi** rollback container ke image lama
+(mis. lewat Railway "Redeploy" versi sebelumnya) **tetap TIDAK otomatis mengembalikan
+schema database** — `migrate deploy` hanya maju (apply migration baru), tidak ada
+"migrate down" otomatis. Kalau deploy baru menghapus/ubah kolom, rollback container
+tanpa rollback database akan membuat kode lama error (kolom yang diharapkan sudah
+tidak ada) atau diam-diam kehilangan data.
 
 ### Backup — wajib sebelum deploy yang mengubah schema
 
@@ -142,15 +139,6 @@ Simpan file dump di luar Railway (lokal/Google Drive/S3) — jangan commit ke gi
 3. Setelah rollback, jalankan smoke test manual: login, buka 1 halaman per modul
    (Area/Equipment/Corrective Maintenance/Dashboard), pastikan tidak ada error di
    Railway logs.
-
-### Rencana ke depan (belum dikerjakan, dicatat sebagai technical debt)
-
-Begitu tim/dataset bertambah, pertimbangkan migrasi dari `db push` ke
-`prisma migrate deploy` dengan file migration formal ter-commit
-(`prisma/migrations/`) — ini memberi riwayat perubahan schema yang bisa di-review
-seperti code review biasa, dan lebih mudah di-rollback terarah (migration down)
-dibanding `db push` yang selalu menyamakan paksa ke schema saat ini. Lihat catatan
-di langkah 3 "Migration & Seed" di atas.
 
 ## Konvensi Commit
 

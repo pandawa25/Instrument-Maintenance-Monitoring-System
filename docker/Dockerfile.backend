@@ -42,7 +42,7 @@ RUN npx tsc apps/backend/prisma/seed.ts \
 FROM node:20-alpine AS runtime
 WORKDIR /app
 # Runtime adalah base image baru (bukan lanjutan dari stage build), jadi OpenSSL
-# harus diinstall lagi di sini juga — dipakai saat `prisma db push` jalan di CMD.
+# harus diinstall lagi di sini juga — dipakai saat `prisma migrate deploy` jalan di CMD.
 RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 # npm workspaces meng-hoist semua dependency ke node_modules di ROOT repo,
@@ -74,11 +74,9 @@ RUN mkdir -p uploads /data/uploads && chown -R node:node uploads /data/uploads
 USER node
 
 EXPOSE 3000
-# CATATAN SEMENTARA: memakai `db push` (bukan `migrate deploy`) karena belum ada
-# file migration formal di prisma/migrations/ (belum sempat digenerate — environment
-# development terblokir akses ke binaries.prisma.sh). `db push` menyamakan skema DB
-# langsung ke schema.prisma tanpa riwayat migration, cukup untuk tahap MVP.
-# TODO: begitu ada akses lokal penuh, jalankan `prisma migrate dev --name init`,
-# commit folder prisma/migrations/ yang dihasilkan, lalu ganti baris di bawah ini
-# kembali ke `prisma migrate deploy` supaya history migration production tercatat rapi.
-CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss --schema=./prisma/schema.prisma && node dist/main.js"]
+# `migrate deploy` menjalankan migration formal dari prisma/migrations/ secara
+# berurutan (bukan `db push` yang menyamakan skema paksa tanpa riwayat) — setiap
+# perubahan schema sejak 3 Okt 2026 tercatat sebagai file migration ter-review,
+# bisa di-rollback terarah, dan production sudah di-baseline ke 14 migration yang
+# ada di folder ini (lihat docs/procedures/migrate-to-prisma-migrate-deploy.md).
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.js"]
