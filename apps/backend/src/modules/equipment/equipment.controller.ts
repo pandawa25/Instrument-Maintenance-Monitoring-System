@@ -114,6 +114,32 @@ export class EquipmentController {
     return this.equipmentService.findAllForDropdown();
   }
 
+  // NOTE: path statis (dashboard/*, export, manufacturers) WAJIB didaftarkan sebelum
+  // ":id" di bawah — kalau tidak, Nest akan menganggap "dashboard"/"export" sebagai value :id.
+
+  @Get('dashboard/status-counts')
+  @ApiOperation({ summary: 'Count per status (Total/Active/Standby/Out Of Service) untuk summary card' })
+  getStatusCounts(@Query() query: QueryEquipmentDto) {
+    return this.equipmentService.getStatusCounts(query);
+  }
+
+  @Get('manufacturers')
+  @ApiOperation({ summary: 'Daftar distinct manufacturer (non-null) untuk dropdown filter' })
+  getManufacturers() {
+    return this.equipmentService.getManufacturers();
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export Excel data equipment sesuai filter yang aktif' })
+  async exportExcel(@Query() query: QueryEquipmentDto, @Res({ passthrough: true }) res: Response) {
+    const buffer = await this.equipmentService.exportToExcel(query);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="equipment-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    });
+    return new StreamableFile(buffer);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detail satu equipment' })
   findOne(@Param('id', ParseUuidPipe) id: string) {

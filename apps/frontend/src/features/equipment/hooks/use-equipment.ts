@@ -4,7 +4,9 @@ import {
   createEquipment,
   deleteEquipment,
   fetchEquipment,
+  fetchEquipmentStatusCounts,
   fetchImportBatchRows,
+  fetchManufacturers,
   previewBulkEquipment,
   updateEquipment,
 } from '../api/equipment.api';
@@ -17,6 +19,25 @@ export function useEquipmentList(params: EquipmentQueryParams) {
     queryKey: [EQUIPMENT_KEY, params],
     queryFn: () => fetchEquipment(params),
     placeholderData: (prev) => prev,
+  });
+}
+
+// Count per status untuk summary card (Total/Active/Standby/Out Of Service) — ikut filter
+// yang sedang aktif di halaman list (search/area/instrument name/manufacturer), KECUALI
+// filter status itu sendiri (lihat EquipmentRepository.getStatusCounts()).
+export function useEquipmentStatusCounts(params: EquipmentQueryParams) {
+  return useQuery({
+    queryKey: [EQUIPMENT_KEY, 'status-counts', params],
+    queryFn: () => fetchEquipmentStatusCounts(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useManufacturers() {
+  return useQuery({
+    queryKey: [EQUIPMENT_KEY, 'manufacturers'],
+    queryFn: fetchManufacturers,
+    staleTime: 5 * 60_000, // jarang berubah — cukup refetch tiap 5 menit
   });
 }
 

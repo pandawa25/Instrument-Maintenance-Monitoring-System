@@ -3,7 +3,17 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
-import { isValveInstrumentCode, type Equipment } from '../types/equipment.types';
+import { cn } from '@/lib/utils';
+import { isValveInstrumentCode, type Equipment, type EquipmentStatus } from '../types/equipment.types';
+import { getTypeCategory } from '../utils/equipment-type-category';
+
+// Aksen warna kiri per baris — scan cepat status tanpa harus baca kolom Status
+// (konsisten dengan warna StatusBadge: success/warning/danger).
+const STATUS_ROW_ACCENT: Record<EquipmentStatus, string> = {
+  ACTIVE: 'border-l-success',
+  STANDBY: 'border-l-warning',
+  OUT_OF_SERVICE: 'border-l-danger',
+};
 
 /** Range (LRV-URV/Unit) untuk equipment ukur, atau Size/Rating untuk equipment valve. */
 function rangeOrSizeCell(item: Equipment): string {
@@ -52,40 +62,60 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
         </tr>
       </thead>
       <tbody>
-        {equipment.map((item) => (
-          <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-            <td className="px-4 py-2.5 font-mono text-xs text-text">{item.tagNumber}</td>
-            <td className="px-4 py-2.5 text-text">{item.service}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.instrumentName.name}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.type || '—'}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
-            <td className="px-4 py-2.5 text-text-muted">{item.manufacturer || '—'}</td>
-            <td className="px-4 py-2.5 text-text-muted">{rangeOrSizeCell(item)}</td>
-            <td className="px-4 py-2.5">
-              <StatusBadge value={item.status} />
-            </td>
-            <td className="px-4 py-2.5 text-text-muted">
-              {item.lastMaintenanceDate ? new Date(item.lastMaintenanceDate).toLocaleDateString('id-ID') : '—'}
-            </td>
-            <td className="px-4 py-2.5">
-              <div className="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" onClick={() => onView(item)} title="View detail">
-                  <Eye className="h-4 w-4" />
-                </Button>
-                {canEdit && (
-                  <>
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(item)} title="Edit">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(item)} title="Delete">
-                      <Trash2 className="h-4 w-4 text-danger" />
-                    </Button>
-                  </>
+        {equipment.map((item) => {
+          const category = getTypeCategory(item.instrumentName.code);
+          return (
+            <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+              <td
+                className={cn(
+                  'border-l-4 px-4 py-2.5 font-mono text-xs text-text',
+                  STATUS_ROW_ACCENT[item.status] ?? 'border-l-transparent',
                 )}
-              </div>
-            </td>
-          </tr>
-        ))}
+              >
+                {item.tagNumber}
+              </td>
+              <td className="px-4 py-2.5 text-text">{item.service}</td>
+              <td className="px-4 py-2.5 text-text-muted">{item.instrumentName.name}</td>
+              <td className="px-4 py-2.5">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
+                    category.className,
+                  )}
+                >
+                  <category.icon className="h-3 w-3" />
+                  {category.label}
+                </span>
+              </td>
+              <td className="px-4 py-2.5 text-text-muted">{item.area.areaCode}</td>
+              <td className="px-4 py-2.5 text-text-muted">{item.manufacturer || '—'}</td>
+              <td className="px-4 py-2.5 text-text-muted">{rangeOrSizeCell(item)}</td>
+              <td className="px-4 py-2.5">
+                <StatusBadge value={item.status} dot />
+              </td>
+              <td className="px-4 py-2.5 text-text-muted">
+                {item.lastMaintenanceDate ? new Date(item.lastMaintenanceDate).toLocaleDateString('id-ID') : '—'}
+              </td>
+              <td className="px-4 py-2.5">
+                <div className="flex justify-end gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onView(item)} title="View detail">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {canEdit && (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(item)} title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(item)} title="Delete">
+                        <Trash2 className="h-4 w-4 text-danger" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

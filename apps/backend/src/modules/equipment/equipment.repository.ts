@@ -35,6 +35,14 @@ export class EquipmentRepository {
       where.instrumentNameId = query.instrumentNameId;
     }
 
+    if (query.manufacturer) {
+      where.manufacturer = query.manufacturer;
+    }
+
+    if (query.criticality) {
+      where.criticality = query.criticality;
+    }
+
     if (query.status) {
       where.status = query.status;
     }
@@ -78,6 +86,68 @@ export class EquipmentRepository {
   findById(id: string) {
     return this.prisma.equipment.findFirst({
       where: { id, deletedAt: null },
+      include: {
+        area: { select: { id: true, areaCode: true, areaName: true } },
+        instrumentName: { select: { id: true, code: true, name: true } },
+        maintenance: {
+          where: { deletedAt: null, status: 'COMPLETED' },
+          orderBy: { maintenanceDate: 'desc' },
+          take: 1,
+          select: { maintenanceDate: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Count per status untuk summary card di halaman list (Total/Active/Standby/Out Of
+   * Service) — menghormati filter search/area/instrument name/manufacturer yang sedang
+   * aktif (TAPI bukan filter status itu sendiri, supaya tiap card tahu count-nya masing2),
+   * sama persis polanya dengan MaintenanceRepository.getStatusCounts().
+   */
+  async getStatusCounts(query: QueryEquipmentDto) {
+    const where = this.buildWhere(query);
+    delete where.status;
+
+    const [total, grouped] = await this.prisma.$transaction([
+      this.prisma.equipment.count({ where }),
+      this.prisma.equipment.groupBy({
+        by: ['status'],
+        where,
+        _count: { _all: true },
+        orderBy: { status: 'asc' },
+      }),
+    ]);
+
+    const counts: Record<string, number> = {
+      ALL: total,
+      ACTIVE: 0,
+      STANDBY: 0,
+      OUT_OF_SERVICE: 0,
+    };
+    for (const g of grouped as { status: string; _count: { _all: number } }[]) {
+      counts[g.status] = g._count._all;
+    }
+    return counts;
+  }
+
+  /** Daftar nilai distinct `manufacturer` (non-null) untuk dropdown filter — diurutkan A-Z. */
+  async getDistinctManufacturers(): Promise<string[]> {
+    const rows = await this.prisma.equipment.findMany({
+      where: { deletedAt: null, manufacturer: { not: null } },
+      distinct: ['manufacturer'],
+      select: { manufacturer: true },
+      orderBy: { manufacturer: 'asc' },
+    });
+    return rows.map((r: { manufacturer: string | null }) => r.manufacturer as string);
+  }
+
+  /** Semua baris yang cocok filter aktif, TANPA pagination — dipakai export Excel. */
+  findAllForExport(query: QueryEquipmentDto) {
+    const where = this.buildWhere(query);
+    return this.prisma.equipment.findMany({
+      where,
+      orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
       include: {
         area: { select: { id: true, areaCode: true, areaName: true } },
         instrumentName: { select: { id: true, code: true, name: true } },

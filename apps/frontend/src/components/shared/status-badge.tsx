@@ -31,7 +31,22 @@ const STATUS_STYLES: Record<string, string> = {
   INSUFFICIENT_DATA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
 };
 
-export function StatusBadge({ value }: { value: string | null | undefined }) {
+// Warna dot sama dengan warna teks badge-nya — dipetakan dari STATUS_STYLES (bukan
+// daftar terpisah) supaya tidak bisa "nyasar" tidak sinkron kalau STATUS_STYLES berubah.
+const DOT_COLOR: Record<string, string> = Object.fromEntries(
+  Object.entries(STATUS_STYLES).map(([status, classes]) => {
+    const textClass = classes.split(' ').find((c) => c.startsWith('text-')) ?? 'text-text-muted';
+    return [status, textClass.replace('text-', 'bg-')];
+  }),
+);
+
+interface StatusBadgeProps {
+  value: string | null | undefined;
+  /** Tampilkan dot bulat berwarna sebelum teks (mis. untuk tabel yang butuh scan cepat by-color). */
+  dot?: boolean;
+}
+
+export function StatusBadge({ value, dot = false }: StatusBadgeProps) {
   // Defensive: kalau API belum dimigrate/di-deploy serentak dengan frontend (mis. field baru
   // belum ada di response lama), value bisa undefined/null sesaat — jangan sampai crash
   // seluruh halaman karena satu badge, tampilkan "-" saja.
@@ -46,10 +61,11 @@ export function StatusBadge({ value }: { value: string | null | undefined }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium',
         STATUS_STYLES[value] ?? 'bg-surface-2 text-text-muted border-border',
       )}
     >
+      {dot && <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', DOT_COLOR[value] ?? 'bg-text-muted')} />}
       {value.replace(/_/g, ' ')}
     </span>
   );

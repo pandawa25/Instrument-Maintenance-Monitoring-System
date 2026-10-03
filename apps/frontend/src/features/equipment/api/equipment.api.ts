@@ -4,22 +4,51 @@ import type {
   Equipment,
   EquipmentFormValues,
   EquipmentQueryParams,
+  EquipmentStatusCounts,
   ImportBatchRow,
   ImportCommitResult,
   ImportPreviewResult,
   ImportRowSeverity,
 } from '../types/equipment.types';
 
+function cleanParams(params: EquipmentQueryParams) {
+  return {
+    ...params,
+    areaId: params.areaId || undefined,
+    instrumentNameId: params.instrumentNameId || undefined,
+    manufacturer: params.manufacturer || undefined,
+    criticality: params.criticality || undefined,
+    status: params.status || undefined,
+  };
+}
+
 export async function fetchEquipment(params: EquipmentQueryParams) {
-  const { data } = await api.get<PaginatedResult<Equipment>>('/equipment', {
-    params: {
-      ...params,
-      areaId: params.areaId || undefined,
-      instrumentNameId: params.instrumentNameId || undefined,
-      status: params.status || undefined,
-    },
-  });
+  const { data } = await api.get<PaginatedResult<Equipment>>('/equipment', { params: cleanParams(params) });
   return data;
+}
+
+export async function fetchEquipmentStatusCounts(params: EquipmentQueryParams) {
+  const { data } = await api.get<{ data: EquipmentStatusCounts }>('/equipment/dashboard/status-counts', {
+    params: cleanParams(params),
+  });
+  return data.data;
+}
+
+export async function fetchManufacturers() {
+  const { data } = await api.get<{ data: string[] }>('/equipment/manufacturers');
+  return data.data;
+}
+
+export async function exportEquipment(params: EquipmentQueryParams) {
+  const response = await api.get('/equipment/export', { params: cleanParams(params), responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `equipment-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function fetchEquipmentById(id: string) {

@@ -114,7 +114,11 @@ export interface EquipmentQueryParams {
   search?: string;
   areaId?: string | '';
   instrumentNameId?: string | '';
+  manufacturer?: string | '';
+  criticality?: Criticality | '';
   status?: EquipmentStatus | '';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+export type EquipmentStatusCounts = Record<'ALL' | EquipmentStatus, number>;

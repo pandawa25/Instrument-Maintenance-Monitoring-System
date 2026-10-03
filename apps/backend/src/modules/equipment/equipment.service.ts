@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import { Equipment } from '@prisma/client';
 import { normalizeTag } from '@imms/shared-utils';
 import { EquipmentRepository } from './equipment.repository';
@@ -92,6 +93,62 @@ export class EquipmentService {
 
   findAllForDropdown() {
     return this.repository.findAllForDropdown();
+  }
+
+  /** Count per status untuk summary card (Total/Active/Standby/Out Of Service). */
+  getStatusCounts(query: QueryEquipmentDto) {
+    return this.repository.getStatusCounts(query);
+  }
+
+  /** Daftar nilai distinct manufacturer untuk dropdown filter. */
+  getManufacturers() {
+    return this.repository.getDistinctManufacturers();
+  }
+
+  /** Export Excel — semua baris yang cocok filter (TANPA pagination), 1 sheet. */
+  async exportToExcel(query: QueryEquipmentDto): Promise<Buffer> {
+    const rows = await this.repository.findAllForExport(query);
+    const items = rows.map((row: EquipmentWithRelations) => this.toListItem(row));
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Equipment');
+    sheet.columns = [
+      { header: 'Tag Number', key: 'tagNumber', width: 16 },
+      { header: 'Service', key: 'service', width: 26 },
+      { header: 'Instrument Name', key: 'instrumentName', width: 22 },
+      { header: 'Type', key: 'type', width: 16 },
+      { header: 'Area', key: 'area', width: 14 },
+      { header: 'Manufacturer', key: 'manufacturer', width: 18 },
+      { header: 'Model', key: 'model', width: 16 },
+      { header: 'Serial Number', key: 'serialNumber', width: 18 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Criticality', key: 'criticality', width: 12 },
+      { header: 'Last Maintenance', key: 'lastMaintenance', width: 16 },
+      { header: 'Remarks', key: 'remarks', width: 30 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+
+    for (const item of items) {
+      sheet.addRow({
+        tagNumber: item.tagNumber,
+        service: item.service,
+        instrumentName: item.instrumentName.name,
+        type: item.type ?? '',
+        area: item.area.areaCode,
+        manufacturer: item.manufacturer ?? '',
+        model: item.model ?? '',
+        serialNumber: item.serialNumber ?? '',
+        status: item.status,
+        criticality: item.criticality,
+        lastMaintenance: item.lastMaintenanceDate
+          ? new Date(item.lastMaintenanceDate).toLocaleDateString('id-ID')
+          : '',
+        remarks: item.remarks ?? '',
+      });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 
   async create(dto: CreateEquipmentDto) {
