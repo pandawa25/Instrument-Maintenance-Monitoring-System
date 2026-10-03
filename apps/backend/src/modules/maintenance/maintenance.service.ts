@@ -10,6 +10,7 @@ import { UsersService } from '../users/users.service';
 import { SparePartsService } from '../spare-parts/spare-parts.service';
 import { MaterialInputDto } from './dto/material-input.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
+import { validateCompletionDateRequirement, validateStatusTransition } from './maintenance-status.util';
 
 type MaintenanceWithRelations = CorrectiveMaintenance & {
   equipment: { id: string; tagNumber: string; service: string };
@@ -136,6 +137,11 @@ export class MaintenanceService {
     await this.validateMaterials(dto.materials);
     const areaId = await this.resolveAreaId(dto.equipmentId);
 
+    // Saat create tidak ada "status sebelumnya" untuk divalidasi transisinya —
+    // tapi requirement completionDate tetap berlaku kalau client langsung
+    // membuat record dengan status COMPLETED (mis. input data historis).
+    validateCompletionDateRequirement(dto.status ?? 'OPEN', dto.completionDate);
+
     const created = await this.repository.create(dto, areaId, createdById);
     return this.findOne(created.id);
   }
@@ -148,6 +154,14 @@ export class MaintenanceService {
     }
     await this.validateAdditionalTechnicians(dto.additionalTechnicianIds);
     await this.validateMaterials(dto.materials);
+
+    if (dto.status) {
+      validateStatusTransition(current.status, dto.status);
+    }
+
+    const resultingStatus = dto.status ?? current.status;
+    const resultingCompletionDate = dto.completionDate ?? current.completionDate;
+    validateCompletionDateRequirement(resultingStatus, resultingCompletionDate);
 
     let areaId: string | undefined;
     if (dto.equipmentId) {

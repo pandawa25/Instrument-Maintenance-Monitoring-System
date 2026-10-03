@@ -16,6 +16,7 @@ import {
 } from '../hooks/use-maintenance-lookups';
 import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
+import { getSelectableStatuses, MAINTENANCE_STATUS_LABELS } from '../utils/maintenance-status.util';
 
 const EMPTY_FORM: MaintenanceFormValues = {
   spkNumber: '',
@@ -124,6 +125,13 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
 
     if (form.needsSparePart && form.materials.some((m) => !m.sparePartId)) {
       toast.error('Pilih spare part untuk setiap baris material, atau hapus baris yang kosong');
+      return;
+    }
+
+    // Cermin dari validateCompletionDateRequirement() di backend — dicek juga
+    // di sini supaya user tahu sebelum submit, bukan baru lihat error dari API.
+    if (form.status === 'COMPLETED' && !form.completionDate) {
+      toast.error("Completion Date wajib diisi saat status 'Completed'");
       return;
     }
 
@@ -344,11 +352,17 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value as MaintenanceFormValues['status'] })}
             >
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="WAITING_MATERIAL">Waiting Material</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
+              {/* Saat edit, pilihan dibatasi ke transisi yang diizinkan backend (lihat
+                  maintenance-status.util.ts) — mencegah user memilih transisi yang pasti
+                  ditolak saat submit, mis. Completed -> Open. Saat create, semua pilihan
+                  tetap terbuka karena belum ada "status sebelumnya". */}
+              {(isEdit && maintenance ? getSelectableStatuses(maintenance.status) : (Object.keys(MAINTENANCE_STATUS_LABELS) as MaintenanceFormValues['status'][])).map(
+                (status) => (
+                  <option key={status} value={status}>
+                    {MAINTENANCE_STATUS_LABELS[status]}
+                  </option>
+                ),
+              )}
             </Select>
             {isEdit && form.status === 'CANCELLED' && maintenance?.needsSparePart && (
               <p className="mt-1 text-xs text-warning">
@@ -358,12 +372,15 @@ export function MaintenanceFormDialog({ open, onOpenChange, maintenance }: Props
           </div>
 
           <div>
-            <Label htmlFor="completionDate">Completion Date</Label>
+            <Label htmlFor="completionDate">
+              Completion Date{form.status === 'COMPLETED' && <span className="text-danger"> *</span>}
+            </Label>
             <Input
               id="completionDate"
               type="date"
               value={form.completionDate}
               onChange={(e) => setForm({ ...form, completionDate: e.target.value })}
+              required={form.status === 'COMPLETED'}
             />
           </div>
 
