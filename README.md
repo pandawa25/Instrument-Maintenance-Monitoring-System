@@ -97,6 +97,61 @@ Railway bersifat ephemeral).
 > login sebagai Admin, buka menu **User Management**, lalu gunakan aksi "Reset Password"
 > pada akun admin@imms.local.
 
+## Backup & Rollback Database (Railway / PostgreSQL)
+
+Deployment saat ini pakai `prisma db push --accept-data-loss` di startup container
+(lihat `docker/Dockerfile.backend`), **bukan** `prisma migrate deploy` — artinya
+rollback container ke image lama (mis. lewat Railway "Redeploy" versi sebelumnya)
+**TIDAK otomatis mengembalikan schema database**. Kalau deploy baru menghapus/ubah
+kolom, rollback container tanpa rollback database akan membuat kode lama error
+(kolom yang diharapkan sudah tidak ada) atau diam-diam kehilangan data (kolom yang
+dihapus `db push` sebelumnya tidak bisa dikembalikan dari container lama).
+
+### Backup — wajib sebelum deploy yang mengubah schema
+
+Railway PostgreSQL punya backup otomatis bawaan (tergantung plan — cek
+[dokumentasi Railway](https://docs.railway.app/reference/backups) untuk retensi
+yang berlaku di plan yang dipakai), tapi untuk perubahan schema yang berisiko
+(mengubah tipe kolom, menghapus kolom/tabel, mengubah constraint), **jangan
+bergantung pada backup otomatis saja** — ambil backup manual tepat sebelum deploy:
+
+```bash
+# Dari komputer dengan akses ke DATABASE_URL Railway (lihat tab "Variables" project):
+pg_dump "$DATABASE_URL" -F c -f "backup-$(date +%Y%m%d-%H%M%S).dump"
+
+# Restore kalau diperlukan (ke database yang SAMA, menimpa isi saat ini):
+pg_restore --clean --if-exists -d "$DATABASE_URL" backup-20261003-120000.dump
+```
+
+Simpan file dump di luar Railway (lokal/Google Drive/S3) — jangan commit ke git
+(data produksi, dan ukuran bisa besar).
+
+### Prosedur rollback kalau deploy baru bermasalah
+
+1. **Container-only rollback (schema TIDAK berubah di deploy yang bermasalah)** —
+   aman langsung: di Railway dashboard, pilih deployment sebelumnya → "Redeploy".
+2. **Schema berubah di deploy yang bermasalah** — rollback container saja TIDAK
+   CUKUP:
+   - Kalau kolom/tabel baru ditambahkan (tidak ada yang dihapus): rollback
+     container aman — kolom baru yang tidak dipakai kode lama tidak masalah,
+     dibiarkan saja sampai deploy berikutnya.
+   - Kalau kolom/tabel **dihapus atau diubah tipe/constraint-nya**: restore
+     database dari backup manual (langkah di atas) **sebelum** atau **bersamaan
+     dengan** rollback container — urutan: stop traffic (atau terima downtime
+     singkat) → `pg_restore` → rollback container → verifikasi.
+3. Setelah rollback, jalankan smoke test manual: login, buka 1 halaman per modul
+   (Area/Equipment/Corrective Maintenance/Dashboard), pastikan tidak ada error di
+   Railway logs.
+
+### Rencana ke depan (belum dikerjakan, dicatat sebagai technical debt)
+
+Begitu tim/dataset bertambah, pertimbangkan migrasi dari `db push` ke
+`prisma migrate deploy` dengan file migration formal ter-commit
+(`prisma/migrations/`) — ini memberi riwayat perubahan schema yang bisa di-review
+seperti code review biasa, dan lebih mudah di-rollback terarah (migration down)
+dibanding `db push` yang selalu menyamakan paksa ke schema saat ini. Lihat catatan
+di langkah 3 "Migration & Seed" di atas.
+
 ## Konvensi Commit
 
 Menggunakan [Conventional Commits](https://www.conventionalcommits.org/):
