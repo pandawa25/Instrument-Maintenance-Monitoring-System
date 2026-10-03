@@ -1,114 +1,147 @@
 # Roadmap Pengembangan — Instrument Maintenance Monitoring System
 
-Status: **Draft untuk review**. Menggantikan bagian "Roadmap Modul Berikutnya" di `design-document.md` (sudah usang — ditulis sebelum modul PM, Spare Part, dan Dashboard selesai).
+**Status:** Revisi 3 Oktober 2026. Menggantikan revisi sebelumnya yang ditulis saat sistem
+masih 3 modul/6 tabel — sudah usang karena sebagian besar isi "Phase 2"-nya di revisi lama
+sudah selesai dikerjakan (dengan penomoran phase berbeda, lihat README `Status Pengembangan`).
 
-Dokumen ini punya 2 bagian: **(A) technical debt & risk** dari kondisi sistem saat ini, dan **(B) roadmap fitur** dalam beberapa phase, disusun berdasarkan urutan ketergantungan dan value terhadap operasional maintenance instrumentasi.
+Dokumen ini: **(A)** kondisi sistem saat ini, **(B)** technical debt & risk register yang
+masih terbuka, **(C)** roadmap fitur Phase 5 ke atas, **(D)** rekomendasi urutan eksekusi.
 
 ---
 
 ## A. Kondisi Sistem Saat Ini
 
-| Modul | Status | Catatan |
-|---|---|---|
-| Master Area, Equipment, Instrument Name | Selesai | CRUD lengkap |
-| Corrective Maintenance | Selesai | + fitur kebutuhan Spare Part/Material |
-| Preventive Maintenance (Program, Periode, Eksekusi, Checklist) | Selesai | Termasuk bulk-edit eksekusi |
-| Master Vendor, PM Activity Type, Spare Part | Selesai | |
-| Dashboard | Selesai | Summary card, 4 chart, tabel terbaru |
-| Auth (JWT) & Role (Admin/Viewer) | Selesai (basic) | Belum ada refresh token, belum ada granular permission |
+Sistem sudah melewati tahap MVP murni — pertumbuhannya:
 
-Total 13 tabel, arsitektur modular NestJS + Prisma + React berjalan konsisten. Fondasi ini **cukup kuat untuk dikembangkan lebih jauh** — tidak perlu rewrite, hanya penambahan bertahap.
+| | MVP awal (project brief) | Kondisi sekarang |
+|---|---|---|
+| Modul operasional | 3 (Area, Instrument, Corrective Maintenance) | 9+ (+ PM Program/Period/Execution, Spare Part + Stock Ledger, Vendor, Manage User, Attachment/Evidence, Audit Log, KPI & Health Index Dashboard) |
+| Model database (Prisma) | 6 | 23 |
+| Auth | JWT access token saja | Refresh token rotation + reuse detection, rate limiting login, login history, access token memory-only (bukan localStorage) |
+| Observability | — | Audit log terpusat (siapa/apa/kapan, redaksi otomatis field sensitif) |
+| Analytics | Dashboard ringkas (4 summary card + 3 chart) | + KPI (MTTR/MTBF/PM Compliance Rate, 3 level agregasi) + Instrument Health Index (skor komposit percentile-based) |
+| Testing | — | Jest unit test backend (6 suite, 45 test — auth, RBAC, stock ledger, audit log, dashboard KPI) + CI (build+test otomatis tiap PR) |
+| Security hardening | — | 10/10 temuan audit (security, correctness, UX, DevOps) selesai — lihat `docs/system-audit-2026-10-03.md` |
+
+**Yang BELUM dikerjakan (bukan oversight, sengaja di luar scope sampai sekarang):**
+- Work Order formal (approval workflow, assignment) — saat ini cuma field referensi manual ke ERP eksternal, sesuai keputusan desain di README.
+- Hierarki Plant (multi-site) — `areas` masih flat, asumsi 1 plant.
+- Kalibrasi instrumentasi (calibration due tracking) — belum ada field/entity.
+- Test frontend (Vitest/RTL) — 0 test, seluruhnya manual QA.
+- Notifikasi proaktif (PM overdue, low stock) — info hanya terlihat kalau dashboard dibuka manual.
 
 ---
 
 ## B. Technical Debt & Risk Register
 
-Diurutkan berdasarkan prioritas (dampak operasional/risiko x kemudahan terlambat diperbaiki).
+Diurutkan berdasarkan dampak x kemudahan terlambat diperbaiki. Status diverifikasi langsung
+dari kode per 3 Oktober 2026 (bukan asumsi dari dokumen lama).
 
-| # | Item | Risiko Kalau Dibiarkan | Prioritas |
-|---|---|---|---|
-| 1 | **Tidak ada histori pergerakan stock** — stock Spare Part di-`decrement`/`increment` langsung tanpa ledger. | Tidak bisa audit "kenapa stock jadi segini", tidak bisa lacak siapa/kapan pakai berapa. Untuk sistem maintenance industri ini masalah nyata, bukan kosmetik. | **Tinggi** |
-| 2 | **`SparePart.stock` bertipe Int, `quantity` material bertipe Decimal** — saat ini dibulatkan diam-diam di `MaintenanceRepository.decrementStock()`. | Kalau nanti ada part dengan satuan non-bulat (meter, liter), data quantity akan salah tanpa error yang jelas. | Tinggi |
-| 3 | **Tidak ada automated test** (unit/e2e) sama sekali. | Setiap perubahan berisiko regresi diam-diam, terutama di area yang sudah kompleks (transaction PM Program, stock adjustment). | Tinggi |
-| 4 | **Tidak ada refresh token** — JWT access token saja. | Sesi login expired mendadak di tengah kerja lapangan, atau sebaliknya token diset umur panjang demi kenyamanan (risiko keamanan). | Tinggi |
-| 5 | **Agregasi Dashboard dihitung di JS (fetch semua baris lalu loop)**, bukan di level SQL. | Aman untuk data saat ini, tapi tidak scalable — begitu Corrective Maintenance/PM Execution mencapai puluhan ribu baris, endpoint dashboard akan melambat. | Sedang (aksi: pantau, bukan urgent sekarang) |
-| 6 | **Tidak ada file/foto attachment** di Corrective Maintenance atau PM Execution. | Temuan lapangan (kerusakan, kondisi sebelum/sesudah) tidak terdokumentasi visual — penting untuk RCA dan klaim vendor/garansi. | Tinggi |
-| 7 | **Tidak ada notifikasi** (in-app/email/WhatsApp) untuk PM overdue atau stock rendah. | Dashboard hanya terlihat kalau dibuka manual — risiko PM terlewat tetap ada meski datanya sudah tercatat. | Sedang |
-| 8 | **Bundle frontend sudah 930kB** (warning saat build, sejak recharts masuk). | Belum masalah sekarang, tapi tiap modul baru menambah ukuran. Perlu code-splitting per route sebelum jadi keluhan loading time. | Rendah-Sedang |
-| 9 | **Tidak ada CI pipeline** (build/test otomatis di GitHub sebelum merge). | Bug baru terdeteksi manual setelah deploy, bukan sebelum merge. | Sedang |
-| 10 | **Satu environment saja** (langsung ke Railway production). | Tidak ada tempat aman untuk uji fitur besar sebelum menyentuh data real. | Sedang |
-| 11 | **Threshold "low stock" hardcode (≤5)**, bukan per-item. | Part yang consumption rate-nya tinggi butuh threshold lebih tinggi dari part yang jarang dipakai — satu angka untuk semua tidak akurat. | Rendah (sudah disepakati sebagai simplifikasi MVP) |
-
-Item #1, #2, #3, #4, #6 saya rekomendasikan masuk **Phase 2** karena menyangkut integritas data dan keamanan — bukan fitur baru, tapi mengeraskan fondasi sebelum menambah lebih banyak modul di atasnya.
+| # | Item | Risiko Kalau Dibiarkan | Prioritas | Status |
+|---|---|---|---|---|
+| 1 | **`SparePart.stock` bertipe `Int`, tapi `quantity` pemakaian material `Decimal(10,2)`** (`schema.prisma:467,515`) | Aman untuk part satuan bulat (pcs/unit). Part dengan satuan non-bulat (meter kabel, liter oli) akan dibulatkan diam-diam tanpa error — data stock jadi salah tanpa jejak. | **Tinggi** | Open |
+| 2 | **Deploy pakai `prisma db push --accept-data-loss`, bukan `migrate deploy`** — tidak ada file migration formal ter-commit | Tidak ada riwayat perubahan schema yang bisa di-review seperti code review biasa; rollback container tidak otomatis rollback schema (sudah didokumentasikan prosedur manualnya di README, tapi tetap manual/rawan human error) | Tinggi | Open (mitigasi: prosedur backup/rollback sudah didokumentasikan) |
+| 3 | **Tidak ada test frontend sama sekali** (Vitest/RTL — 0 file `*.test.*`) | Regresi UI (terutama logic form-dialog, kalkulasi client-side seperti validasi completionDate) hanya terdeteksi lewat QA manual | Tinggi | Open |
+| 4 | **Coverage test backend masih sempit** — 6 suite (auth, RBAC, stock ledger, audit log redaction, dashboard KPI) dari ~15 modul | Modul tanpa test (Equipment, PM Program, Maintenance state-machine yang baru ditambah, dll) berisiko regresi diam-diam | Sedang-Tinggi | Open |
+| 5 | **Duplikasi pola form-dialog identik di 10+ modul** (state sync, submit, error handling — tidak ada hook bersama) | Perbaikan bug/pola di satu form tidak otomatis menular ke form lain; effort maintenance berlipat tiap ada perubahan pola | Sedang | Open |
+| 6 | **Race condition stock movement** — tidak ada row lock (`SELECT ... FOR UPDATE`) di `SparePartsRepository.recordMovement()` | Aman untuk tim kecil (<20 user) saat ini. Begitu concurrent user bertambah, 2 transaksi stock bersamaan bisa saling menimpa | Sedang (disadari & diterima sementara, dikomentari di kode) | Open |
+| 7 | **Dashboard & KPI dihitung on-the-fly di JS** (fetch semua baris lalu `.reduce()`/`.filter()`), bukan SQL `GROUP BY` | Aman untuk data saat ini. Begitu Corrective Maintenance/PM Execution mencapai puluhan ribu baris, endpoint ini pertama kali melambat | Sedang (pantau, belum urgent) | Open |
+| 8 | **Bundle frontend 1.09 MB** (minified, sebelum gzip 309 kB) — tidak ada code-splitting route | Waktu load awal makin lama tiap modul baru ditambah; belum terasa di koneksi kantor, bisa terasa di lapangan dengan sinyal lemah | Rendah-Sedang | Open |
+| 9 | **Tidak ada `HEALTHCHECK`/endpoint health** | Railway tidak bisa deteksi container "hidup tapi stuck" (mis. DB connection pool habis) — restart hanya terjadi kalau proses benar-benar crash | Sedang | Open |
+| 10 | **Logging masih `console.log` polos**, bukan structured (JSON) | Sulit di-query/filter kalau nanti pakai log aggregator (mis. Railway log search, atau export ke observability tool) | Sedang (naik prioritas begitu multi-instance) | Open |
+| 11 | **N+1 request dari frontend saat "Isi Massal" PM Execution** (1 PUT per equipment, paralel — sudah `Promise.allSettled` untuk reliability, tapi tetap N request) | Lambat untuk periode dengan banyak equipment (puluhan); beban ke backend juga N kali lipat dari seharusnya | Rendah-Sedang | Sebagian — reliability sudah dibenahi (lihat Sprint 3), endpoint bulk-update tunggal belum |
+| 12 | **Threshold "low stock" default 0** (baru ditandai low stock kalau stock = 0) | Part dengan lead-time pengadaan panjang butuh peringatan lebih awal — tapi ini field yang **bisa** diisi manual per-item oleh Admin, jadi bukan hard limitation | Rendah (sudah ada mitigasi di level data) | Open, tidak mendesak |
 
 ---
 
-## C. Roadmap Fitur (Phase 2 – Phase 6)
+## C. Roadmap Fitur (Phase 5 ke atas)
 
-Setiap phase dirancang independen — bisa dikerjakan bertahap tanpa menunggu phase berikutnya direncanakan detail.
+Penomoran melanjutkan README `Status Pengembangan` (terakhir: Phase 4b selesai 3 Okt 2026).
+Setiap phase independen — bisa dikerjakan bertahap tanpa menunggu phase berikutnya
+direncanakan detail.
 
-### Phase 2 — Reliability & Data Integrity Foundation
+### Phase 5 — Hardening Lanjutan & Kesiapan Scale
 
-*Tujuan: mengeraskan fondasi sebelum sistem dipakai lebih luas/lebih lama. Tidak ada fitur baru yang terlihat user, tapi krusial untuk kepercayaan data jangka panjang.*
+*Tujuan: menutup technical debt di atas sebelum menambah lapisan fitur baru (Work Order,
+Asset Lifecycle) di atas fondasi yang masih punya celah. Tidak ada fitur baru yang terlihat
+user.*
 
-| Item | Deskripsi |
-|---|---|
-| Stock Movement Ledger | Tabel baru `spare_part_stock_movements` (spare_part_id, type: IN/OUT/ADJUSTMENT, quantity, reference ke corrective_maintenance, created_by, created_at). `SparePart.stock` jadi kolom hasil hitung/cache, bukan satu-satunya sumber kebenaran. |
-| Attachment / Evidence Upload | Tabel `attachments` generik (polymorphic: entity_type + entity_id) + integrasi object storage (Railway Volume atau S3-compatible seperti Cloudflare R2). Dipakai di Corrective Maintenance & PM Execution. |
-| Refresh Token & Session Hardening | Refresh token rotation, access token umur pendek (15 menit), audit `last_login_at` sudah ada — tambah `login_history`. |
-| Automated Testing Baseline | Unit test untuk service layer kritikal (stock adjustment, area sync, PM period generation) + minimal 1 e2e flow (login → create CM → verify stock). Target coverage bertahap, bukan 100% langsung. |
-| CI Pipeline (GitHub Actions) | Build + lint + test otomatis di tiap PR ke `main`. |
-| Audit Log Terpusat | Tabel `audit_logs` (siapa mengubah apa, kapan, before/after) untuk entity sensitif (User, Corrective Maintenance status, Stock). |
+| Item | Deskripsi | Terkait Risk # |
+|---|---|---|
+| Migrasi `SparePart.stock` ke `Decimal` | Ubah tipe kolom + semua kalkulasi terkait (stock movement, dashboard inventory) — breaking change schema, butuh migration terencana | #1 |
+| Migrasi ke `prisma migrate deploy` formal | Generate migration awal dari schema saat ini, commit ke `prisma/migrations/`, ubah Dockerfile CMD | #2 |
+| Test frontend baseline (Vitest + Testing Library) | Mulai dari logic kritis: validasi form (state-machine maintenance status), komponen shared (`SearchableSelect` keyboard nav, `SearchInput` debounce) | #3 |
+| Perluas test backend | Equipment, PM Program (transaction replace-all), Maintenance state-machine (baru ditambah 3 Okt) | #4 |
+| `useCrudFormDialog()` — hook generik form-dialog | Refactor 10+ form-dialog ke 1 pola bersama | #5 |
+| Row locking stock movement | `SELECT ... FOR UPDATE` atau optimistic locking (`version` column) | #6 |
+| `GET /health` endpoint + `HEALTHCHECK` Dockerfile | Cek koneksi DB via `$queryRaw` | #9 |
+| Structured logging (Pino) | Ganti `console.log` di `main.ts` | #10 |
+| Endpoint bulk-update tunggal untuk PM Execution | 1 request untuk N equipment, bukan N request paralel | #11 |
+| Code-splitting route (`React.lazy` + `Suspense`) | Minimal untuk Dashboard, Maintenance, PM Programs (halaman terberat) | #8 |
 
-### Phase 3 — Work Order System
+### Phase 6 — Work Order System
 
-*Tujuan: menyatukan Corrective Maintenance dan Preventive Maintenance di bawah konsep "Work Order" — sesuai arah yang sudah disebut di project brief awal.*
-
-| Item | Deskripsi |
-|---|---|
-| Entitas Work Order | Nomor WO auto-generate, tipe (Corrective/Preventive), link ke `corrective_maintenance` atau `pm_period_execution` yang sudah ada (bukan replace, tapi layer di atasnya). |
-| Approval Workflow | Status tambahan: Draft → Submitted → Approved → Closed, dengan role approver (mis. Supervisor). |
-| Assignment & Due Date | WO bisa di-assign ke teknisi dengan due date, terpisah dari tanggal pelaksanaan aktual. |
-| Notifikasi | WO baru/overdue → notifikasi in-app minimal, email opsional. |
-
-### Phase 4 — Instrument Health Index & Reliability Analytics
-
-*Tujuan: mengubah data historis maintenance jadi insight reliability — nilai tambah terbesar untuk peran reliability engineer.*
+*Tujuan: formalisasi Work Order sesuai arah awal project brief — saat ini Corrective
+Maintenance & PM Execution berjalan independen dengan field referensi manual ke ERP.*
 
 | Item | Deskripsi |
 |---|---|
-| MTBF / MTTR per Equipment | Dihitung dari histori `corrective_maintenance` (downtime_hours, maintenance_date) per equipment/area. |
-| Health Index Score | Skor komposit per equipment (frekuensi kerusakan, downtime, kepatuhan PM, umur/criticality) — formula disepakati dulu sebelum implementasi. |
-| Kalibrasi Due Tracking | Kalau equipment butuh kalibrasi berkala (umum di instrumentasi), tambah `calibration_interval` + tracking due date mirip pola PM Period. |
-| Reporting Export | Export PDF/Excel untuk laporan bulanan (KPI, MTBF/MTTR, PM compliance) — dipakai untuk laporan ke manajemen. |
+| Entitas Work Order | Nomor WO auto-generate, tipe (Corrective/Preventive), link ke `corrective_maintenance`/`pm_period_execution` yang sudah ada (layer di atas, bukan replace) |
+| Approval Workflow | Status Draft → Submitted → Approved → Closed, dengan role approver (mis. Supervisor — perlu role baru selain Admin/Viewer) |
+| Assignment & Due Date | WO di-assign ke teknisi dengan due date, terpisah dari tanggal pelaksanaan aktual |
+| Notifikasi dasar | WO baru/overdue → notifikasi in-app minimal (polling atau WebSocket), email opsional |
 
-### Phase 5 — Asset Lifecycle Management
+### Phase 7 — Reliability Analytics Lanjutan & Kalibrasi
 
-*Tujuan: memperluas Master Equipment jadi pengelolaan aset penuh, bukan cuma data teknis.*
-
-| Item | Deskripsi |
-|---|---|
-| Hierarki Plant → Area → Equipment | `areas` saat ini flat; tambah level `plants` di atasnya untuk multi-site/multi-plant. |
-| Warranty & Depreciation | Field warranty expiry, nilai buku, metode depresiasi. |
-| Lifecycle Status | Commissioning → Active → Decommissioned, dengan histori perpindahan status. |
-| Equipment Replacement History | Link equipment lama → equipment pengganti (retag), supaya histori maintenance tidak putus. |
-
-### Phase 6 — Enterprise Hardening & Scale-Out
-
-*Tujuan: dijalankan kalau sistem sudah dipakai multi-plant/multi-tenant atau volume data & user signifikan bertambah.*
+*Tujuan: KPI Dashboard & Health Index sudah ada (Phase 3b/3c) — phase ini melengkapi sisi
+yang belum tersentuh: kalibrasi dan reporting formal.*
 
 | Item | Deskripsi |
 |---|---|
-| Caching Layer (Redis) | Untuk endpoint Dashboard & lookup yang sering diakses. |
-| Query Aggregation di Level SQL | Ganti agregasi JS di Dashboard jadi `$queryRaw`/materialized view kalau data sudah besar (lihat Risk #5). |
-| SSO / Integrasi Active Directory | Kalau perusahaan sudah punya AD/SSO korporat. |
-| PWA / Mobile-Friendly untuk Lapangan | Form input cepat untuk teknisi di lapangan, idealnya bisa input offline lalu sync. |
-| Horizontal Scaling Backend | Kalau 1 instance Railway sudah tidak cukup — perlu load balancer + stateless session (sudah JWT jadi relatif siap). |
+| Kalibrasi Due Tracking | `calibration_interval` per equipment + tracking due date, mirip pola PM Period yang sudah ada |
+| Reporting Export PDF/Excel terjadwal | Export Excel sudah ada di Corrective Maintenance list — perluas ke laporan bulanan gabungan (KPI + MTBF/MTTR + PM Compliance) untuk laporan ke manajemen |
+| MTBF berbasis running hours (opsional) | Saat ini MTBF calendar-based (disadari sebagai keterbatasan di README) — butuh running-hours meter per equipment kalau mau MTBF klasik |
+
+### Phase 8 — Asset Lifecycle Management
+
+*Tujuan: memperluas Master Equipment jadi pengelolaan aset penuh.*
+
+| Item | Deskripsi |
+|---|---|
+| Hierarki Plant → Area → Equipment | `areas` saat ini flat; tambah level `plants` untuk multi-site |
+| Warranty & Depreciation | Field warranty expiry, nilai buku, metode depresiasi |
+| Lifecycle Status | Commissioning → Active → Decommissioned, dengan histori perpindahan status |
+| Equipment Replacement History | Link equipment lama → pengganti (retag), histori maintenance tidak putus |
+
+### Phase 9 — Enterprise Hardening & Scale-Out
+
+*Tujuan: dijalankan kalau sistem sudah dipakai multi-plant/multi-tenant, atau volume
+data/user bertambah signifikan — bukan sebelumnya (hindari over-engineering).*
+
+| Item | Deskripsi |
+|---|---|
+| Caching Layer (Redis) | Endpoint Dashboard & lookup yang sering diakses |
+| Query Aggregation di Level SQL | Ganti agregasi JS jadi `$queryRaw`/materialized view (lihat Risk #7) |
+| SSO / Integrasi Active Directory | Kalau perusahaan sudah punya AD/SSO korporat |
+| PWA / Mobile-Friendly Lapangan | Input cepat untuk teknisi, idealnya bisa offline lalu sync |
+| Horizontal Scaling Backend | Load balancer + stateless session (JWT sudah siap untuk ini) |
 
 ---
 
 ## D. Rekomendasi Urutan Eksekusi
 
-1. **Phase 2 dulu, wajib** — sebelum tambah fitur baru, karena menyangkut integritas data yang sudah dipakai (Stock Ledger terutama, karena makin lama makin sulit di-backfill datanya).
-2. **Phase 3 dan Phase 4 bisa paralel/dipilih sesuai kebutuhan bisnis mendesak** — Work Order kalau butuh formalitas approval, Health Index kalau fokusnya insight/reliability reporting.
-3. **Phase 5 dan 6 ditunda sampai ada sinyal nyata kebutuhannya** (multi-plant, atau volume data/user yang mulai terasa lambat) — menghindari over-engineering di tahap ini.
+1. **Phase 5 dulu** — terutama migrasi `stock` ke `Decimal` (#1) dan `prisma migrate deploy`
+   (#2). Keduanya makin mahal diperbaiki semakin lama ditunda (data production bertambah,
+   migrasi jadi makin berisiko). Test baseline frontend (#3) juga strategis dikerjakan
+   sebelum Phase 6/7/8 menambah kompleksitas UI lebih jauh.
+2. **Phase 6 dan 7 bisa dipilih sesuai kebutuhan bisnis mendesak** — Work Order kalau
+   organisasi butuh approval formal, Reliability Analytics lanjutan kalau fokusnya
+   pelaporan ke manajemen/kalibrasi compliance.
+3. **Phase 8 dan 9 ditunda sampai ada sinyal nyata kebutuhannya** (multi-plant, atau
+   volume data/user mulai terasa lambat) — konsisten dengan prinsip MVP: jangan
+   over-engineering untuk kebutuhan yang belum terjadi.
+
+---
+
+*Dokumen ini hidup — update setiap kali ada phase yang selesai atau prioritas bisnis
+berubah, sama seperti `docs/system-audit-2026-10-03.md` untuk tracking remediasi audit.*
