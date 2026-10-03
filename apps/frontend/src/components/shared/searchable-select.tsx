@@ -35,6 +35,13 @@ interface Props {
  *   Escape menutup panel dan mengembalikan fokus ke trigger.
  * - Tombol clear sekarang `<button tabIndex={0}>` sungguhan (sebelumnya `tabIndex={-1}`,
  *   dihapus total dari tab order — tidak bisa dioperasikan tanpa mouse).
+ *
+ * Catatan HTML validity (Technical Debt Risk #13): trigger-nya sengaja BUKAN elemen
+ * `<button>` native — dulu sempat begitu, tapi tombol "Hapus pilihan" perlu hidup di
+ * dalam area trigger yang sama secara visual, dan `<button>` di dalam `<button>` adalah
+ * HTML tidak valid (browser boleh auto-close tag lebih awal dari yang diharapkan).
+ * Jadi trigger-nya `<div role="combobox" tabIndex={0}>` — perilaku keyboard/fokus
+ * dijaga manual (tabIndex, onKeyDown, focus-visible ring) supaya tetap setara `<button>`.
  */
 export function SearchableSelect({
   id,
@@ -52,7 +59,7 @@ export function SearchableSelect({
   const [query, setQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
 
@@ -106,7 +113,7 @@ export function SearchableSelect({
     closePanel(true);
   }
 
-  function handleTriggerKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+  function handleTriggerKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (disabled) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -135,19 +142,23 @@ export function SearchableSelect({
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
-      <button
+      <div
         ref={triggerRef}
         id={id}
-        type="button"
         role="combobox"
+        tabIndex={disabled ? -1 : 0}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={listboxId}
-        disabled={disabled}
-        onClick={() => (open ? closePanel(false) : openPanel())}
+        aria-disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          open ? closePanel(false) : openPanel();
+        }}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-md border border-border bg-surface px-3 text-sm text-text disabled:cursor-not-allowed disabled:opacity-50',
+          'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border border-border bg-surface px-3 text-sm text-text',
+          disabled && 'cursor-not-allowed opacity-50',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         )}
       >
@@ -171,7 +182,7 @@ export function SearchableSelect({
           )}
           <ChevronsUpDown className="h-3.5 w-3.5 text-text-muted" />
         </div>
-      </button>
+      </div>
 
       {/* input hidden untuk validasi HTML native `required` pada form */}
       {required && <input tabIndex={-1} className="sr-only" value={value} required onChange={() => {}} />}

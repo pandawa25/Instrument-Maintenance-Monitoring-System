@@ -18,6 +18,7 @@ import { PmPeriodsModule } from './modules/pm-periods/pm-periods.module';
 import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
     SparePartsModule,
     DashboardModule,
     AttachmentsModule,
+    HealthModule,
   ],
   providers: [
     // Aktif sebagai guard global — tiap route otomatis kena limit default di

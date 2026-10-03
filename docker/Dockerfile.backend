@@ -74,6 +74,15 @@ RUN mkdir -p uploads /data/uploads && chown -R node:node uploads /data/uploads
 USER node
 
 EXPOSE 3000
+# Technical Debt Risk #9: tanpa HEALTHCHECK, Railway cuma tahu container "crash"
+# total (proses Node mati) — container yang hidup tapi stuck (mis. connection
+# pool ke Postgres habis/deadlock, event loop macet) tidak pernah di-restart
+# otomatis karena proses induknya tetap jalan. --start-period=30s kasih waktu
+# untuk `prisma migrate deploy` selesai dulu sebelum healthcheck pertama mulai
+# dihitung gagal. wget dipakai (bukan curl) karena sudah tersedia bawaan di
+# base image alpine (busybox) — tidak perlu install dependency tambahan.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${PORT:-3000}/api/health" || exit 1
 # `migrate deploy` menjalankan migration formal dari prisma/migrations/ secara
 # berurutan (bukan `db push` yang menyamakan skema paksa tanpa riwayat) — setiap
 # perubahan schema sejak 3 Okt 2026 tercatat sebagai file migration ter-review,
