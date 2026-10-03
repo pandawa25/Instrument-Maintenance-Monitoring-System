@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, StockMovementType } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
 import { QuerySparePartDto } from './dto/query-spare-part.dto';
@@ -14,7 +15,10 @@ const STOCK_MOVEMENT_SORTABLE_FIELDS = ['type', 'quantityDelta', 'balanceAfter',
 interface RecordMovementParams {
   sparePartId: string;
   type: StockMovementType;
-  quantityDelta: number;
+  // number | string | Decimal (bukan cuma number) — pemanggil di
+  // MaintenanceRepository mengirim Decimal langsung (lihat decrementStock/
+  // restoreStock), bukan number biasa, sejak migrasi stock ke Decimal.
+  quantityDelta: number | string | Decimal;
   referenceType?: string;
   referenceId?: string;
   notes?: string;
@@ -130,16 +134,22 @@ export class SparePartsRepository {
    * Tidak ada row-level locking (SELECT ... FOR UPDATE) — risiko race condition
    * diterima sadar untuk MVP (tim kecil, kemungkinan sangat rendah).
    */
-  async recordMovement(tx: any, params: RecordMovementParams): Promise<number> {
+  async recordMovement(tx: any, params: RecordMovementParams): Promise<Decimal> {
     const sparePart = await tx.sparePart.findUnique({ where: { id: params.sparePartId } });
     if (!sparePart) {
       throw new BadRequestException(`Spare part dengan id '${params.sparePartId}' tidak ditemukan`);
     }
 
-    const balanceAfter = sparePart.stock + params.quantityDelta;
-    if (balanceAfter < 0) {
+    // `sparePart.stock` datang dari Prisma sebagai instance Decimal (decimal.js) —
+    // operator aritmetika native (`+`, `<`) TIDAK bekerja benar untuknya (sejak
+    // migrasi stock dari Int ke Decimal, lihat docs/roadmap.md Risk #1), wajib
+    // pakai method Decimal. `decimal.js` diimpor langsung (bukan `Prisma.Decimal`)
+    // supaya tidak bergantung pada generated client untuk sekadar konstruksi nilai.
+    const delta = new Decimal(params.quantityDelta);
+    const balanceAfter = sparePart.stock.plus(delta);
+    if (balanceAfter.isNegative()) {
       throw new BadRequestException(
-        `Stock spare part '${sparePart.kimap}' tidak cukup (tersedia ${sparePart.stock}, dibutuhkan ${-params.quantityDelta})`,
+        `Stock spare part '${sparePart.kimap}' tidak cukup (tersedia ${sparePart.stock}, dibutuhkan ${delta.negated()})`,
       );
     }
 
@@ -148,7 +158,7 @@ export class SparePartsRepository {
       data: {
         sparePartId: params.sparePartId,
         type: params.type,
-        quantityDelta: params.quantityDelta,
+        quantityDelta: delta,
         balanceAfter,
         referenceType: params.referenceType,
         referenceId: params.referenceId,
@@ -244,7 +254,10 @@ export class SparePartsRepository {
     return {
       totalItems,
       activeItems,
-      totalStockQty: stockAgg._sum.stock ?? 0,
+      // stockAgg._sum.stock adalah Decimal | null sejak migrasi stock ke Decimal
+      // — dikonversi ke Number di boundary repository supaya pemanggil
+      // (service/dashboard) tidak perlu tahu soal tipe Decimal sama sekali.
+      totalStockQty: stockAgg._sum.stock ? Number(stockAgg._sum.stock) : 0,
       outOfStockCount,
       lowStockCount: Number(lowStockCount[0]?.count ?? 0),
     };
@@ -252,10 +265,12 @@ export class SparePartsRepository {
 
   /** Tren Stock In (RESTOCK) vs Stock Out (STOCK_OUT) per bulan, N bulan terakhir. */
   async getMonthlyStockInOut(months: number) {
-    return this.prisma.$queryRaw<{ month: string; type: string; total: bigint }[]>`
+    // `::numeric` (bukan `::bigint`) — quantity_delta sekarang Decimal(10,2),
+    // cast ke bigint akan MEMOTONG pecahan (1.5 -> 1) alih-alih membulatkan.
+    return this.prisma.$queryRaw<{ month: string; type: string; total: Decimal }[]>`
       SELECT TO_CHAR(DATE_TRUNC('month', "created_at"), 'YYYY-MM') AS month,
              "type"::text AS type,
-             SUM(ABS("quantity_delta"))::bigint AS total
+             SUM(ABS("quantity_delta"))::numeric AS total
       FROM "spare_part_stock_movements"
       WHERE "type" IN ('RESTOCK', 'STOCK_OUT')
         AND "created_at" >= DATE_TRUNC('month', NOW()) - (${months - 1} || ' months')::interval
@@ -267,7 +282,7 @@ export class SparePartsRepository {
   /** Daftar spare part yang sudah menyentuh/melewati ambang low-stock (termasuk habis). */
   findLowStockItems(limit: number) {
     return this.prisma.$queryRaw<
-      { id: string; kimap: string; name: string; unit: string; stock: number; minStock: number }[]
+      { id: string; kimap: string; name: string; unit: string; stock: Decimal; minStock: Decimal }[]
     >`
       SELECT "id", "kimap", "name", "unit", "stock", "min_stock" AS "minStock"
       FROM "spare_parts"

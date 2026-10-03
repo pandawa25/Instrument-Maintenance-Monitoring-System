@@ -19,8 +19,11 @@ export class SparePartsService {
       kimap: row.kimap,
       name: row.name,
       unit: row.unit,
-      stock: row.stock,
-      minStock: row.minStock,
+      // row.stock/minStock adalah instance Prisma.Decimal — dikonversi eksplisit
+      // ke Number di boundary API supaya response JSON tetap angka biasa (bukan
+      // string hasil Decimal.toJSON()), kontrak API ke frontend tidak berubah.
+      stock: Number(row.stock),
+      minStock: Number(row.minStock),
       status: row.status,
       remarks: row.remarks,
       createdAt: row.createdAt,
@@ -35,8 +38,11 @@ export class SparePartsService {
   }
 
   // Dipakai untuk dropdown (form Corrective Maintenance) — tanpa pagination.
-  findAllForDropdown() {
-    return this.repository.findAllForDropdown();
+  async findAllForDropdown() {
+    const rows = await this.repository.findAllForDropdown();
+    // row.stock adalah Prisma.Decimal — konversi ke Number sebelum keluar API,
+    // sama seperti toListItem() (lihat migrasi stock ke Decimal, Risk #1).
+    return rows.map((row) => ({ ...row, stock: Number(row.stock) }));
   }
 
   async findOne(id: string) {
@@ -126,8 +132,8 @@ export class SparePartsService {
     const data = rows.map((row: any) => ({
       id: row.id,
       type: row.type,
-      quantityDelta: row.quantityDelta,
-      balanceAfter: row.balanceAfter,
+      quantityDelta: Number(row.quantityDelta),
+      balanceAfter: Number(row.balanceAfter),
       notes: row.notes,
       sparePart: row.sparePart,
       createdBy: row.createdBy,
@@ -165,7 +171,14 @@ export class SparePartsService {
     }
     const monthlyTrend = Array.from(trendMap.values());
 
-    const lowStockItems = await this.repository.findLowStockItems(10);
+    const rawLowStockItems = await this.repository.findLowStockItems(10);
+    // stock/minStock dari raw query adalah Prisma.Decimal — konversi ke Number
+    // di sini supaya response API tetap angka biasa, konsisten dengan toListItem().
+    const lowStockItems = rawLowStockItems.map((item) => ({
+      ...item,
+      stock: Number(item.stock),
+      minStock: Number(item.minStock),
+    }));
 
     return { monthlyTrend, lowStockItems };
   }
@@ -177,8 +190,8 @@ export class SparePartsService {
     const data = rows.map((row: any) => ({
       id: row.id,
       type: row.type,
-      quantityDelta: row.quantityDelta,
-      balanceAfter: row.balanceAfter,
+      quantityDelta: Number(row.quantityDelta),
+      balanceAfter: Number(row.balanceAfter),
       referenceType: row.referenceType,
       referenceId: row.referenceId,
       notes: row.notes,

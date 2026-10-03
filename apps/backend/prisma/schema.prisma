@@ -464,11 +464,14 @@ model SparePart {
   kimap     String          @unique @db.VarChar(50)
   name      String          @db.VarChar(150)
   unit      String          @db.VarChar(20)
-  stock     Int             @default(0)
+  // Decimal (bukan Int) — konsisten dengan CorrectiveMaintenanceMaterial.quantity,
+  // supaya part dengan satuan non-bulat (meter kabel, liter oli) tidak dibulatkan
+  // diam-diam (lihat docs/roadmap.md Risk #1, migrasi dari Int 3 Okt 2026).
+  stock     Decimal         @default(0) @db.Decimal(10, 2)
   // Ambang batas "low stock" untuk Inventory Dashboard — default 0 berarti baru
   // ditandai low stock kalau stock sudah habis (non-breaking untuk data lama).
   // Diisi manual per item oleh Admin sesuai kebutuhan reorder masing-masing part.
-  minStock  Int             @default(0) @map("min_stock")
+  minStock  Decimal         @default(0) @map("min_stock") @db.Decimal(10, 2)
   status    SparePartStatus @default(ACTIVE)
   remarks   String?         @db.VarChar(500)
   createdAt DateTime        @default(now()) @map("created_at")
@@ -490,8 +493,8 @@ model SparePartStockMovement {
   id            String            @id @default(uuid()) @db.Uuid
   sparePartId   String            @map("spare_part_id") @db.Uuid
   type          StockMovementType
-  quantityDelta Int               @map("quantity_delta")
-  balanceAfter  Int               @map("balance_after")
+  quantityDelta Decimal           @map("quantity_delta") @db.Decimal(10, 2)
+  balanceAfter  Decimal           @map("balance_after") @db.Decimal(10, 2)
   referenceType String?           @map("reference_type") @db.VarChar(50)
   referenceId   String?           @map("reference_id") @db.Uuid
   notes         String?           @db.VarChar(255)

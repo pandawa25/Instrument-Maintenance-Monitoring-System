@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { SparePartStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
 
 export class CreateSparePartDto {
   @ApiProperty({ example: 'KM-001-2026', maxLength: 50, description: 'Kode KIMAP (unik)' })
@@ -22,10 +22,13 @@ export class CreateSparePartDto {
   @MaxLength(20)
   unit!: string;
 
+  // Decimal (bukan integer) — part dengan satuan non-bulat (meter kabel, liter
+  // oli) butuh pecahan, bukan cuma pcs/unit bulat. Dibatasi 2 angka di belakang
+  // koma, konsisten dengan kolom DB (`Decimal(10, 2)`).
   @ApiProperty({ example: 10, default: 0, required: false })
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   stock?: number;
 
@@ -37,7 +40,7 @@ export class CreateSparePartDto {
   })
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   minStock?: number;
 

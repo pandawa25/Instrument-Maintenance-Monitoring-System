@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
 
@@ -20,7 +21,7 @@ import { SparePartsRepository } from '../spare-parts/spare-parts.repository';
 
 interface MaterialRow {
   sparePartId: string;
-  quantity: number | string | Prisma.Decimal;
+  quantity: number | string | Decimal;
 }
 
 /** Persen perubahan bulan ini vs bulan lalu, dibulatkan. 0 lama & 0 baru = 0%, bukan NaN. */
@@ -126,22 +127,26 @@ export class MaintenanceRepository {
   }
 
   /**
-   * Kurangi stock tiap spare part yang dipakai (quantity dibulatkan ke integer
-   * terdekat — stock master dalam satuan bulat/pcs), lewat SparePartsRepository
+   * Kurangi stock tiap spare part yang dipakai lewat SparePartsRepository
    * .recordMovement() supaya tercatat di ledger (tipe MAINTENANCE_USAGE) dan
    * tetap atomic dalam `tx` yang sama dengan perubahan Corrective Maintenance.
    * recordMovement() sendiri yang menolak (BadRequestException) kalau stock
    * tidak cukup.
+   *
+   * `quantity` TIDAK LAGI dibulatkan ke integer (sebelumnya `Math.round`) sejak
+   * `SparePart.stock` dimigrasikan dari Int ke Decimal(10,2) — part dengan
+   * satuan non-bulat (meter kabel, liter oli) sekarang tersimpan presisi apa
+   * adanya, bukan dibulatkan diam-diam. Lihat docs/roadmap.md Risk #1.
    */
   private async decrementStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
     for (const m of materials) {
-      const qty = Math.round(Number(m.quantity));
-      if (qty <= 0) continue;
+      const qty = new Decimal(m.quantity);
+      if (qty.lessThanOrEqualTo(0)) continue;
 
       await this.sparePartsRepository.recordMovement(tx, {
         sparePartId: m.sparePartId,
         type: 'MAINTENANCE_USAGE',
-        quantityDelta: -qty,
+        quantityDelta: qty.negated(),
         referenceType: 'CORRECTIVE_MAINTENANCE',
         referenceId: maintenanceId,
         createdById: actorId,
@@ -152,8 +157,8 @@ export class MaintenanceRepository {
   /** Kembalikan stock — dipakai saat material lama diganti (update) atau maintenance dihapus. */
   private async restoreStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
     for (const m of materials) {
-      const qty = Math.round(Number(m.quantity));
-      if (qty <= 0) continue;
+      const qty = new Decimal(m.quantity);
+      if (qty.lessThanOrEqualTo(0)) continue;
 
       await this.sparePartsRepository.recordMovement(tx, {
         sparePartId: m.sparePartId,
