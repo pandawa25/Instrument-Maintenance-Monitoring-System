@@ -1,0 +1,5 @@
+-- RenameForeignKey
+ALTER TABLE "corrective_maintenance_technicians" RENAME CONSTRAINT "corrective_maintenance_technicians_corrective_maintenance_id_fk" TO "corrective_maintenance_technicians_corrective_maintenance__fkey";
+
+-- RenameIndex
+ALTER INDEX "corrective_maintenance_technicians_corrective_maintenance_id_us" RENAME TO "corrective_maintenance_technicians_corrective_maintenance_i_key";
