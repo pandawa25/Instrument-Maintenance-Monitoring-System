@@ -5,6 +5,7 @@ import { router } from './router';
 import { AppQueryProvider } from './providers/query-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { bootstrapAuth } from '@/lib/axios';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -28,20 +29,22 @@ export function App() {
   }
 
   return (
-    <AppQueryProvider>
-      <TooltipProvider delayDuration={200}>
-        <RouterProvider router={router} />
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          toastOptions={{
-            classNames: {
-              toast: 'font-sans',
-            },
-          }}
-        />
-      </TooltipProvider>
-    </AppQueryProvider>
+    <ErrorBoundary>
+      <AppQueryProvider>
+        <TooltipProvider delayDuration={200}>
+          <RouterProvider router={router} />
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            toastOptions={{
+              classNames: {
+                toast: 'font-sans',
+              },
+            }}
+          />
+        </TooltipProvider>
+      </AppQueryProvider>
+    </ErrorBoundary>
   );
 }
