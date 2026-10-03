@@ -95,37 +95,61 @@ export function PmBulkExecutionFormDialog({ open, onOpenChange, executions }: Pr
       return;
     }
 
-    try {
-      await Promise.all(
-        executions.map((exec) => {
-          const sortedResults = exec.checklistResults.slice().sort((a, b) => a.sortOrder - b.sortOrder);
-          const checklistResults: { id: string; result: PmChecklistResult; notes?: string }[] = [];
-          form.checklist.forEach((draft, index) => {
-            if (!draft.apply) return;
-            const target = sortedResults[index];
-            if (!target) return;
-            checklistResults.push({ id: target.id, result: draft.result, notes: draft.notes || undefined });
-          });
+    // Promise.allSettled (bukan Promise.all) — sebelumnya satu PUT gagal (mis.
+    // 1 equipment punya validasi yang tidak lolos) langsung reject seluruh batch
+    // tanpa info mana yang sudah tersimpan vs belum. User tidak tahu equipment
+    // mana yang perlu diulang, dan beresiko submit ulang equipment yang
+    // sebenarnya sudah berhasil tersimpan (duplikasi niat input).
+    const results = await Promise.allSettled(
+      executions.map((exec) => {
+        const sortedResults = exec.checklistResults.slice().sort((a, b) => a.sortOrder - b.sortOrder);
+        const checklistResults: { id: string; result: PmChecklistResult; notes?: string }[] = [];
+        form.checklist.forEach((draft, index) => {
+          if (!draft.apply) return;
+          const target = sortedResults[index];
+          if (!target) return;
+          checklistResults.push({ id: target.id, result: draft.result, notes: draft.notes || undefined });
+        });
 
-          return updateMutation.mutateAsync({
-            id: exec.id,
-            payload: {
-              executionDate: form.applyExecutionDate ? form.executionDate || undefined : undefined,
-              result: form.applyResult ? form.result : undefined,
-              vendorPersonnel: form.applyVendorPersonnel ? form.vendorPersonnel || undefined : undefined,
-              status: form.applyStatus ? form.status : undefined,
-              findings: form.applyFindings ? form.findings || undefined : undefined,
-              actionTaken: form.applyActionTaken ? form.actionTaken || undefined : undefined,
-              checklistResults: checklistResults.length > 0 ? checklistResults : undefined,
-            },
-          });
-        }),
-      );
-      toast.success(`Hasil eksekusi berhasil diterapkan ke ${executions.length} equipment`);
+        return updateMutation.mutateAsync({
+          id: exec.id,
+          payload: {
+            executionDate: form.applyExecutionDate ? form.executionDate || undefined : undefined,
+            result: form.applyResult ? form.result : undefined,
+            vendorPersonnel: form.applyVendorPersonnel ? form.vendorPersonnel || undefined : undefined,
+            status: form.applyStatus ? form.status : undefined,
+            findings: form.applyFindings ? form.findings || undefined : undefined,
+            actionTaken: form.applyActionTaken ? form.actionTaken || undefined : undefined,
+            checklistResults: checklistResults.length > 0 ? checklistResults : undefined,
+          },
+        });
+      }),
+    );
+
+    const failures = results
+      .map((result, index) => ({ result, exec: executions[index] }))
+      .filter((r): r is { result: PromiseRejectedResult; exec: PmPeriodExecutionItem } => r.result.status === 'rejected');
+    const successCount = results.length - failures.length;
+
+    if (failures.length === 0) {
+      toast.success(`Hasil eksekusi berhasil diterapkan ke ${successCount} equipment`);
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan sebagian atau semua eksekusi'));
+      return;
     }
+
+    if (successCount === 0) {
+      toast.error(getErrorMessage(failures[0].result.reason, `Gagal menyimpan ke semua ${failures.length} equipment`));
+      return;
+    }
+
+    // Partial failure — dialog SENGAJA tidak ditutup supaya user bisa lihat
+    // daftar yang gagal & memutuskan apakah mau submit ulang (field checkbox
+    // yang sudah dicentang tetap tersimpan di form, tidak direset).
+    const failedTagNumbers = failures.map((f) => f.exec.equipment.tagNumber).join(', ');
+    toast.error(
+      `${successCount} berhasil, ${failures.length} gagal: ${failedTagNumbers}. Equipment yang gagal belum tersimpan — periksa dan coba lagi.`,
+      { duration: 10_000 },
+    );
   }
 
   return (
