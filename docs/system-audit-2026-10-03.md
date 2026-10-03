@@ -3,9 +3,11 @@
 **Scope:** Backend (NestJS), Frontend (React), DevOps/Deployment & Database Schema
 **Metode:** Code review menyeluruh (read-only), tidak ada perubahan kode dalam audit ini
 
-> **Status implementasi — update 3 Oktober 2026:** Sprint 1 (5 isu Security Critical/High)
-> **✅ SELESAI** — commit `b3f80af`..`7dbc634`, sudah di-push ke `main`. Detail per item ada
-> di tabel masing-masing di bawah (ditandai ✅). Sprint 2 & 3 masih open.
+> **Status implementasi — update 3 Oktober 2026:**
+> - Sprint 1 (5 isu Security Critical/High) **✅ SELESAI** — commit `b3f80af`..`7dbc634`.
+> - Sprint 2 (Correctness & stabilitas, 3 item) **✅ SELESAI** — commit `5270e90`, `2eafef7`, `0043c11`.
+> - Semua sudah di-push ke `main`. Detail per item ada di tabel masing-masing di bawah
+>   (ditandai ✅). Sprint 3 (UX & performance) masih open.
 
 ---
 
@@ -50,9 +52,9 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ### Fungsi/Correctness (berkaitan keamanan data)
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🔴 High | Tidak ada validasi state-machine untuk `MaintenanceStatus` — client bisa kirim transisi status bebas (mis. `COMPLETED` → `OPEN`), dan `completionDate` tidak wajib saat status `COMPLETED` | `maintenance.service.ts:143-159`, `dto/create-maintenance.dto.ts:93-96` | Tambah validator transisi status yang diizinkan per status saat ini + requirement conditional untuk `completionDate` |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🔴 High | Tidak ada validasi state-machine untuk `MaintenanceStatus` — client bisa kirim transisi status bebas (mis. `COMPLETED` → `OPEN`), dan `completionDate` tidak wajib saat status `COMPLETED` | `maintenance.service.ts:143-159`, `dto/create-maintenance.dto.ts:93-96` | Tambah validator transisi status yang diizinkan per status saat ini + requirement conditional untuk `completionDate` | ✅ Fixed (`5270e90`) |
 | 🟡 Medium | Race condition di pencatatan stock movement — tidak ada row lock (`SELECT ... FOR UPDATE`) | `spare-parts.repository.ts:119-157` (sudah diakui di komentar kode) | Sebelum multi-user concurrent jadi nyata: pakai row lock atau optimistic locking (`version` column) |
 | 🟢 Low | File upload: validasi tipe file cuma dari `mimetype` klaim client (bisa dipalsukan) | `attachments.multer.config.ts:42-48` | Defense-in-depth: cek magic bytes (`file-type` package) |
 
@@ -73,10 +75,10 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 
 ## 3. CODE QUALITY
 
-| Severity | Temuan | Lokasi | Rekomendasi |
-|---|---|---|---|
-| 🟡 High | Duplikasi pola form-dialog identik di 10+ modul (state sync, submit, error handling) — tidak ada hook bersama | `*/components/*-form-dialog.tsx` | Buat `useCrudFormDialog()` generik: `{ form, setForm, handleSubmit, isSaving }` |
-| 🟡 High | **Tidak ada Error Boundary** sama sekali — satu error render bisa membuat seluruh app blank | `src/main.tsx`, `src/app/App.tsx` | Tambah `ErrorBoundary` global dengan fallback UI, idealnya juga per-route/per-chart |
+| Severity | Temuan | Lokasi | Rekomendasi | Status |
+|---|---|---|---|---|
+| 🟡 High | Duplikasi pola form-dialog identik di 10+ modul (state sync, submit, error handling) — tidak ada hook bersama | `*/components/*-form-dialog.tsx` | Buat `useCrudFormDialog()` generik: `{ form, setForm, handleSubmit, isSaving }` | Open — Backlog |
+| 🟡 High | **Tidak ada Error Boundary** sama sekali — satu error render bisa membuat seluruh app blank | `src/main.tsx`, `src/app/App.tsx` | Tambah `ErrorBoundary` global dengan fallback UI, idealnya juga per-route/per-chart | ✅ Fixed (`2eafef7`) |
 | 🟡 Medium | Duplikasi pola `orderBy: { [query.sortBy]: query.sortOrder }` di 10+ repository (terkait juga temuan security di atas) | — | Factor jadi helper bersama `buildSafeOrderBy()` |
 | 🟡 Medium | File form monolitik 300-500 baris tanpa dipecah sub-komponen | `maintenance-form-dialog.tsx` (512 baris), `equipment-form-dialog.tsx` (400 baris), dll | Pecah section besar (material rows, ERP block, checklist) jadi sub-komponen |
 | 🟢 Low | `tx: any` di beberapa repository, `row: any` di beberapa service — hilang type-safety Prisma | `spare-parts.repository.ts:89,129,160`, `maintenance.repository.ts:124`, `pm-period-executions.service.ts:9,23` | Ketik sebagai `Prisma.TransactionClient` |
@@ -100,7 +102,7 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 | Severity | Temuan | Lokasi | Rekomendasi | Status |
 |---|---|---|---|---|
 | 🔴 High | Container backend & frontend (nginx) jalan sebagai **root** — tidak ada instruksi `USER` | `docker/Dockerfile.backend`, `docker/Dockerfile.frontend` | Tambah `USER node` (backend) / `USER nginx` (frontend) sebelum `CMD` | ✅ Fixed (`c33c196`) — backend `USER node`, frontend `nginx-unprivileged` |
-| 🔴 High | Tidak ada strategi rollback schema terdokumentasi — karena pakai `db push`, rollback container ke image lama tidak otomatis mengembalikan kolom yang **dihapus** oleh deploy baru | README/runbook | Dokumentasikan prosedur backup manual sebelum deploy yang mengubah schema | Open — Sprint 2 |
+| 🔴 High | Tidak ada strategi rollback schema terdokumentasi — karena pakai `db push`, rollback container ke image lama tidak otomatis mengembalikan kolom yang **dihapus** oleh deploy baru | README/runbook | Dokumentasikan prosedur backup manual sebelum deploy yang mengubah schema | ✅ Fixed (`0043c11`) — section baru di README |
 | 🟡 Medium | Tidak ada `HEALTHCHECK`/endpoint health sama sekali | Dockerfile, backend routes | Tambah `GET /api/health` (cek DB via `$queryRaw`) + `HEALTHCHECK CMD` di Dockerfile |
 | 🟡 Medium | Tidak ada strategi backup database yang disebutkan di mana pun | README, docker-compose | Dokumentasikan backup bawaan Railway Postgres, atau cron `pg_dump` |
 | 🟡 Medium | Logging masih `console.log` polos, bukan structured (JSON) | `main.ts:63` | Pakai NestJS Logger/Pino dengan format JSON — naik prioritas begitu scale multi-instance |
@@ -125,10 +127,10 @@ Detail lengkap dan rekomendasi per kategori ada di bawah.
 > sesi login lama akan ter-logout (localStorage lama tidak dipakai lagi); verifikasi
 > ownership Volume `/data/uploads` setelah deploy pertama pasca switch ke non-root.
 
-**Sprint 2 — Correctness & stabilitas:**
-5. State-machine validation untuk `MaintenanceStatus` + requirement `completionDate`
-6. Error Boundary global di frontend
-7. Dokumentasi rollback & backup strategy database
+**Sprint 2 — Correctness & stabilitas: ✅ SELESAI (3 Okt 2026)**
+5. ✅ State-machine validation untuk `MaintenanceStatus` + requirement `completionDate` (`5270e90`)
+6. ✅ Error Boundary global di frontend (`2eafef7`)
+7. ✅ Dokumentasi rollback & backup strategy database (`0043c11`)
 
 **Sprint 3 — UX & performance:**
 8. Debounce search input (dampak besar, effort kecil)
