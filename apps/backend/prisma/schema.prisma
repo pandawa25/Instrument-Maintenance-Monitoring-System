@@ -706,15 +706,13 @@ model ImportBatchRow {
   @@map("import_batch_rows")
 }
 
-/**
- * Satu "peristiwa" perubahan massal equipment yang bisa di-rollback: baik dari commit
- * Bulk Upload mode UPDATE_OR_CREATE (source = IMPORT_UPSERT, importBatchId terisi), maupun
- * dari fitur Edit Massal manual (source = MANUAL_BULK_EDIT, importBatchId null). Dipisah
- * dari ImportBatch (bukan menambah status baru di situ) karena Edit Massal tidak berasal
- * dari file upload — menyatukan keduanya di ImportBatch akan memaksa filename/fileChecksum
- * jadi nullable, padahal keduanya murni atribut file. EquipmentChangeSnapshot menyimpan nilai
- * SEBELUM perubahan per equipment yang terdampak — itulah yang dipakai untuk restore.
- */
+// Satu "peristiwa" perubahan massal equipment yang bisa di-rollback: baik dari commit
+// Bulk Upload mode UPDATE_OR_CREATE (source = IMPORT_UPSERT, importBatchId terisi), maupun
+// dari fitur Edit Massal manual (source = MANUAL_BULK_EDIT, importBatchId null). Dipisah
+// dari ImportBatch (bukan menambah status baru di situ) karena Edit Massal tidak berasal
+// dari file upload — menyatukan keduanya di ImportBatch akan memaksa filename/fileChecksum
+// jadi nullable, padahal keduanya murni atribut file. EquipmentChangeSnapshot menyimpan nilai
+// SEBELUM perubahan per equipment yang terdampak — itulah yang dipakai untuk restore.
 model EquipmentBulkOperation {
   id            String              @id @default(uuid()) @db.Uuid
   source        BulkOperationSource
@@ -738,7 +736,7 @@ model EquipmentBulkOperation {
   @@map("equipment_bulk_operations")
 }
 
-/** Nilai Equipment SEBELUM diubah oleh satu EquipmentBulkOperation — sumber data restore rollback. */
+// Nilai Equipment SEBELUM diubah oleh satu EquipmentBulkOperation — sumber data restore rollback.
 model EquipmentChangeSnapshot {
   id          String   @id @default(uuid()) @db.Uuid
   operationId String   @map("operation_id") @db.Uuid
