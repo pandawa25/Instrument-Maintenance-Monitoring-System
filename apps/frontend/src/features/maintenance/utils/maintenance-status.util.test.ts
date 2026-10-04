@@ -6,8 +6,14 @@ describe('getSelectableStatuses', () => {
     expect(getSelectableStatuses('IN_PROGRESS')[0]).toBe('IN_PROGRESS');
   });
 
-  it('OPEN -> [OPEN, IN_PROGRESS, WAITING_MATERIAL, CANCELLED]', () => {
-    expect(getSelectableStatuses('OPEN')).toEqual(['OPEN', 'IN_PROGRESS', 'WAITING_MATERIAL', 'CANCELLED']);
+  it('OPEN -> [OPEN, IN_PROGRESS, WAITING_MATERIAL, COMPLETED, CANCELLED]', () => {
+    expect(getSelectableStatuses('OPEN')).toEqual([
+      'OPEN',
+      'IN_PROGRESS',
+      'WAITING_MATERIAL',
+      'COMPLETED',
+      'CANCELLED',
+    ]);
   });
 
   it('IN_PROGRESS -> [IN_PROGRESS, WAITING_MATERIAL, COMPLETED, CANCELLED]', () => {

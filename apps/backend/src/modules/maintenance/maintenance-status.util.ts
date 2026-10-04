@@ -14,9 +14,16 @@ import { MaintenanceStatus } from '@prisma/client';
  * kalau ada kesalahan input setelah status itu, perbaikan dilakukan lewat
  * Admin yang edit field lain (bukan ubah status), atau proses koreksi data
  * terpisah di luar scope MVP ini.
+ *
+ * OPEN -> COMPLETED diizinkan langsung (revisi 4 Okt 2026, permintaan user)
+ * untuk kasus perbaikan cepat yang selesai di tempat pada hari yang sama —
+ * technician tidak dipaksa mencatat "In Progress" dulu kalau pekerjaannya
+ * memang sudah tuntas saat itu juga. WAITING_MATERIAL sengaja TIDAK dapat
+ * transisi langsung ke COMPLETED (harus balik ke IN_PROGRESS dulu) karena
+ * "menunggu material" secara definisi berarti pekerjaan belum selesai.
  */
 const ALLOWED_TRANSITIONS: Record<MaintenanceStatus, MaintenanceStatus[]> = {
-  OPEN: ['IN_PROGRESS', 'WAITING_MATERIAL', 'CANCELLED'],
+  OPEN: ['IN_PROGRESS', 'WAITING_MATERIAL', 'COMPLETED', 'CANCELLED'],
   IN_PROGRESS: ['WAITING_MATERIAL', 'COMPLETED', 'CANCELLED'],
   WAITING_MATERIAL: ['IN_PROGRESS', 'CANCELLED'],
   COMPLETED: [],

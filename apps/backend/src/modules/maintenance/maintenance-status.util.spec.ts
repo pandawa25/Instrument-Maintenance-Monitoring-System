@@ -10,6 +10,7 @@ const ALL_STATUSES: MaintenanceStatus[] = ['OPEN', 'IN_PROGRESS', 'WAITING_MATER
 const VALID_TRANSITIONS: [MaintenanceStatus, MaintenanceStatus][] = [
   ['OPEN', 'IN_PROGRESS'],
   ['OPEN', 'WAITING_MATERIAL'],
+  ['OPEN', 'COMPLETED'],
   ['OPEN', 'CANCELLED'],
   ['IN_PROGRESS', 'WAITING_MATERIAL'],
   ['IN_PROGRESS', 'COMPLETED'],
@@ -48,7 +49,7 @@ describe('validateStatusTransition', () => {
   });
 
   it('pesan error untuk status non-terminal menyebutkan daftar transisi yang valid', () => {
-    expect(() => validateStatusTransition('OPEN', 'COMPLETED')).toThrow(/IN_PROGRESS, WAITING_MATERIAL, CANCELLED/);
+    expect(() => validateStatusTransition('WAITING_MATERIAL', 'COMPLETED')).toThrow(/IN_PROGRESS, CANCELLED/);
   });
 });
 

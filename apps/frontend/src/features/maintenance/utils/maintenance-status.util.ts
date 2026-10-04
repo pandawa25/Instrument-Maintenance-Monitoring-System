@@ -19,7 +19,7 @@ export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
  * kalau aturan transisi di backend berubah.
  */
 const ALLOWED_TRANSITIONS: Record<MaintenanceStatus, MaintenanceStatus[]> = {
-  OPEN: ['IN_PROGRESS', 'WAITING_MATERIAL', 'CANCELLED'],
+  OPEN: ['IN_PROGRESS', 'WAITING_MATERIAL', 'COMPLETED', 'CANCELLED'],
   IN_PROGRESS: ['WAITING_MATERIAL', 'COMPLETED', 'CANCELLED'],
   WAITING_MATERIAL: ['IN_PROGRESS', 'CANCELLED'],
   COMPLETED: [],
