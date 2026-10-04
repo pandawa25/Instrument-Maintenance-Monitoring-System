@@ -128,6 +128,17 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+const STATUS_ORDER = ['ACTIVE', 'STANDBY', 'OUT_OF_SERVICE'] as const;
+const CRITICALITY_ORDER = ['HIGH', 'MEDIUM', 'LOW'] as const;
+
+function sortByFixedOrder<T extends Record<string, unknown>>(
+  rows: T[],
+  order: readonly string[],
+  key: keyof T,
+): T[] {
+  return [...rows].sort((a, b) => order.indexOf(String(a[key])) - order.indexOf(String(b[key])));
+}
+
 @Injectable()
 export class DashboardService {
   constructor(private readonly repository: DashboardRepository) {}
@@ -137,11 +148,24 @@ export class DashboardService {
   }
 
   async getCharts() {
-    const [maintenanceByArea, maintenanceByFailureCategory, pmComplianceRaw, maintenanceByMonth] = await Promise.all([
+    const [
+      maintenanceByArea,
+      maintenanceByFailureCategory,
+      pmComplianceRaw,
+      maintenanceByMonth,
+      equipmentByArea,
+      equipmentByType,
+      equipmentByStatus,
+      equipmentByCriticality,
+    ] = await Promise.all([
       this.repository.getMaintenanceCountByArea(),
       this.repository.getMaintenanceCountByFailureCategory(),
       this.repository.getPmComplianceCounts(),
       this.getMaintenanceTrend(),
+      this.repository.getEquipmentCountByArea(),
+      this.repository.getEquipmentCountByType(),
+      this.repository.getEquipmentCountByStatus(),
+      this.repository.getEquipmentCountByCriticality(),
     ]);
 
     const today = new Date();
@@ -158,6 +182,14 @@ export class DashboardService {
       maintenanceByArea: maintenanceByArea.sort((a, b) => b.count - a.count),
       maintenanceByFailureCategory: maintenanceByFailureCategory.sort((a, b) => b.count - a.count),
       pmCompliance: { completed: pmComplianceRaw.completed, pendingOnTime, overdue },
+      // Sebaran populasi equipment (inventory) — beda dari maintenanceByArea di atas yang
+      // menghitung KEJADIAN corrective maintenance, bukan jumlah equipment itu sendiri.
+      equipmentByArea: equipmentByArea.sort((a, b) => b.count - a.count),
+      equipmentByType: equipmentByType.sort((a, b) => b.count - a.count),
+      // Urutan tetap (bukan sort by count) — supaya posisi slice pie chart & legend
+      // konsisten antar refresh, tidak tergantung urutan hasil groupBy Postgres.
+      equipmentByStatus: sortByFixedOrder(equipmentByStatus, STATUS_ORDER, 'status'),
+      equipmentByCriticality: sortByFixedOrder(equipmentByCriticality, CRITICALITY_ORDER, 'criticality'),
     };
   }
 

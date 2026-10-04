@@ -69,6 +69,68 @@ export class DashboardRepository {
     }));
   }
 
+  // --- Sebaran Equipment (inventory/populasi, bukan kejadian maintenance) ---
+
+  async getEquipmentCountByArea() {
+    const grouped = await this.prisma.equipment.groupBy({
+      by: ['areaId'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    });
+
+    const areas = await this.prisma.area.findMany({
+      where: { id: { in: grouped.map((g) => g.areaId) } },
+      select: { id: true, areaCode: true, areaName: true },
+    });
+    const areaMap = new Map(areas.map((a) => [a.id, a]));
+
+    return grouped.map((g) => ({
+      areaCode: areaMap.get(g.areaId)?.areaCode ?? '-',
+      areaName: areaMap.get(g.areaId)?.areaName ?? '-',
+      count: g._count._all,
+    }));
+  }
+
+  async getEquipmentCountByType() {
+    const grouped = await this.prisma.equipment.groupBy({
+      by: ['instrumentNameId'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    });
+
+    const instrumentNames = await this.prisma.instrumentName.findMany({
+      where: { id: { in: grouped.map((g) => g.instrumentNameId) } },
+      select: { id: true, code: true, name: true },
+    });
+    const nameMap = new Map(instrumentNames.map((i) => [i.id, i]));
+
+    return grouped.map((g) => ({
+      code: nameMap.get(g.instrumentNameId)?.code ?? '-',
+      name: nameMap.get(g.instrumentNameId)?.name ?? '-',
+      count: g._count._all,
+    }));
+  }
+
+  async getEquipmentCountByStatus() {
+    const grouped = await this.prisma.equipment.groupBy({
+      by: ['status'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    });
+
+    return grouped.map((g) => ({ status: g.status, count: g._count._all }));
+  }
+
+  async getEquipmentCountByCriticality() {
+    const grouped = await this.prisma.equipment.groupBy({
+      by: ['criticality'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    });
+
+    return grouped.map((g) => ({ criticality: g.criticality, count: g._count._all }));
+  }
+
   async getMaintenanceCountByFailureCategory() {
     const grouped = await this.prisma.correctiveMaintenance.groupBy({
       by: ['failureCategory'],

@@ -12,6 +12,10 @@ import {
   Legend,
 } from 'recharts';
 import type {
+  EquipmentByArea,
+  EquipmentByCriticality,
+  EquipmentByStatus,
+  EquipmentByType,
   MaintenanceByArea,
   MaintenanceByFailureCategory,
   MaintenanceByMonth,
@@ -151,6 +155,152 @@ export function PmComplianceChart({ data, isLoading }: { data?: PmCompliance; is
 
   return (
     <ChartCard title="PM Compliance">
+      {isLoading ? (
+        <ChartSkeleton />
+      ) : total === 0 ? (
+        <EmptyState />
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+              {chartData.map((entry, index) => (
+                <Cell key={index} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.text }} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  ACTIVE: 'Active',
+  STANDBY: 'Standby',
+  OUT_OF_SERVICE: 'Out Of Service',
+};
+
+const CRITICALITY_LABEL: Record<string, string> = {
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low',
+};
+
+export function EquipmentByAreaChart({ data, isLoading }: { data?: EquipmentByArea[]; isLoading: boolean }) {
+  const colors = useChartColors();
+  const chartData = (data ?? []).slice(0, 10).map((d) => ({ ...d, label: d.areaCode }));
+
+  return (
+    <ChartCard title="Sebaran Equipment by Area">
+      {isLoading ? (
+        <ChartSkeleton />
+      ) : chartData.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} horizontal={false} />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: colors['text-muted'] }} axisLine={false} tickLine={false} />
+            <YAxis
+              type="category"
+              dataKey="label"
+              tick={{ fontSize: 12, fill: colors.text }}
+              axisLine={false}
+              tickLine={false}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }}
+              formatter={(value: number, _name, item) => [value, item.payload.areaName]}
+            />
+            <Bar dataKey="count" fill={colors.primary} radius={[0, 4, 4, 0]} maxBarSize={18} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}
+
+export function EquipmentByTypeChart({ data, isLoading }: { data?: EquipmentByType[]; isLoading: boolean }) {
+  const colors = useChartColors();
+  // Dibatasi top 10 — Instrument Type Master bisa sampai 15 entri, lebih dari itu
+  // label jadi terlalu padat untuk horizontal bar chart.
+  const chartData = (data ?? []).slice(0, 10).map((d) => ({ ...d, label: d.code }));
+
+  return (
+    <ChartCard title="Sebaran Equipment by Type">
+      {isLoading ? (
+        <ChartSkeleton />
+      ) : chartData.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} horizontal={false} />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: colors['text-muted'] }} axisLine={false} tickLine={false} />
+            <YAxis
+              type="category"
+              dataKey="label"
+              tick={{ fontSize: 12, fill: colors.text }}
+              axisLine={false}
+              tickLine={false}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }}
+              formatter={(value: number, _name, item) => [value, item.payload.name]}
+            />
+            <Bar dataKey="count" fill={colors.secondary} radius={[0, 4, 4, 0]} maxBarSize={18} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}
+
+export function EquipmentByStatusChart({ data, isLoading }: { data?: EquipmentByStatus[]; isLoading: boolean }) {
+  const colors = useChartColors();
+  const STATUS_COLOR: Record<string, string> = { ACTIVE: colors.success, STANDBY: colors.warning, OUT_OF_SERVICE: colors.danger };
+  const chartData = (data ?? []).map((d) => ({ name: STATUS_LABEL[d.status] ?? d.status, value: d.count, color: STATUS_COLOR[d.status] ?? colors.primary }));
+  const total = chartData.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <ChartCard title="Sebaran Equipment by Status">
+      {isLoading ? (
+        <ChartSkeleton />
+      ) : total === 0 ? (
+        <EmptyState />
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+              {chartData.map((entry, index) => (
+                <Cell key={index} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 12, background: 'hsl(var(--surface))', color: 'hsl(var(--text))' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.text }} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}
+
+export function EquipmentByCriticalityChart({ data, isLoading }: { data?: EquipmentByCriticality[]; isLoading: boolean }) {
+  const colors = useChartColors();
+  const CRITICALITY_COLOR: Record<string, string> = { HIGH: colors.danger, MEDIUM: colors.warning, LOW: colors.success };
+  const chartData = (data ?? []).map((d) => ({
+    name: CRITICALITY_LABEL[d.criticality] ?? d.criticality,
+    value: d.count,
+    color: CRITICALITY_COLOR[d.criticality] ?? colors.primary,
+  }));
+  const total = chartData.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <ChartCard title="Sebaran Equipment by Criticality">
       {isLoading ? (
         <ChartSkeleton />
       ) : total === 0 ? (

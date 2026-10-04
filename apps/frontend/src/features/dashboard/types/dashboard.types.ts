@@ -29,11 +29,39 @@ export interface PmCompliance {
   overdue: number;
 }
 
+// Sebaran populasi equipment (inventory) — beda dari MaintenanceByArea di atas yang
+// menghitung KEJADIAN corrective maintenance, bukan jumlah equipment itu sendiri.
+export interface EquipmentByArea {
+  areaCode: string;
+  areaName: string;
+  count: number;
+}
+
+export interface EquipmentByType {
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface EquipmentByStatus {
+  status: 'ACTIVE' | 'STANDBY' | 'OUT_OF_SERVICE';
+  count: number;
+}
+
+export interface EquipmentByCriticality {
+  criticality: 'HIGH' | 'MEDIUM' | 'LOW';
+  count: number;
+}
+
 export interface DashboardCharts {
   maintenanceByMonth: MaintenanceByMonth[];
   maintenanceByArea: MaintenanceByArea[];
   maintenanceByFailureCategory: MaintenanceByFailureCategory[];
   pmCompliance: PmCompliance;
+  equipmentByArea: EquipmentByArea[];
+  equipmentByType: EquipmentByType[];
+  equipmentByStatus: EquipmentByStatus[];
+  equipmentByCriticality: EquipmentByCriticality[];
 }
 
 export interface LatestMaintenanceItem {
