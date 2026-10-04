@@ -11,7 +11,7 @@ import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-f
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { useMaintenanceById } from '../hooks/use-maintenance';
 import { MaintenanceForm } from '../components/maintenance-form';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { Maintenance } from '../types/maintenance.types';
 
 const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
@@ -35,8 +35,7 @@ export function MaintenanceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canEdit = usePermission('CORRECTIVE_MAINTENANCE', 'edit');
 
   const [mode, setMode] = useState<'view' | 'edit'>(
     (location.state as { mode?: 'view' | 'edit' } | null)?.mode === 'edit' && canEdit ? 'edit' : 'view',

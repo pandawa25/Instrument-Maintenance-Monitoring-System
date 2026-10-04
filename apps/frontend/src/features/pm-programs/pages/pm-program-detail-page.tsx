@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { PageHeader } from '@/components/shared/page-header';
 import { LoadingState } from '@/components/shared/loading-state';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import { usePmProgramDetail } from '../hooks/use-pm-programs';
 import { usePmPeriods } from '../hooks/use-pm-periods';
 import { PmPeriodList } from '../components/pm-period-list';
@@ -24,8 +24,14 @@ const FREQUENCY_UNIT_LABEL: Record<string, string> = {
 export function PmProgramDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  // Dipisah sesuai desain matriks role: PM_PROGRAM = metadata & jadwal periode
+  // (Admin/Teknisi only — edit metadata program sendiri dilakukan dari halaman
+  // list lewat PmProgramFormDialog), PM_EXECUTION = isi hasil checklist per
+  // equipment (Vendor juga boleh, tapi tidak boleh tambah/hapus periode atau
+  // ubah program).
+  const canCreatePeriod = usePermission('PM_PROGRAM', 'create');
+  const canDeletePeriod = usePermission('PM_PROGRAM', 'delete');
+  const canEditExecution = usePermission('PM_EXECUTION', 'edit');
 
   const [periodDialogOpen, setPeriodDialogOpen] = useState(false);
   const [executionId, setExecutionId] = useState<string | null>(null);
@@ -89,7 +95,7 @@ export function PmProgramDetailPage() {
 
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-text">Periode PM</h3>
-        {canEdit && (
+        {canCreatePeriod && (
           <Button size="sm" onClick={() => setPeriodDialogOpen(true)}>
             <Plus className="h-4 w-4" />
             Tambah Periode
@@ -100,7 +106,12 @@ export function PmProgramDetailPage() {
       {isLoadingPeriods ? (
         <LoadingState message="Memuat periode..." />
       ) : (
-        <PmPeriodList periods={periods ?? []} canEdit={canEdit} onFillExecution={setExecutionId} />
+        <PmPeriodList
+          periods={periods ?? []}
+          canEdit={canDeletePeriod}
+          canEditExecution={canEditExecution}
+          onFillExecution={setExecutionId}
+        />
       )}
 
       {id && (
@@ -117,7 +128,7 @@ export function PmProgramDetailPage() {
         open={Boolean(executionId)}
         onOpenChange={(open) => !open && setExecutionId(null)}
         executionId={executionId}
-        canEdit={canEdit}
+        canEdit={canEditExecution}
       />
     </div>
   );

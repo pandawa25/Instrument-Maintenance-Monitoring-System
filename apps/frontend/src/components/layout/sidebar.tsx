@@ -14,6 +14,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart3,
+  ShieldCheck,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
@@ -22,12 +23,17 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
 import { useLayoutPreferencesStore } from '@/store/layout-preferences.store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { PermissionModule } from '@/types/permissions';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
-  roles: string[];
+  // Modul yang menentukan tampil/tidaknya item ini (dicek lewat permissions.<module>.view
+  // hasil GET /auth/me). undefined = selalu Admin only (User Management, Role & Permission
+  // settings) — keduanya TIDAK ikut matriks, lihat PermissionsService di backend.
+  module?: PermissionModule;
+  adminOnly?: boolean;
   // true = NavLink exact match. Dipakai untuk item yang path-nya adalah prefix dari
   // sibling lain (mis. "/spare-parts" vs "/spare-parts/stock-in") supaya tidak ikut
   // ter-highlight saat sibling-nya aktif.
@@ -41,42 +47,48 @@ interface NavGroup {
 
 // Menu dikelompokkan sesuai struktur informasi: Dashboard (utama + Inventory)
 // berdiri sendiri di atas, lalu Kegiatan Maintenance, Master Data, Spare Part /
-// Material, dan Administrasi (Admin only).
+// Material, dan Administrasi (Admin only). Visibilitas tiap item (selain
+// Administrasi) sekarang mengikuti matriks hak akses (role_permissions), BUKAN
+// hardcode nama role — supaya Admin bisa mengatur ulang lewat halaman Matriks
+// Role & Permission tanpa perlu ganti kode.
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Viewer'] },
-      { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, roles: ['Admin', 'Viewer'] },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'DASHBOARD' },
+      { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, module: 'SPARE_PART' },
     ],
   },
   {
     label: 'Kegiatan Maintenance',
     items: [
-      { to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, roles: ['Admin', 'Viewer'] },
-      { to: '/pm-programs', label: 'Preventive Maintenance', icon: CalendarClock, roles: ['Admin', 'Viewer'] },
+      { to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, module: 'CORRECTIVE_MAINTENANCE' },
+      { to: '/pm-programs', label: 'Preventive Maintenance', icon: CalendarClock, module: 'PM_PROGRAM' },
     ],
   },
   {
     label: 'Master Data',
     items: [
-      { to: '/areas', label: 'Area', icon: MapPinned, roles: ['Admin', 'Viewer'] },
-      { to: '/equipment', label: 'Equipment', icon: Gauge, roles: ['Admin', 'Viewer'] },
-      { to: '/instrument-names', label: 'Instrument Name', icon: Tag, roles: ['Admin', 'Viewer'] },
-      { to: '/vendors', label: 'Vendor', icon: Building2, roles: ['Admin', 'Viewer'] },
-      { to: '/pm-activity-types', label: 'PM Activity Type', icon: ListChecks, roles: ['Admin', 'Viewer'] },
+      { to: '/areas', label: 'Area', icon: MapPinned, module: 'AREA' },
+      { to: '/equipment', label: 'Equipment', icon: Gauge, module: 'EQUIPMENT' },
+      { to: '/instrument-names', label: 'Instrument Name', icon: Tag, module: 'INSTRUMENT_NAME' },
+      { to: '/vendors', label: 'Vendor', icon: Building2, module: 'VENDOR' },
+      { to: '/pm-activity-types', label: 'PM Activity Type', icon: ListChecks, module: 'PM_ACTIVITY_TYPE' },
     ],
   },
   {
     label: 'Spare Part / Material',
     items: [
-      { to: '/spare-parts', label: 'Master Spare Part', icon: PackageSearch, roles: ['Admin', 'Viewer'], end: true },
-      { to: '/spare-parts/stock-in', label: 'Stock In', icon: ArrowDownToLine, roles: ['Admin', 'Viewer'] },
-      { to: '/spare-parts/stock-out', label: 'Stock Out', icon: ArrowUpFromLine, roles: ['Admin', 'Viewer'] },
+      { to: '/spare-parts', label: 'Master Spare Part', icon: PackageSearch, module: 'SPARE_PART', end: true },
+      { to: '/spare-parts/stock-in', label: 'Stock In', icon: ArrowDownToLine, module: 'SPARE_PART' },
+      { to: '/spare-parts/stock-out', label: 'Stock Out', icon: ArrowUpFromLine, module: 'SPARE_PART' },
     ],
   },
   {
     label: 'Administrasi',
-    items: [{ to: '/users', label: 'User Management', icon: Users, roles: ['Admin'] }],
+    items: [
+      { to: '/users', label: 'User Management', icon: Users, adminOnly: true },
+      { to: '/settings/roles', label: 'Role & Permission', icon: ShieldCheck, adminOnly: true },
+    ],
   },
 ];
 
@@ -111,10 +123,17 @@ function NavItemLink({ item, collapsed, onNavigate }: { item: NavItem; collapsed
 
 export function Sidebar() {
   const role = useAuthStore((s) => s.user?.role);
+  const permissions = useAuthStore((s) => s.user?.permissions);
   const mobileSidebarOpen = useUiStore((s) => s.mobileSidebarOpen);
   const closeMobileSidebar = useUiStore((s) => s.closeMobileSidebar);
   const collapsed = useLayoutPreferencesStore((s) => s.sidebarCollapsed);
   const toggleCollapsed = useLayoutPreferencesStore((s) => s.toggleSidebarCollapsed);
+
+  function canSee(item: NavItem): boolean {
+    if (item.adminOnly) return role === 'Admin';
+    if (!item.module) return true;
+    return permissions?.[item.module]?.view ?? false;
+  }
 
   return (
     <aside
@@ -132,7 +151,7 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-4">
         {NAV_GROUPS.map((group, idx) => {
-          const items = group.items.filter((item) => !role || item.roles.includes(role));
+          const items = group.items.filter(canSee);
           if (items.length === 0) return null;
 
           return (

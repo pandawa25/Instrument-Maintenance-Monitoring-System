@@ -14,11 +14,15 @@ import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
   periods: PmPeriodListItem[];
+  // Hapus/kelola periode (modul PM_PROGRAM) — berbeda dari canEditExecution.
   canEdit: boolean;
+  // Isi hasil eksekusi per equipment (modul PM_EXECUTION) — ini yang dipakai Vendor,
+  // yang TIDAK punya canEdit (tidak boleh hapus periode / ubah metadata program).
+  canEditExecution: boolean;
   onFillExecution: (executionId: string) => void;
 }
 
-export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
+export function PmPeriodList({ periods, canEdit, canEditExecution, onFillExecution }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deleteMutation = useDeletePmPeriod();
@@ -85,7 +89,7 @@ export function PmPeriodList({ periods, canEdit, onFillExecution }: Props) {
           </button>
 
           {expandedId === period.id && (
-            <PmPeriodExecutionsPanel periodId={period.id} canEdit={canEdit} onFillExecution={onFillExecution} />
+            <PmPeriodExecutionsPanel periodId={period.id} canEdit={canEditExecution} onFillExecution={onFillExecution} />
           )}
         </Card>
       ))}

@@ -11,15 +11,15 @@ import { useInstrumentNameList, useDeleteInstrumentName } from '../hooks/use-ins
 import { InstrumentNameTable } from '../components/instrument-name-table';
 import { InstrumentNameFormDialog } from '../components/instrument-name-form-dialog';
 import { InstrumentNameDetailDialog } from '../components/instrument-name-detail-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { InstrumentName, InstrumentNameQueryParams } from '../types/instrument-name.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: InstrumentNameQueryParams = { page: 1, limit: 20, search: '' };
 
 export function InstrumentNameListPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('INSTRUMENT_NAME', 'create');
+  const canEdit = usePermission('INSTRUMENT_NAME', 'edit');
 
   const [params, setParams] = useState<InstrumentNameQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -58,7 +58,7 @@ export function InstrumentNameListPage() {
         title="Master Instrument Name"
         description="Kelola master data jenis instrument (dipakai di form Equipment)."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Instrument Name

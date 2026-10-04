@@ -12,15 +12,15 @@ import { useAreas, useDeleteArea } from '../hooks/use-areas';
 import { AreaTable } from '../components/area-table';
 import { AreaFormDialog } from '../components/area-form-dialog';
 import { AreaDetailDialog } from '../components/area-detail-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { Area, AreaQueryParams } from '../types/area.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: AreaQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
 export function AreaListPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('AREA', 'create');
+  const canEdit = usePermission('AREA', 'edit');
 
   const [params, setParams] = useState<AreaQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -59,7 +59,7 @@ export function AreaListPage() {
         title="Master Area"
         description="Kelola area/unit proses pada fasilitas."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Area

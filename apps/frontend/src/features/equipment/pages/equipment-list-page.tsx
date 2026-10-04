@@ -16,7 +16,7 @@ import { EquipmentTable } from '../components/equipment-table';
 import { EquipmentFormDialog } from '../components/equipment-form-dialog';
 import { EquipmentBulkUploadDialog } from '../components/equipment-bulk-upload-dialog';
 import { EquipmentSummaryCards } from '../components/equipment-summary-cards';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -33,8 +33,8 @@ const DEFAULT_PARAMS: EquipmentQueryParams = {
 
 export function EquipmentListPage() {
   const navigate = useNavigate();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('EQUIPMENT', 'create');
+  const canEdit = usePermission('EQUIPMENT', 'edit');
 
   const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [showMoreFilter, setShowMoreFilter] = useState(false);
@@ -96,7 +96,7 @@ export function EquipmentListPage() {
               <Download className="h-4 w-4" />
               {isExporting ? 'Mengekspor...' : 'Export'}
             </Button>
-            {canEdit && (
+            {canCreate && (
               <>
                 <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
                   <UploadCloud className="h-4 w-4" />

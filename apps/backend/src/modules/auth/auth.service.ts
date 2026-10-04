@@ -6,12 +6,14 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { generateRefreshToken, hashToken, parseDurationMs } from './utils/token.util';
+import { PermissionsService } from '../permissions/permissions.service';
 
 export interface JwtPayload {
   sub: string;
   email: string;
   fullName: string;
   role: string;
+  roleId: string;
 }
 
 export interface RequestMeta {
@@ -27,10 +29,19 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
-  private toAuthUser(user: UserWithRole) {
-    return { id: user.id, email: user.email, fullName: user.fullName, role: user.role.name };
+  /**
+   * Permission map ikut dikembalikan di sini (bukan cuma lewat POST /auth/me)
+   * supaya frontend langsung tahu hak akses user begitu login/refresh selesai —
+   * tanpa ini, sidebar/route guard akan menganggap user tidak punya akses apa pun
+   * sampai /auth/me sempat dipanggil terpisah.
+   */
+  private async toAuthUser(user: UserWithRole) {
+    const authUser = { id: user.id, email: user.email, fullName: user.fullName, role: user.role.name, roleId: user.roleId };
+    const permissions = await this.permissionsService.getMyPermissions(authUser);
+    return { ...authUser, permissions };
   }
 
   private issueAccessToken(user: UserWithRole): Promise<string> {
@@ -39,6 +50,7 @@ export class AuthService {
       email: user.email,
       fullName: user.fullName,
       role: user.role.name,
+      roleId: user.roleId,
     };
     return this.jwtService.signAsync(payload);
   }
@@ -105,7 +117,7 @@ export class AuthService {
       meta,
     );
 
-    return { accessToken, refreshToken, refreshTokenExpiresAt, user: this.toAuthUser(user) };
+    return { accessToken, refreshToken, refreshTokenExpiresAt, user: await this.toAuthUser(user) };
   }
 
   /**
@@ -156,7 +168,7 @@ export class AuthService {
 
     const accessToken = await this.issueAccessToken(user);
 
-    return { accessToken, refreshToken: newRefreshToken, refreshTokenExpiresAt, user: this.toAuthUser(user) };
+    return { accessToken, refreshToken: newRefreshToken, refreshTokenExpiresAt, user: await this.toAuthUser(user) };
   }
 
   /** Logout — cabut HANYA refresh token yang sedang dipakai (bukan semua sesi device lain). */

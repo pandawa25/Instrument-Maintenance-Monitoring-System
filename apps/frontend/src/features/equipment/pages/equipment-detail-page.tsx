@@ -10,7 +10,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
 import { useEquipmentById } from '../hooks/use-equipment';
 import { EquipmentForm } from '../components/equipment-form';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import { FAIL_ACTION_LABEL, isValveInstrumentCode } from '../types/equipment.types';
 
 // Halaman View/Edit Equipment (1 URL, mode toggle) — menggantikan EquipmentDetailDialog +
@@ -24,8 +24,7 @@ export function EquipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canEdit = usePermission('EQUIPMENT', 'edit');
 
   const [mode, setMode] = useState<'view' | 'edit'>(
     (location.state as { mode?: 'view' | 'edit' } | null)?.mode === 'edit' && canEdit ? 'edit' : 'view',

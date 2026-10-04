@@ -12,6 +12,24 @@ enum AreaStatus {
   INACTIVE
 }
 
+// Daftar modul yang bisa diatur hak aksesnya lewat matriks Role & Permission
+// (lihat RolePermission). PM_PROGRAM (metadata program: judul/vendor/frekuensi)
+// sengaja dipisah dari PM_EXECUTION (isi hasil eksekusi checklist per periode)
+// supaya role seperti Vendor bisa diberi akses edit HANYA ke eksekusi, tanpa bisa
+// ubah program itu sendiri.
+enum PermissionModule {
+  DASHBOARD
+  AREA
+  EQUIPMENT
+  INSTRUMENT_NAME
+  CORRECTIVE_MAINTENANCE
+  VENDOR
+  PM_ACTIVITY_TYPE
+  PM_PROGRAM
+  PM_EXECUTION
+  SPARE_PART
+}
+
 enum EquipmentStatus {
   ACTIVE
   STANDBY
@@ -105,9 +123,33 @@ model Role {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  users User[]
+  users       User[]
+  permissions RolePermission[]
 
   @@map("roles")
+}
+
+// Matriks hak akses: 1 baris = 1 sel (Role x Modul) dengan 4 flag CRUD. Role
+// bernama "Admin" SELALU full access lewat bypass hardcode di kode (lihat
+// PermissionsService) — tidak bergantung pada baris di tabel ini — supaya admin
+// tidak bisa mengunci diri sendiri keluar dari pengaturan lewat matriks yang salah
+// konfigurasi. Baris di tabel ini berlaku untuk role lain (Teknisi, View, Vendor,
+// dan role baru yang dibuat Admin nanti).
+model RolePermission {
+  id        String            @id @default(uuid()) @db.Uuid
+  roleId    String            @map("role_id") @db.Uuid
+  module    PermissionModule
+  canView   Boolean           @default(false) @map("can_view")
+  canCreate Boolean           @default(false) @map("can_create")
+  canEdit   Boolean           @default(false) @map("can_edit")
+  canDelete Boolean           @default(false) @map("can_delete")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module])
+  @@map("role_permissions")
 }
 
 model User {

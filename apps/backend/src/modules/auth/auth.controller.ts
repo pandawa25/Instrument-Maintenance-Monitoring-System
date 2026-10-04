@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { PermissionsService } from '../permissions/permissions.service';
 
 const REFRESH_COOKIE_NAME = 'imms_refresh_token';
 // Discope cookie ke prefix /api/auth saja — browser hanya kirim cookie ini
@@ -19,6 +20,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   private cookieOptions(expires?: Date): CookieOptions {
@@ -84,8 +86,12 @@ export class AuthController {
   @Post('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Cek identitas dari token yang sedang dipakai' })
-  me(@CurrentUser() user: AuthenticatedUser) {
-    return user;
+  @ApiOperation({
+    summary:
+      'Cek identitas dari token yang sedang dipakai, termasuk map permission per modul (untuk sidebar/tombol aksi di frontend)',
+  })
+  async me(@CurrentUser() user: AuthenticatedUser) {
+    const permissions = await this.permissionsService.getMyPermissions(user);
+    return { ...user, permissions };
   }
 }

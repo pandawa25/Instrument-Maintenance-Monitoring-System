@@ -11,15 +11,15 @@ import { usePmActivityTypeList, useDeletePmActivityType } from '../hooks/use-pm-
 import { PmActivityTypeTable } from '../components/pm-activity-type-table';
 import { PmActivityTypeFormDialog } from '../components/pm-activity-type-form-dialog';
 import { PmActivityTypeDetailDialog } from '../components/pm-activity-type-detail-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { PmActivityType, PmActivityTypeQueryParams } from '../types/pm-activity-type.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: PmActivityTypeQueryParams = { page: 1, limit: 20, search: '' };
 
 export function PmActivityTypeListPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('PM_ACTIVITY_TYPE', 'create');
+  const canEdit = usePermission('PM_ACTIVITY_TYPE', 'edit');
 
   const [params, setParams] = useState<PmActivityTypeQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -58,7 +58,7 @@ export function PmActivityTypeListPage() {
         title="Master PM Activity Type"
         description="Kelola jenis aktifitas PM (Cleaning, Calibration, dst) untuk checklist PM Program."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Activity Type

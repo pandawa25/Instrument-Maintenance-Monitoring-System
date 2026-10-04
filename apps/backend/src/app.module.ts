@@ -9,6 +9,7 @@ import { AreasModule } from './modules/areas/areas.module';
 import { InstrumentNamesModule } from './modules/instrument-names/instrument-names.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { UsersModule } from './modules/users/users.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
@@ -39,6 +40,7 @@ import { HealthModule } from './modules/health/health.module';
     InstrumentNamesModule,
     EquipmentModule,
     RolesModule,
+    PermissionsModule,
     UsersModule,
     MaintenanceModule,
     VendorsModule,

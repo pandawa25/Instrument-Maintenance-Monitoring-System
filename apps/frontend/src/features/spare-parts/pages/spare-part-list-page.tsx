@@ -13,15 +13,15 @@ import { SparePartTable } from '../components/spare-part-table';
 import { SparePartFormDialog } from '../components/spare-part-form-dialog';
 import { SparePartDetailDialog } from '../components/spare-part-detail-dialog';
 import { StockMovementDialog } from '../components/stock-movement-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: SparePartQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
 export function SparePartListPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('SPARE_PART', 'create');
+  const canEdit = usePermission('SPARE_PART', 'edit');
 
   const [params, setParams] = useState<SparePartQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -61,7 +61,7 @@ export function SparePartListPage() {
         title="Master Spare Part / Material"
         description="Kelola master spare part / material untuk kebutuhan Corrective Maintenance."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Spare Part

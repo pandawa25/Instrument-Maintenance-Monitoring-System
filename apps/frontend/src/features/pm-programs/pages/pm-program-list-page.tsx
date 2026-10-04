@@ -13,7 +13,7 @@ import { useVendorsLookup } from '@/features/vendors/hooks/use-vendors';
 import { usePmProgramList, useDeletePmProgram } from '../hooks/use-pm-programs';
 import { PmProgramTable } from '../components/pm-program-table';
 import { PmProgramFormDialog } from '../components/pm-program-form-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { PmProgramListItem, PmProgramQueryParams } from '../types/pm-program.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -21,8 +21,10 @@ const DEFAULT_PARAMS: PmProgramQueryParams = { page: 1, limit: 20, search: '', s
 
 export function PmProgramListPage() {
   const navigate = useNavigate();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  // Modul PM_PROGRAM = metadata program (judul/vendor/frekuensi/jadwal). Vendor
+  // hanya punya PM_PROGRAM 'view' (untuk navigasi ke periode), tidak create/edit/delete.
+  const canCreate = usePermission('PM_PROGRAM', 'create');
+  const canEdit = usePermission('PM_PROGRAM', 'edit');
 
   const [params, setParams] = useState<PmProgramQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -65,7 +67,7 @@ export function PmProgramListPage() {
         title="Preventive Maintenance Program"
         description="Kelola program PM (judul, periode, vendor, dan equipment yang dicakup)."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah PM Program

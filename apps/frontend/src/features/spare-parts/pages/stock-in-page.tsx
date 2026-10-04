@@ -10,14 +10,15 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useStockIn } from '../hooks/use-spare-parts';
 import { StockMovementListTable } from '../components/stock-movement-list-table';
 import { StockMovementFormDialog } from '../components/stock-movement-form-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { AllStockMovementsQueryParams } from '../types/spare-part.types';
 
 const DEFAULT_PARAMS: AllStockMovementsQueryParams = { page: 1, limit: 20, search: '', dateFrom: '', dateTo: '' };
 
 export function StockInPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  // Stock movement (In/Out/Adjustment) dianggap "edit" terhadap spare part di
+  // backend (mengubah saldo stock item yang sudah ada), bukan "create" modul baru.
+  const canEdit = usePermission('SPARE_PART', 'edit');
 
   const [params, setParams] = useState<AllStockMovementsQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);

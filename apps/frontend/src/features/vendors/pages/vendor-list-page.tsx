@@ -12,15 +12,15 @@ import { useVendors, useDeleteVendor } from '../hooks/use-vendors';
 import { VendorTable } from '../components/vendor-table';
 import { VendorFormDialog } from '../components/vendor-form-dialog';
 import { VendorDetailDialog } from '../components/vendor-detail-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { Vendor, VendorQueryParams } from '../types/vendor.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: VendorQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
 export function VendorListPage() {
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('VENDOR', 'create');
+  const canEdit = usePermission('VENDOR', 'edit');
 
   const [params, setParams] = useState<VendorQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
@@ -59,7 +59,7 @@ export function VendorListPage() {
         title="Master Vendor"
         description="Kelola vendor pelaksana Preventive Maintenance."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Vendor

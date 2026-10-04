@@ -1,7 +1,30 @@
-import { PrismaClient, AreaStatus, EquipmentStatus, Criticality } from '@prisma/client';
+import { PrismaClient, AreaStatus, EquipmentStatus, Criticality, PermissionModule } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+
+// Modul operasional (di luar Dashboard) yang dapat full CRUD oleh Teknisi.
+const OPERATIONAL_MODULES: PermissionModule[] = [
+  PermissionModule.AREA,
+  PermissionModule.EQUIPMENT,
+  PermissionModule.INSTRUMENT_NAME,
+  PermissionModule.CORRECTIVE_MAINTENANCE,
+  PermissionModule.VENDOR,
+  PermissionModule.PM_ACTIVITY_TYPE,
+  PermissionModule.PM_PROGRAM,
+  PermissionModule.PM_EXECUTION,
+  PermissionModule.SPARE_PART,
+];
+
+// Modul yang boleh dilihat (view-only) oleh role View, sesuai permintaan user:
+// Dashboard, Equipment, Corrective Maintenance, Preventive Maintenance (Program & Execution).
+const VIEW_ROLE_MODULES: PermissionModule[] = [
+  PermissionModule.DASHBOARD,
+  PermissionModule.EQUIPMENT,
+  PermissionModule.CORRECTIVE_MAINTENANCE,
+  PermissionModule.PM_PROGRAM,
+  PermissionModule.PM_EXECUTION,
+];
 
 const INSTRUMENT_NAMES: Array<{ code: string; name: string }> = [
   { code: 'PT', name: 'Pressure Transmitter' },
@@ -50,10 +73,96 @@ async function main() {
     create: { name: 'Admin', description: 'Full access — CRUD semua master data & user management' },
   });
 
-  await prisma.role.upsert({
-    where: { name: 'Viewer' },
+  // Rename role lama 'Viewer' -> 'View' (penyesuaian penamaan matriks role:
+  // Admin/Teknisi/View/Vendor). No-op kalau sudah pernah di-rename.
+  const legacyViewer = await prisma.role.findUnique({ where: { name: 'Viewer' } });
+  if (legacyViewer) {
+    await prisma.role.update({ where: { name: 'Viewer' }, data: { name: 'View' } });
+  }
+
+  const viewRole = await prisma.role.upsert({
+    where: { name: 'View' },
     update: {},
-    create: { name: 'Viewer', description: 'Read-only — dashboard, equipment, dan riwayat maintenance' },
+    create: { name: 'View', description: 'Read-only — dashboard, equipment, corrective & preventive maintenance' },
+  });
+
+  const teknisiRole = await prisma.role.upsert({
+    where: { name: 'Teknisi' },
+    update: {},
+    create: {
+      name: 'Teknisi',
+      description:
+        'Kelola seluruh modul operasional (Area, Equipment, Maintenance, PM, Spare Part, dst) kecuali User Management',
+    },
+  });
+
+  const vendorRole = await prisma.role.upsert({
+    where: { name: 'Vendor' },
+    update: {},
+    create: {
+      name: 'Vendor',
+      description: 'Hanya bisa melihat Preventive Maintenance dan mengisi hasil eksekusi per periode',
+    },
+  });
+
+  console.log('Seeding role permission matrix...');
+  // Teknisi: full CRUD di semua modul operasional, Dashboard view-only (tidak ada aksi
+  // create/edit/delete untuk Dashboard).
+  await prisma.rolePermission.upsert({
+    where: { roleId_module: { roleId: teknisiRole.id, module: PermissionModule.DASHBOARD } },
+    update: {},
+    create: {
+      roleId: teknisiRole.id,
+      module: PermissionModule.DASHBOARD,
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+    },
+  });
+  for (const mod of OPERATIONAL_MODULES) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_module: { roleId: teknisiRole.id, module: mod } },
+      update: {},
+      create: { roleId: teknisiRole.id, module: mod, canView: true, canCreate: true, canEdit: true, canDelete: true },
+    });
+  }
+
+  // View: read-only, hanya 4 modul yang diminta (modul lain tidak punya baris sama
+  // sekali = default tersembunyi; Admin bisa tambah lewat UI matriks nanti).
+  for (const mod of VIEW_ROLE_MODULES) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_module: { roleId: viewRole.id, module: mod } },
+      update: {},
+      create: { roleId: viewRole.id, module: mod, canView: true, canCreate: false, canEdit: false, canDelete: false },
+    });
+  }
+
+  // Vendor: lihat PM Program (untuk navigasi ke periode), lihat + EDIT hasil eksekusi
+  // (bukan edit metadata program itu sendiri). Modul lain tersembunyi total.
+  await prisma.rolePermission.upsert({
+    where: { roleId_module: { roleId: vendorRole.id, module: PermissionModule.PM_PROGRAM } },
+    update: {},
+    create: {
+      roleId: vendorRole.id,
+      module: PermissionModule.PM_PROGRAM,
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+    },
+  });
+  await prisma.rolePermission.upsert({
+    where: { roleId_module: { roleId: vendorRole.id, module: PermissionModule.PM_EXECUTION } },
+    update: {},
+    create: {
+      roleId: vendorRole.id,
+      module: PermissionModule.PM_EXECUTION,
+      canView: true,
+      canCreate: false,
+      canEdit: true,
+      canDelete: false,
+    },
   });
 
   console.log('Seeding instrument names...');

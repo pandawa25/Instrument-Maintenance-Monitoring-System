@@ -22,7 +22,7 @@ import { MaintenanceTable } from '../components/maintenance-table';
 import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
 import { MaintenanceSummaryCards } from '../components/maintenance-summary-cards';
 import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { Maintenance, MaintenanceQueryParams } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -40,8 +40,8 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
 
 export function MaintenanceListPage() {
   const navigate = useNavigate();
-  const role = useAuthStore((s) => s.user?.role);
-  const canEdit = role === 'Admin';
+  const canCreate = usePermission('CORRECTIVE_MAINTENANCE', 'create');
+  const canEdit = usePermission('CORRECTIVE_MAINTENANCE', 'edit');
 
   const [params, setParams] = useState<MaintenanceQueryParams>(DEFAULT_PARAMS);
   // Dialog ini sekarang cuma dipakai untuk "Buat e-SPK" (create) — View & Edit sudah
@@ -85,7 +85,7 @@ export function MaintenanceListPage() {
         title="Corrective Maintenance"
         description="Kelola dan pantau pekerjaan corrective maintenance instrumentasi."
         action={
-          canEdit && (
+          canCreate && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               Buat e-SPK
