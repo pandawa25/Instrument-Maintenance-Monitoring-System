@@ -22,16 +22,24 @@ import { PermissionModule } from '@prisma/client';
 import type { Response } from 'express';
 import { EquipmentService } from './equipment.service';
 import { EquipmentBulkUploadService } from './equipment-bulk-upload.service';
+import { EquipmentBulkEditService } from './equipment-bulk-edit.service';
+import { BulkEditEquipmentDto } from './dto/bulk-edit-equipment.dto';
+import { BulkEditCommitResultDto, BulkEditPreviewResultDto } from './dto/bulk-edit-result.dto';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { QueryEquipmentDto } from './dto/query-equipment.dto';
 import { ImportPreviewResultDto } from './dto/import-preview-result.dto';
+import { PreviewBulkUploadDto } from './dto/preview-bulk-upload.dto';
 import { QueryImportRowsDto } from './dto/query-import-rows.dto';
 import { ImportCommitResultDto } from './dto/import-commit-result.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { EquipmentRevertService } from './equipment-revert.service';
+import { BulkOperationListItemDto, RevertCommitResultDto, RevertPreviewResultDto } from './dto/revert-result.dto';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -43,6 +51,8 @@ export class EquipmentController {
   constructor(
     private readonly equipmentService: EquipmentService,
     private readonly bulkUploadService: EquipmentBulkUploadService,
+    private readonly bulkEditService: EquipmentBulkEditService,
+    private readonly revertService: EquipmentRevertService,
   ) {}
 
   @Get()
@@ -70,17 +80,19 @@ export class EquipmentController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary:
-      'Tahap 1: upload & validasi file Excel (create-only, maks 1000 baris) — belum menyimpan apa pun ke equipment. ' +
+      'Tahap 1: upload & validasi file Excel (maks 1000 baris) — belum menyimpan apa pun ke equipment. ' +
+      'mode=CREATE_ONLY (default): tag existing ditolak. mode=UPDATE_OR_CREATE: tag existing di-UPDATE. ' +
       'Lihat ringkasan hasilnya, lalu commit lewat POST bulk-upload/:batchId/commit',
   })
   async previewBulk(
     @UploadedFile() file: Express.Multer.File,
+    @Body() dto: PreviewBulkUploadDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ImportPreviewResultDto> {
     if (!file) {
       throw new BadRequestException('File tidak ditemukan — pastikan field form-data bernama "file"');
     }
-    return this.bulkUploadService.previewUpload(file.buffer, file.originalname, user.id);
+    return this.bulkUploadService.previewUpload(file.buffer, file.originalname, user.id, dto.mode);
   }
 
   @Get('bulk-upload/:batchId')
@@ -103,11 +115,73 @@ export class EquipmentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Tahap 2: commit batch yang sudah di-preview — insert semua baris OK+WARNING dalam satu transaksi. ' +
-      'Ditolak kalau masih ada baris ERROR',
+      'Tahap 2: commit batch yang sudah di-preview — insert/update semua baris OK+WARNING (kecuali ' +
+      'NO_CHANGE) dalam satu transaksi. Ditolak kalau masih ada baris ERROR',
   })
-  commitBulk(@Param('batchId', ParseUuidPipe) batchId: string): Promise<ImportCommitResultDto> {
-    return this.bulkUploadService.commitBatch(batchId);
+  commitBulk(
+    @Param('batchId', ParseUuidPipe) batchId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ImportCommitResultDto> {
+    return this.bulkUploadService.commitBatch(batchId, user.id);
+  }
+
+  @Post('bulk-edit/preview')
+  @RequirePermission(PermissionModule.EQUIPMENT, 'edit')
+  @ApiOperation({
+    summary:
+      'Preview Edit Massal — hitung before/after untuk field yang dipilih tanpa menyimpan apa pun. ' +
+      'Field yang BOLEH diubah tidak termasuk tagNumber/areaId/serialNumber (lihat BulkEditFieldsDto)',
+  })
+  previewBulkEdit(@Body() dto: BulkEditEquipmentDto): Promise<BulkEditPreviewResultDto> {
+    return this.bulkEditService.preview(dto);
+  }
+
+  @Post('bulk-edit/commit')
+  @RequirePermission(PermissionModule.EQUIPMENT, 'edit')
+  @AuditLog('Equipment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Commit Edit Massal — update semua equipment yang datanya benar-benar berubah dalam satu transaksi, ' +
+      'snapshot nilai lama untuk kebutuhan rollback (lihat POST equipment/bulk-operations/:id/revert)',
+  })
+  commitBulkEdit(
+    @Body() dto: BulkEditEquipmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<BulkEditCommitResultDto> {
+    return this.bulkEditService.commit(dto, user.id);
+  }
+
+  @Get('bulk-operations')
+  @RequirePermission(PermissionModule.EQUIPMENT, 'view')
+  @ApiOperation({ summary: 'Riwayat operasi bulk (Bulk Upload mode Update & Edit Massal) yang bisa di-rollback' })
+  listBulkOperations(): Promise<BulkOperationListItemDto[]> {
+    return this.revertService.listOperations();
+  }
+
+  // Rollback sengaja dikunci @Roles('Admin') DI ATAS permission EQUIPMENT biasa — operasi ini
+  // bisa mempengaruhi banyak record sekaligus & tidak bisa di-undo lagi, lihat EquipmentRevertService.
+  @Post('bulk-operations/:operationId/revert/preview')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @RequirePermission(PermissionModule.EQUIPMENT, 'edit')
+  @ApiOperation({ summary: '[Admin only] Preview rollback — equipment mana yang aman direstore vs konflik, tanpa mengubah apa pun' })
+  previewRevert(@Param('operationId', ParseUuidPipe) operationId: string): Promise<RevertPreviewResultDto> {
+    return this.revertService.previewRevert(operationId);
+  }
+
+  @Post('bulk-operations/:operationId/revert/commit')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @RequirePermission(PermissionModule.EQUIPMENT, 'edit')
+  @AuditLog('Equipment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '[Admin only] Commit rollback — restore equipment yang aman ke nilai sebelum operasi ini' })
+  commitRevert(
+    @Param('operationId', ParseUuidPipe) operationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<RevertCommitResultDto> {
+    return this.revertService.commitRevert(operationId, user.id);
   }
 
   @Get('dropdown')

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { ImportBatchStatus, ImportEntityType, ImportRowSeverity, Prisma } from '@prisma/client';
+import { ImportBatchStatus, ImportEntityType, ImportMode, ImportRowAction, ImportRowSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface NewImportRow {
@@ -8,6 +8,9 @@ export interface NewImportRow {
   payload: Prisma.InputJsonValue;
   severity: ImportRowSeverity;
   messages: string[];
+  // Hanya terisi untuk batch mode UPDATE_OR_CREATE — lihat EquipmentBulkUploadService.validateRow().
+  action?: ImportRowAction;
+  targetEquipmentId?: string;
 }
 
 const ROW_INSERT_CHUNK_SIZE = 500;
@@ -28,6 +31,7 @@ export class ImportBatchRepository {
    */
   async createBatchWithRows(params: {
     entityType: ImportEntityType;
+    mode?: ImportMode;
     filename: string;
     fileChecksum: string;
     createdById: string;
@@ -45,6 +49,7 @@ export class ImportBatchRepository {
           data: {
             id: batchId,
             entityType: params.entityType,
+            mode: params.mode,
             filename: params.filename,
             fileChecksum: params.fileChecksum,
             totalRows: params.rows.length,
@@ -64,6 +69,8 @@ export class ImportBatchRepository {
             payload: r.payload,
             severity: r.severity,
             messages: r.messages,
+            action: r.action,
+            targetEquipmentId: r.targetEquipmentId,
           }));
           await tx.importBatchRow.createMany({ data: chunk });
         }
@@ -72,6 +79,28 @@ export class ImportBatchRepository {
       },
       { timeout: 30_000 },
     );
+  }
+
+  /**
+   * Hitung jumlah baris per action (CREATE/UPDATE/NO_CHANGE) di antara baris yang BENAR-BENAR
+   * akan diproses saat commit (OK+WARNING, bukan ERROR) — dipakai untuk ringkasan preview &
+   * ditampilkan ulang di getBatch(). Baris lama (action null, dari sebelum fitur upsert ada,
+   * atau batch mode CREATE_ONLY) dihitung sebagai CREATE.
+   */
+  async countActionsForCommittableRows(batchId: string) {
+    const grouped = await this.prisma.importBatchRow.groupBy({
+      by: ['action'],
+      where: { batchId, deletedAt: null, severity: { in: ['OK', 'WARNING'] } },
+      _count: { _all: true },
+    });
+
+    const counts = { createRows: 0, updateRows: 0, noChangeRows: 0 };
+    for (const g of grouped as { action: ImportRowAction | null; _count: { _all: number } }[]) {
+      if (g.action === 'UPDATE') counts.updateRows += g._count._all;
+      else if (g.action === 'NO_CHANGE') counts.noChangeRows += g._count._all;
+      else counts.createRows += g._count._all; // null (legacy) atau 'CREATE'
+    }
+    return counts;
   }
 
   findBatchById(id: string) {

@@ -1,17 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  commitBulkEdit,
   commitBulkImport,
+  commitRevert,
   createEquipment,
   deleteEquipment,
+  fetchBulkOperations,
   fetchEquipment,
   fetchEquipmentById,
   fetchEquipmentStatusCounts,
   fetchImportBatchRows,
   fetchManufacturers,
+  previewBulkEdit,
   previewBulkEquipment,
+  previewRevert,
   updateEquipment,
 } from '../api/equipment.api';
-import type { EquipmentFormValues, EquipmentQueryParams, ImportRowSeverity } from '../types/equipment.types';
+import type {
+  BulkEditFieldsValues,
+  EquipmentFormValues,
+  EquipmentQueryParams,
+  ImportMode,
+  ImportRowSeverity,
+} from '../types/equipment.types';
 
 const EQUIPMENT_KEY = 'equipment';
 
@@ -79,7 +90,7 @@ export function useDeleteEquipment() {
 // Tahap 1 — belum mengubah data equipment, jadi TIDAK invalidate query list di sini.
 export function usePreviewBulkImport() {
   return useMutation({
-    mutationFn: (file: File) => previewBulkEquipment(file),
+    mutationFn: ({ file, mode }: { file: File; mode: ImportMode }) => previewBulkEquipment(file, mode),
   });
 }
 
@@ -101,5 +112,50 @@ export function useCommitBulkImport() {
   return useMutation({
     mutationFn: (batchId: string) => commitBulkImport(batchId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] }),
+  });
+}
+
+// ---- Edit Massal ----
+
+// Preview belum mengubah data — tidak invalidate list.
+export function usePreviewBulkEdit() {
+  return useMutation({
+    mutationFn: ({ ids, fields }: { ids: string[]; fields: BulkEditFieldsValues }) => previewBulkEdit(ids, fields),
+  });
+}
+
+export function useCommitBulkEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ids, fields }: { ids: string[]; fields: BulkEditFieldsValues }) => commitBulkEdit(ids, fields),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] }),
+  });
+}
+
+// ---- Rollback (daftar & aksinya dikunci Admin di backend) ----
+
+const BULK_OPERATIONS_KEY = 'equipment-bulk-operations';
+
+export function useBulkOperations() {
+  return useQuery({
+    queryKey: [BULK_OPERATIONS_KEY],
+    queryFn: fetchBulkOperations,
+  });
+}
+
+export function usePreviewRevert() {
+  return useMutation({
+    mutationFn: (operationId: string) => previewRevert(operationId),
+  });
+}
+
+export function useCommitRevert() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (operationId: string) => commitRevert(operationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [EQUIPMENT_KEY] });
+      queryClient.invalidateQueries({ queryKey: [BULK_OPERATIONS_KEY] });
+    },
   });
 }

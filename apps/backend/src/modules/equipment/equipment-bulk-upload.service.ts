@@ -1,8 +1,20 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
-import { Area, Criticality, EquipmentStatus, FailAction, ImportRowSeverity, InstrumentName, Prisma } from '@prisma/client';
+import {
+  Area,
+  Criticality,
+  Equipment,
+  EquipmentStatus,
+  FailAction,
+  ImportMode,
+  ImportRowAction,
+  ImportRowSeverity,
+  InstrumentName,
+  Prisma,
+} from '@prisma/client';
 import { normalizeTag } from '@imms/shared-utils';
+import { PrismaService } from '../../prisma/prisma.service';
 import { EquipmentRepository } from './equipment.repository';
 import { ImportBatchRepository, NewImportRow } from './import-batch.repository';
 import { AreasService } from '../areas/areas.service';
@@ -77,6 +89,12 @@ interface ParsedRow {
   failAction?: string;
 }
 
+/**
+ * Field yang `undefined` berarti "kolom kosong di Excel" — PENTING untuk mode UPDATE_OR_CREATE:
+ * kosong = tidak mengubah nilai existing (bukan di-set ke null). Lihat buildPartialUpdateData()
+ * & hasFieldChanges(). Untuk mode CREATE_ONLY, undefined berarti field itu memang tidak diisi
+ * (equipment baru dibuat dengan nilai null/default Prisma untuk field tersebut).
+ */
 interface ResolvedEquipmentRow {
   tagNumber: string;
   service: string;
@@ -99,9 +117,11 @@ interface ResolvedEquipmentRow {
 }
 
 interface RowValidationContext {
+  mode: ImportMode;
   areasByCode: Map<string, Area>;
   instrumentNamesByCode: Map<string, InstrumentName>;
   activeTagsUpper: Set<string>;
+  activeEquipmentByTagUpper?: Map<string, Equipment>; // hanya terisi untuk mode UPDATE_OR_CREATE
   activeSerialsUpper: Set<string>;
   seenTagsInFile: Map<string, number>;
   seenSerialsInFile: Map<string, number>;
@@ -111,11 +131,14 @@ interface RowValidationResult {
   severity: ImportRowSeverity;
   messages: string[];
   resolved?: ResolvedEquipmentRow;
+  action?: ImportRowAction;
+  targetEquipmentId?: string;
 }
 
 @Injectable()
 export class EquipmentBulkUploadService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly repository: EquipmentRepository,
     private readonly importBatchRepository: ImportBatchRepository,
     private readonly areasService: AreasService,
@@ -228,8 +251,17 @@ export class EquipmentBulkUploadService {
    * Tahap 1 dari alur bulk upload: parse + validasi SEMUA baris, simpan hasilnya sebagai
    * ImportBatch (status VALIDATED) — TIDAK menyentuh tabel equipment sama sekali. User
    * baru bisa commit (lihat commitBatch) setelah meninjau ringkasan ini.
+   *
+   * mode CREATE_ONLY (default): tag yang sudah ada equipment aktif = ERROR (perilaku lama).
+   * mode UPDATE_OR_CREATE: tag yang sudah ada equipment aktif dibandingkan datanya — beda =
+   * action UPDATE, identik = action NO_CHANGE (dilewati saat commit, bukan error).
    */
-  async previewUpload(buffer: Buffer, filename: string, userId: string): Promise<ImportPreviewResultDto> {
+  async previewUpload(
+    buffer: Buffer,
+    filename: string,
+    userId: string,
+    mode: ImportMode = 'CREATE_ONLY',
+  ): Promise<ImportPreviewResultDto> {
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(buffer as never);
@@ -261,18 +293,29 @@ export class EquipmentBulkUploadService {
     }
 
     // Preload semua referensi aktif SEKALI di awal (bukan query per baris) — untuk 1000
-    // baris ini menghindari ribuan round-trip DB yang bisa bikin request timeout.
-    const [areasList, instrumentNamesList, activeTagsUpper, activeSerialsUpper] = await Promise.all([
+    // baris ini menghindari ribuan round-trip DB yang bisa bikin request timeout. Untuk mode
+    // UPDATE_OR_CREATE, fetch FULL ROW equipment (bukan cuma Set tag) karena perlu diff data.
+    const [areasList, instrumentNamesList, activeSerialsUpper] = await Promise.all([
       this.areasService.findAllActive() as Promise<Area[]>,
       this.instrumentNamesService.findAllForDropdown() as Promise<InstrumentName[]>,
-      this.repository.findAllActiveTagNumbersUpper(),
       this.repository.findAllActiveSerialNumbersUpper(),
     ]);
 
+    let activeTagsUpper: Set<string>;
+    let activeEquipmentByTagUpper: Map<string, Equipment> | undefined;
+    if (mode === 'UPDATE_OR_CREATE') {
+      activeEquipmentByTagUpper = await this.repository.findAllActiveEquipmentByTagUpper();
+      activeTagsUpper = new Set(activeEquipmentByTagUpper.keys());
+    } else {
+      activeTagsUpper = await this.repository.findAllActiveTagNumbersUpper();
+    }
+
     const ctx: RowValidationContext = {
+      mode,
       areasByCode: new Map(areasList.map((a) => [a.areaCode.toUpperCase(), a])),
       instrumentNamesByCode: new Map(instrumentNamesList.map((i) => [i.code.toUpperCase(), i])),
       activeTagsUpper,
+      activeEquipmentByTagUpper,
       activeSerialsUpper,
       seenTagsInFile: new Map(),
       seenSerialsInFile: new Map(),
@@ -288,7 +331,14 @@ export class EquipmentBulkUploadService {
         // signature). Data resolved tetap plain object JSON-serializable, aman di-cast.
         resolved: (result.resolved ?? null) as unknown as Prisma.InputJsonValue,
       };
-      return { rowNumber, severity: result.severity, messages: result.messages, payload };
+      return {
+        rowNumber,
+        severity: result.severity,
+        messages: result.messages,
+        payload,
+        action: result.action,
+        targetEquipmentId: result.targetEquipmentId,
+      };
     });
 
     const fileChecksum = createHash('sha256').update(buffer).digest('hex');
@@ -296,6 +346,7 @@ export class EquipmentBulkUploadService {
 
     const batch = await this.importBatchRepository.createBatchWithRows({
       entityType: 'EQUIPMENT',
+      mode,
       filename,
       fileChecksum,
       createdById: userId,
@@ -303,8 +354,11 @@ export class EquipmentBulkUploadService {
       rows,
     });
 
+    const actionCounts = await this.importBatchRepository.countActionsForCommittableRows(batch.id);
+
     return {
       batchId: batch.id,
+      mode: batch.mode,
       filename: batch.filename,
       totalRows: batch.totalRows,
       okRows: batch.okRows,
@@ -312,6 +366,7 @@ export class EquipmentBulkUploadService {
       errorRows: batch.errorRows,
       expiresAt: batch.expiresAt,
       canCommit: batch.errorRows === 0,
+      ...actionCounts,
     };
   }
 
@@ -320,8 +375,10 @@ export class EquipmentBulkUploadService {
     if (!batch) {
       throw new NotFoundException('Import batch tidak ditemukan');
     }
+    const actionCounts = await this.importBatchRepository.countActionsForCommittableRows(batchId);
     return {
       batchId: batch.id,
+      mode: batch.mode,
       filename: batch.filename,
       status: batch.status,
       totalRows: batch.totalRows,
@@ -331,6 +388,7 @@ export class EquipmentBulkUploadService {
       expiresAt: batch.expiresAt,
       committedAt: batch.committedAt,
       canCommit: batch.status === 'VALIDATED' && batch.errorRows === 0 && batch.expiresAt.getTime() > Date.now(),
+      ...actionCounts,
     };
   }
 
@@ -343,26 +401,34 @@ export class EquipmentBulkUploadService {
       take: query.limit,
     });
 
-    const data: ImportBatchRowDto[] = rows.map((r: { rowNumber: number; severity: ImportRowSeverity; messages: unknown; payload: unknown }) => {
-      const payload = r.payload as unknown as { raw: Record<string, unknown> };
-      return {
-        rowNumber: r.rowNumber,
-        severity: r.severity,
-        messages: r.messages as unknown as string[],
-        raw: payload.raw,
-      };
-    });
+    const data: ImportBatchRowDto[] = rows.map(
+      (r: { rowNumber: number; severity: ImportRowSeverity; action: ImportRowAction | null; messages: unknown; payload: unknown }) => {
+        const payload = r.payload as unknown as { raw: Record<string, unknown> };
+        return {
+          rowNumber: r.rowNumber,
+          severity: r.severity,
+          action: r.action,
+          messages: r.messages as unknown as string[],
+          raw: payload.raw,
+        };
+      },
+    );
 
     return { data, meta: buildPaginationMeta(query.page, query.limit, total) };
   }
 
   /**
-   * Tahap 2: insert SEMUA baris OK + WARNING dalam satu transaksi atomic (all-or-nothing).
-   * Ditolak kalau batch masih punya baris ERROR, sudah pernah di-commit, atau sudah
-   * kedaluwarsa. Constraint DB (partial unique index tag_number) tetap jadi pagar terakhir
-   * untuk race condition antara preview dan commit.
+   * Tahap 2: insert/update SEMUA baris OK + WARNING (kecuali action NO_CHANGE, yang dilewati)
+   * dalam satu transaksi atomic (all-or-nothing). Ditolak kalau batch masih punya baris ERROR,
+   * sudah pernah di-commit, atau sudah kedaluwarsa. Constraint DB (partial unique index
+   * tag_number) tetap jadi pagar terakhir untuk race condition antara preview dan commit.
+   *
+   * Untuk baris action=UPDATE: nilai equipment SEBELUM diubah disnapshot ke
+   * EquipmentChangeSnapshot (dikelompokkan dalam satu EquipmentBulkOperation source=IMPORT_UPSERT)
+   * supaya bisa di-rollback nanti (lihat EquipmentRevertService). Baris action=CREATE tidak perlu
+   * snapshot — revert-nya cukup soft-delete equipment yang baru dibuat.
    */
-  async commitBatch(batchId: string): Promise<ImportCommitResultDto> {
+  async commitBatch(batchId: string, userId: string): Promise<ImportCommitResultDto> {
     const batch = await this.importBatchRepository.findBatchById(batchId);
     if (!batch) {
       throw new NotFoundException('Import batch tidak ditemukan');
@@ -386,11 +452,15 @@ export class EquipmentBulkUploadService {
     }
 
     const committableRows = await this.importBatchRepository.findCommittableRows(batchId);
-    if (committableRows.length === 0) {
-      throw new BadRequestException('Tidak ada baris valid untuk di-commit');
+    const rowsToApply = committableRows.filter((r: { action: ImportRowAction | null }) => r.action !== 'NO_CHANGE');
+    if (rowsToApply.length === 0) {
+      throw new BadRequestException('Tidak ada baris yang perlu diproses (semua baris NO_CHANGE atau kosong)');
     }
 
-    const equipmentRows: Prisma.EquipmentCreateManyInput[] = committableRows.map((r: { payload: unknown }) => {
+    const createRows = rowsToApply.filter((r: { action: ImportRowAction | null }) => r.action !== 'UPDATE');
+    const updateRows = rowsToApply.filter((r: { action: ImportRowAction | null }) => r.action === 'UPDATE');
+
+    const equipmentCreateInputs: Prisma.EquipmentCreateManyInput[] = createRows.map((r: { payload: unknown }) => {
       const payload = r.payload as unknown as { resolved: ResolvedEquipmentRow };
       const resolved = payload.resolved;
       return {
@@ -417,8 +487,72 @@ export class EquipmentBulkUploadService {
       };
     });
 
+    let operationId: string | undefined;
+
     try {
-      await this.repository.createManyInTransaction(equipmentRows);
+      await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          for (let i = 0; i < equipmentCreateInputs.length; i += 500) {
+            await tx.equipment.createMany({ data: equipmentCreateInputs.slice(i, i + 500) });
+          }
+
+          if (updateRows.length > 0) {
+            const snapshots: { id: string; equipmentId: string; beforeData: Prisma.InputJsonValue }[] = [];
+
+            for (const r of updateRows as { payload: unknown; targetEquipmentId: string | null }[]) {
+              const payload = r.payload as unknown as { resolved: ResolvedEquipmentRow };
+              const resolved = payload.resolved;
+              const equipmentId = r.targetEquipmentId;
+              if (!equipmentId) {
+                throw new ConflictException(
+                  `Baris update untuk tag '${resolved.tagNumber}' kehilangan referensi target — upload & preview ulang file.`,
+                );
+              }
+
+              const existing = await tx.equipment.findUnique({ where: { id: equipmentId } });
+              if (!existing || existing.deletedAt) {
+                throw new ConflictException(
+                  `Equipment target update untuk tag '${resolved.tagNumber}' sudah tidak ada/terhapus sejak preview — upload & preview ulang file.`,
+                );
+              }
+
+              // Serialize via JSON supaya Decimal/Date otomatis jadi string plain JSON-safe
+              // (Decimal & Date sama-sama punya toJSON()) — aman disimpan ke kolom Json & aman
+              // dibaca ulang saat revert (lihat EquipmentRevertService).
+              snapshots.push({
+                id: randomUUID(),
+                equipmentId,
+                beforeData: JSON.parse(JSON.stringify(existing)) as Prisma.InputJsonValue,
+              });
+
+              await tx.equipment.update({
+                where: { id: equipmentId },
+                data: this.buildPartialUpdateData(resolved),
+              });
+            }
+
+            operationId = randomUUID();
+            await tx.equipmentBulkOperation.create({
+              data: {
+                id: operationId,
+                source: 'IMPORT_UPSERT',
+                importBatchId: batchId,
+                affectedCount: updateRows.length,
+                createdById: userId,
+              },
+            });
+            await tx.equipmentChangeSnapshot.createMany({
+              data: snapshots.map((s) => ({ ...s, operationId: operationId as string })),
+            });
+          }
+
+          await tx.importBatch.update({
+            where: { id: batchId },
+            data: { status: 'COMMITTED', committedAt: new Date() },
+          });
+        },
+        { timeout: 30_000 },
+      );
     } catch (error) {
       await this.importBatchRepository.updateStatus(batchId, 'FAILED');
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -429,14 +563,85 @@ export class EquipmentBulkUploadService {
       throw error;
     }
 
-    const committed = await this.importBatchRepository.updateStatus(batchId, 'COMMITTED', new Date());
+    const committed = await this.importBatchRepository.findBatchById(batchId);
 
     return {
-      batchId: committed.id,
-      status: committed.status,
-      createdCount: equipmentRows.length,
-      committedAt: committed.committedAt as Date,
+      batchId: batchId,
+      status: committed!.status,
+      createdCount: equipmentCreateInputs.length,
+      updatedCount: updateRows.length,
+      operationId,
+      committedAt: committed!.committedAt as Date,
     };
+  }
+
+  /**
+   * Bangun payload Prisma.EquipmentUpdateInput HANYA dari field yang terisi di Excel
+   * (resolved[field] !== undefined). Field yang kosong di Excel TIDAK disentuh sama sekali —
+   * ini yang membuat mode UPDATE_OR_CREATE aman dipakai untuk update parsial (mis. hanya mau
+   * update Status & Criticality tanpa harus mengisi ulang semua kolom lain).
+   */
+  private buildPartialUpdateData(resolved: ResolvedEquipmentRow): Prisma.EquipmentUpdateInput {
+    const data: Prisma.EquipmentUpdateInput = {
+      area: { connect: { id: resolved.areaId } },
+      instrumentName: { connect: { id: resolved.instrumentNameId } },
+      service: resolved.service,
+    };
+    if (resolved.type !== undefined) data.type = resolved.type ?? null;
+    if (resolved.manufacturer !== undefined) data.manufacturer = resolved.manufacturer ?? null;
+    if (resolved.model !== undefined) data.model = resolved.model ?? null;
+    if (resolved.serialNumber !== undefined) data.serialNumber = resolved.serialNumber ?? null;
+    if (resolved.installationDate !== undefined) {
+      data.installationDate = resolved.installationDate ? new Date(resolved.installationDate) : null;
+    }
+    if (resolved.lrv !== undefined) data.lrv = resolved.lrv ?? null;
+    if (resolved.urv !== undefined) data.urv = resolved.urv ?? null;
+    if (resolved.unit !== undefined) data.unit = resolved.unit ?? null;
+    if (resolved.size !== undefined) data.size = resolved.size ?? null;
+    if (resolved.rating !== undefined) data.rating = resolved.rating ?? null;
+    if (resolved.failAction !== undefined) data.failAction = resolved.failAction ?? null;
+    if (resolved.status !== undefined) data.status = resolved.status;
+    if (resolved.criticality !== undefined) data.criticality = resolved.criticality;
+    if (resolved.remarks !== undefined) data.remarks = resolved.remarks ?? null;
+    return data;
+  }
+
+  /**
+   * Bandingkan nilai existing equipment vs resolved (hasil parsing baris Excel) — HANYA untuk
+   * field yang terisi di Excel (resolved[field] !== undefined, konsisten dengan semantik
+   * buildPartialUpdateData di atas: kolom kosong = tidak ikut dibandingkan/diubah).
+   * true kalau ada minimal satu field yang nilainya beda (action harus UPDATE).
+   */
+  private hasFieldChanges(existing: Equipment, resolved: ResolvedEquipmentRow): boolean {
+    const checks: Array<[unknown, unknown]> = [
+      [existing.areaId, resolved.areaId],
+      [existing.instrumentNameId, resolved.instrumentNameId],
+      [existing.service, resolved.service],
+    ];
+
+    if (resolved.type !== undefined) checks.push([existing.type ?? null, resolved.type ?? null]);
+    if (resolved.manufacturer !== undefined) checks.push([existing.manufacturer ?? null, resolved.manufacturer ?? null]);
+    if (resolved.model !== undefined) checks.push([existing.model ?? null, resolved.model ?? null]);
+    if (resolved.serialNumber !== undefined) checks.push([existing.serialNumber ?? null, resolved.serialNumber ?? null]);
+    if (resolved.installationDate !== undefined) {
+      const existingDate = existing.installationDate ? existing.installationDate.toISOString().slice(0, 10) : null;
+      checks.push([existingDate, resolved.installationDate ?? null]);
+    }
+    if (resolved.lrv !== undefined) {
+      checks.push([existing.lrv !== null ? Number(existing.lrv) : null, resolved.lrv ?? null]);
+    }
+    if (resolved.urv !== undefined) {
+      checks.push([existing.urv !== null ? Number(existing.urv) : null, resolved.urv ?? null]);
+    }
+    if (resolved.unit !== undefined) checks.push([existing.unit ?? null, resolved.unit ?? null]);
+    if (resolved.size !== undefined) checks.push([existing.size ?? null, resolved.size ?? null]);
+    if (resolved.rating !== undefined) checks.push([existing.rating ?? null, resolved.rating ?? null]);
+    if (resolved.failAction !== undefined) checks.push([existing.failAction ?? null, resolved.failAction ?? null]);
+    if (resolved.status !== undefined) checks.push([existing.status, resolved.status]);
+    if (resolved.criticality !== undefined) checks.push([existing.criticality, resolved.criticality]);
+    if (resolved.remarks !== undefined) checks.push([existing.remarks ?? null, resolved.remarks ?? null]);
+
+    return checks.some(([a, b]) => a !== b);
   }
 
   private readRow(row: ExcelJS.Row): ParsedRow {
@@ -527,7 +732,9 @@ export class EquipmentBulkUploadService {
     if (existingAt !== undefined) {
       return { severity: 'ERROR', messages: [`Tag number '${tagNumber}' duplikat dengan baris ${existingAt} di file ini`] };
     }
-    if (ctx.activeTagsUpper.has(tagNumber)) {
+
+    const tagAlreadyActive = ctx.activeTagsUpper.has(tagNumber);
+    if (tagAlreadyActive && ctx.mode !== 'UPDATE_OR_CREATE') {
       return { severity: 'ERROR', messages: [`Tag number '${tagNumber}' sudah dipakai equipment aktif lain`] };
     }
     ctx.seenTagsInFile.set(tagNumber, rowNumber);
@@ -620,6 +827,9 @@ export class EquipmentBulkUploadService {
       warnings.push(`LRV (${lrv}) >= URV (${urv}) — pastikan bukan salah ketik (bisa valid untuk reverse-acting)`);
     }
 
+    // Cek duplikat serial number HANYA terhadap tag lain (bukan terhadap dirinya sendiri saat
+    // mode upsert nanti meng-update baris yang kebetulan serial number-nya tidak berubah) —
+    // perbandingan "milik siapa serial ini sekarang" dilakukan di bawah lewat targetEquipmentId.
     if (row.serialNumber) {
       const serialUpper = row.serialNumber.trim().toUpperCase();
       const firstSerialAt = ctx.seenSerialsInFile.get(serialUpper);
@@ -654,6 +864,19 @@ export class EquipmentBulkUploadService {
       remarks: row.remarks,
     };
 
-    return { severity: warnings.length > 0 ? 'WARNING' : 'OK', messages: warnings, resolved };
+    let action: ImportRowAction = 'CREATE';
+    let targetEquipmentId: string | undefined;
+    if (tagAlreadyActive) {
+      const existing = ctx.activeEquipmentByTagUpper!.get(tagNumber)!;
+      targetEquipmentId = existing.id;
+      action = this.hasFieldChanges(existing, resolved) ? 'UPDATE' : 'NO_CHANGE';
+      if (action === 'UPDATE') {
+        warnings.push(`Tag '${tagNumber}' sudah ada — baris ini akan meng-UPDATE equipment existing`);
+      } else {
+        warnings.push(`Tag '${tagNumber}' sudah ada & datanya identik — baris ini dilewati (tidak ada perubahan)`);
+      }
+    }
+
+    return { severity: warnings.length > 0 ? 'WARNING' : 'OK', messages: warnings, resolved, action, targetEquipmentId };
   }
 }

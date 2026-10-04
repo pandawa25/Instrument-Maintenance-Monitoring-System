@@ -9,7 +9,7 @@ import {
   usePreviewBulkImport,
 } from '../hooks/use-equipment';
 import { downloadBulkUploadTemplate } from '../api/equipment.api';
-import type { ImportPreviewResult, ImportRowSeverity } from '../types/equipment.types';
+import type { ImportMode, ImportPreviewResult, ImportRowAction, ImportRowSeverity } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
 
 interface Props {
@@ -27,9 +27,16 @@ const SEVERITY_ICON: Record<ImportRowSeverity, React.ReactNode> = {
   ERROR: <XCircle className="h-3.5 w-3.5 text-danger" />,
 };
 
+const ACTION_BADGE: Record<ImportRowAction, { label: string; className: string }> = {
+  CREATE: { label: 'Baru', className: 'bg-primary/10 text-primary' },
+  UPDATE: { label: 'Update', className: 'bg-warning/10 text-warning' },
+  NO_CHANGE: { label: 'Tanpa Perubahan', className: 'bg-surface-2 text-text-muted' },
+};
+
 export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<ImportMode>('CREATE_ONLY');
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
@@ -48,6 +55,7 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
   function reset() {
     setStep('select');
     setFile(null);
+    setMode('CREATE_ONLY');
     setError(null);
     setPreview(null);
     setSeverityFilter(undefined);
@@ -78,7 +86,7 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
     }
     setError(null);
     try {
-      const result = await previewMutation.mutateAsync(file);
+      const result = await previewMutation.mutateAsync({ file, mode });
       setPreview(result);
       setSeverityFilter(result.errorRows > 0 ? 'ERROR' : undefined);
       setRowsPage(1);
@@ -134,8 +142,36 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
             </div>
 
             <div>
+              <p className="mb-2 text-sm text-text">2. Pilih mode upload:</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setMode('CREATE_ONLY')}
+                  className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                    mode === 'CREATE_ONLY' ? 'border-primary bg-primary/10' : 'border-border bg-surface-2/60'
+                  }`}
+                >
+                  <p className="font-medium text-text">Hanya Tambah Baru</p>
+                  <p className="mt-0.5 text-xs text-text-muted">Tag number yang sudah ada akan ditolak (error).</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('UPDATE_OR_CREATE')}
+                  className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                    mode === 'UPDATE_OR_CREATE' ? 'border-primary bg-primary/10' : 'border-border bg-surface-2/60'
+                  }`}
+                >
+                  <p className="font-medium text-text">Tambah &amp; Update</p>
+                  <p className="mt-0.5 text-xs text-text-muted">
+                    Tag number yang sudah ada akan di-update (hanya kolom yang diisi di Excel).
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <div>
               <p className="mb-2 text-sm text-text">
-                2. Upload file Excel yang sudah diisi (maks 1000 baris data, 5MB) untuk divalidasi dulu — belum
+                3. Upload file Excel yang sudah diisi (maks 1000 baris data, 5MB) untuk divalidasi dulu — belum
                 langsung disimpan:
               </p>
               <input
@@ -194,6 +230,20 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
               </p>
             )}
 
+            {preview.mode === 'UPDATE_OR_CREATE' && (
+              <div className="flex flex-wrap gap-3 text-xs text-text-muted">
+                <span>
+                  <span className="font-medium text-primary">{preview.createRows}</span> baris baru
+                </span>
+                <span>
+                  <span className="font-medium text-warning">{preview.updateRows}</span> baris akan di-update
+                </span>
+                <span>
+                  <span className="font-medium">{preview.noChangeRows}</span> baris tanpa perubahan (dilewati)
+                </span>
+              </div>
+            )}
+
             <div className="max-h-64 overflow-y-auto rounded-lg border border-border">
               {rowsQuery.isLoading ? (
                 <p className="p-4 text-sm text-text-muted">Memuat baris...</p>
@@ -205,9 +255,14 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
                     <li key={row.rowNumber} className="flex items-start gap-2 p-2">
                       <span className="mt-0.5 shrink-0">{SEVERITY_ICON[row.severity]}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-text">
+                        <p className="flex flex-wrap items-center gap-1.5 font-medium text-text">
                           Baris {row.rowNumber}
                           {typeof row.raw.tagNo === 'string' && row.raw.tagNo ? ` — ${row.raw.tagNo}` : ''}
+                          {row.action && (
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_BADGE[row.action].className}`}>
+                              {ACTION_BADGE[row.action].label}
+                            </span>
+                          )}
                         </p>
                         {row.messages.length > 0 && (
                           <ul className="mt-0.5 space-y-0.5 text-xs text-text-muted">
@@ -255,7 +310,8 @@ export function EquipmentBulkUploadDialog({ open, onOpenChange }: Props) {
           <div className="space-y-2 rounded-lg border border-success/30 bg-success/5 p-4 text-sm">
             <p className="flex items-center gap-2 font-medium text-text">
               <CheckCircle2 className="h-4 w-4 text-success" />
-              Berhasil — {commitMutation.data?.createdCount ?? 0} equipment baru dibuat.
+              Berhasil — {commitMutation.data?.createdCount ?? 0} equipment baru dibuat
+              {(commitMutation.data?.updatedCount ?? 0) > 0 && `, ${commitMutation.data?.updatedCount} di-update`}.
             </p>
             <p className="text-text-muted">File: {preview.filename}</p>
           </div>

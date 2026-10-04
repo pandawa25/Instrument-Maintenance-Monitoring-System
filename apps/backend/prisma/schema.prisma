@@ -174,6 +174,8 @@ model User {
   loginHistory       LoginHistory[]
   auditLogs          AuditLog[]
   maintenanceAsAdditionalTech CorrectiveMaintenanceTechnician[]
+  bulkOperationsCreated  EquipmentBulkOperation[] @relation("BulkOperationCreatedBy")
+  bulkOperationsReverted EquipmentBulkOperation[] @relation("BulkOperationRevertedBy")
 
   @@index([roleId])
   @@map("users")
@@ -264,6 +266,8 @@ model Equipment {
   maintenance    CorrectiveMaintenance[]
   pmPrograms     PmProgramEquipment[]
   pmExecutions   PmPeriodExecution[]
+  // Baris import yang menargetkan equipment ini untuk di-UPDATE (mode UPDATE_OR_CREATE).
+  importTargetRows ImportBatchRow[]
 
   @@index([areaId])
   @@index([instrumentNameId])
@@ -595,6 +599,32 @@ enum ImportEntityType {
 
 enum ImportMode {
   CREATE_ONLY
+  // Upsert by tag number — baris dengan tag yang sudah ada equipment aktif akan di-UPDATE
+  // (bukan ditolak) kalau datanya berbeda dari yang tersimpan. Lihat ImportRowAction &
+  // EquipmentBulkUploadService.validateRow().
+  UPDATE_OR_CREATE
+}
+
+// Hasil keputusan validateRow() per baris saat mode = UPDATE_OR_CREATE (null untuk mode
+// CREATE_ONLY lama, backward-compatible dengan baris yang sudah ada sebelum fitur ini).
+enum ImportRowAction {
+  CREATE // tag belum ada — insert baris baru
+  UPDATE // tag sudah ada & datanya beda — overwrite equipment existing
+  NO_CHANGE // tag sudah ada & datanya identik — tidak dihitung ke commit
+}
+
+// Sumber satu "peristiwa" perubahan massal equipment yang di-snapshot untuk kebutuhan
+// rollback (lihat EquipmentBulkOperation). Dua sumber: commit Bulk Upload mode
+// UPDATE_OR_CREATE (hanya baris aksi UPDATE yang disnapshot, baris CREATE tidak perlu
+// rollback karena revert-nya cukup soft-delete), dan Edit Massal manual.
+enum BulkOperationSource {
+  IMPORT_UPSERT
+  MANUAL_BULK_EDIT
+}
+
+enum BulkOperationStatus {
+  COMMITTED
+  REVERTED
 }
 
 enum ImportBatchStatus {
@@ -633,9 +663,10 @@ model ImportBatch {
   updatedAt    DateTime          @updatedAt @map("updated_at")
   deletedAt    DateTime?         @map("deleted_at")
 
-  createdBy User             @relation(fields: [createdById], references: [id])
+  createdBy User                     @relation(fields: [createdById], references: [id])
   rows      ImportBatchRow[]
   equipment Equipment[]
+  bulkOperations EquipmentBulkOperation[]
 
   // Index biasa supaya schema tidak "buta" soal index di kolom ini — uniqueness sebenarnya
   // (partial, hanya WHERE status = 'COMMITTED') ada di migration SQL manual. Kalau nanti
@@ -658,15 +689,69 @@ model ImportBatchRow {
   // Daftar pesan validasi untuk baris ini (bisa lebih dari satu WARNING sekaligus, atau
   // berhenti di ERROR pertama — lihat EquipmentImportService).
   messages  Json
+  // action & targetEquipmentId: nullable, hanya terisi untuk batch mode UPDATE_OR_CREATE.
+  // Baris lama (dari sebelum fitur upsert ada) tetap valid dengan kedua field null.
+  action            ImportRowAction? @map("action")
+  targetEquipmentId String?          @map("target_equipment_id") @db.Uuid
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
   deletedAt DateTime?         @map("deleted_at")
 
-  batch ImportBatch @relation(fields: [batchId], references: [id])
+  batch           ImportBatch @relation(fields: [batchId], references: [id])
+  targetEquipment Equipment?  @relation(fields: [targetEquipmentId], references: [id])
 
   @@unique([batchId, rowNumber])
   @@index([batchId, severity])
+  @@index([targetEquipmentId])
   @@map("import_batch_rows")
+}
+
+/**
+ * Satu "peristiwa" perubahan massal equipment yang bisa di-rollback: baik dari commit
+ * Bulk Upload mode UPDATE_OR_CREATE (source = IMPORT_UPSERT, importBatchId terisi), maupun
+ * dari fitur Edit Massal manual (source = MANUAL_BULK_EDIT, importBatchId null). Dipisah
+ * dari ImportBatch (bukan menambah status baru di situ) karena Edit Massal tidak berasal
+ * dari file upload — menyatukan keduanya di ImportBatch akan memaksa filename/fileChecksum
+ * jadi nullable, padahal keduanya murni atribut file. EquipmentChangeSnapshot menyimpan nilai
+ * SEBELUM perubahan per equipment yang terdampak — itulah yang dipakai untuk restore.
+ */
+model EquipmentBulkOperation {
+  id            String              @id @default(uuid()) @db.Uuid
+  source        BulkOperationSource
+  importBatchId String?             @map("import_batch_id") @db.Uuid
+  status        BulkOperationStatus @default(COMMITTED)
+  affectedCount Int                 @map("affected_count")
+  createdById   String              @map("created_by_id") @db.Uuid
+  createdAt     DateTime            @default(now()) @map("created_at")
+  // Diisi saat admin melakukan rollback — null selama belum pernah di-revert.
+  revertedAt    DateTime?           @map("reverted_at")
+  revertedById  String?             @map("reverted_by_id") @db.Uuid
+
+  importBatch ImportBatch?              @relation(fields: [importBatchId], references: [id])
+  createdBy   User                      @relation("BulkOperationCreatedBy", fields: [createdById], references: [id])
+  revertedBy  User?                     @relation("BulkOperationRevertedBy", fields: [revertedById], references: [id])
+  snapshots   EquipmentChangeSnapshot[]
+
+  @@index([importBatchId])
+  @@index([status])
+  @@index([createdById])
+  @@map("equipment_bulk_operations")
+}
+
+/** Nilai Equipment SEBELUM diubah oleh satu EquipmentBulkOperation — sumber data restore rollback. */
+model EquipmentChangeSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  operationId String   @map("operation_id") @db.Uuid
+  equipmentId String   @map("equipment_id") @db.Uuid
+  // Snapshot full row Equipment (semua kolom scalar) sebelum operasi ini dijalankan.
+  beforeData  Json     @map("before_data")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  operation EquipmentBulkOperation @relation(fields: [operationId], references: [id])
+
+  @@index([operationId])
+  @@index([equipmentId])
+  @@map("equipment_change_snapshots")
 }
 
 // Entity yang boleh punya lampiran evidence — tambah value baru di sini kalau ada

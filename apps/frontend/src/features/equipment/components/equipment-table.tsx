@@ -33,9 +33,26 @@ interface Props {
   onEdit: (equipment: Equipment) => void;
   onDelete: (equipment: Equipment) => void;
   onView: (equipment: Equipment) => void;
+  // Selection untuk Edit Massal — opsional, hanya aktif kalau semua prop ini diisi.
+  selectedIds?: Set<string>;
+  onToggleOne?: (id: string) => void;
+  onToggleAll?: () => void;
 }
 
-export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function EquipmentTable({
+  equipment,
+  isLoading,
+  canEdit,
+  onEdit,
+  onDelete,
+  onView,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
+  const selectionEnabled = canEdit && Boolean(selectedIds && onToggleOne && onToggleAll);
+  const allSelected = selectionEnabled && equipment.length > 0 && selectedIds!.size === equipment.length;
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -48,6 +65,17 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+          {selectionEnabled && (
+            <th className="w-8 px-4 py-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={allSelected}
+                onChange={onToggleAll}
+                aria-label="Pilih semua equipment di halaman ini"
+              />
+            </th>
+          )}
           <th className="px-4 py-2.5 font-medium">Tag Number</th>
           <th className="px-4 py-2.5 font-medium">Instrument Name</th>
           <th className="px-4 py-2.5 font-medium">Service</th>
@@ -61,6 +89,17 @@ export function EquipmentTable({ equipment, isLoading, canEdit, onEdit, onDelete
       <tbody>
         {equipment.map((item) => (
           <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+            {selectionEnabled && (
+              <td className="px-4 py-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={selectedIds!.has(item.id)}
+                  onChange={() => onToggleOne!(item.id)}
+                  aria-label={`Pilih equipment ${item.tagNumber}`}
+                />
+              </td>
+            )}
             <td
               className={cn(
                 'border-l-4 px-4 py-2.5 font-mono text-xs text-text',

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Gauge, Plus, RotateCcw, SlidersHorizontal, UploadCloud } from 'lucide-react';
+import { Download, Gauge, History, ListChecks, Plus, RotateCcw, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,8 +15,10 @@ import { exportEquipment } from '../api/equipment.api';
 import { EquipmentTable } from '../components/equipment-table';
 import { EquipmentFormDialog } from '../components/equipment-form-dialog';
 import { EquipmentBulkUploadDialog } from '../components/equipment-bulk-upload-dialog';
+import { EquipmentBulkEditDialog } from '../components/equipment-bulk-edit-dialog';
+import { EquipmentRollbackDialog } from '../components/equipment-rollback-dialog';
 import { EquipmentSummaryCards } from '../components/equipment-summary-cards';
-import { usePermission } from '@/store/auth.store';
+import { usePermission, useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -35,6 +37,9 @@ export function EquipmentListPage() {
   const navigate = useNavigate();
   const canCreate = usePermission('EQUIPMENT', 'create');
   const canEdit = usePermission('EQUIPMENT', 'edit');
+  // Rollback dikunci Admin only di backend (@Roles('Admin')) — tombol ini hanya dirender
+  // untuk Admin supaya role lain tidak melihat UI yang request-nya pasti ditolak 403.
+  const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
 
   const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [showMoreFilter, setShowMoreFilter] = useState(false);
@@ -43,6 +48,9 @@ export function EquipmentListPage() {
   // sudah pindah ke halaman penuh EquipmentDetailPage (/equipment/:id).
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [rollbackOpen, setRollbackOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingItem, setDeletingItem] = useState<Equipment | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -61,6 +69,30 @@ export function EquipmentListPage() {
       criticalityFilterRef.current?.focus();
     }
   }, [showMoreFilter]);
+
+  // Reset pilihan Edit Massal setiap kali filter/halaman berubah — daftar equipment yang
+  // tampil sudah berbeda, mempertahankan id lama cuma bikin bingung (seolah masih terpilih
+  // equipment yang sudah tidak terlihat).
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [params]);
+
+  const equipmentList = data?.data ?? [];
+
+  function toggleSelectAll() {
+    setSelectedIds((cur) =>
+      cur.size === equipmentList.length ? new Set() : new Set(equipmentList.map((item) => item.id)),
+    );
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function handleExport() {
     setIsExporting(true);
@@ -96,6 +128,12 @@ export function EquipmentListPage() {
               <Download className="h-4 w-4" />
               {isExporting ? 'Mengekspor...' : 'Export'}
             </Button>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => setRollbackOpen(true)}>
+                <History className="h-4 w-4" />
+                Riwayat &amp; Rollback
+              </Button>
+            )}
             {canCreate && (
               <>
                 <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
@@ -218,14 +256,27 @@ export function EquipmentListPage() {
           </div>
         )}
 
+        {canEdit && selectedIds.size > 0 && (
+          <div className="flex items-center justify-between border-b border-border bg-primary-tint/40 px-4 py-2">
+            <span className="text-sm text-text">{selectedIds.size} equipment dipilih</span>
+            <Button size="sm" onClick={() => setBulkEditOpen(true)}>
+              <ListChecks className="h-4 w-4" />
+              Edit Massal
+            </Button>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <EquipmentTable
-            equipment={data?.data ?? []}
+            equipment={equipmentList}
             isLoading={isLoading}
             canEdit={canEdit}
             onEdit={(item) => navigate(`/equipment/${item.id}`, { state: { mode: 'edit' } })}
             onDelete={setDeletingItem}
             onView={(item) => navigate(`/equipment/${item.id}`)}
+            selectedIds={selectedIds}
+            onToggleOne={toggleSelectOne}
+            onToggleAll={toggleSelectAll}
           />
         </div>
 
@@ -237,6 +288,15 @@ export function EquipmentListPage() {
       <EquipmentFormDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <EquipmentBulkUploadDialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen} />
+
+      <EquipmentBulkEditDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        equipmentIds={Array.from(selectedIds)}
+        onDone={() => setSelectedIds(new Set())}
+      />
+
+      {isAdmin && <EquipmentRollbackDialog open={rollbackOpen} onOpenChange={setRollbackOpen} />}
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

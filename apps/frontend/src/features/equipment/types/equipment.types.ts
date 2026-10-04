@@ -79,11 +79,14 @@ export interface EquipmentFormValues {
 
 export type ImportRowSeverity = 'OK' | 'WARNING' | 'ERROR';
 export type ImportBatchStatus = 'VALIDATED' | 'COMMITTED' | 'FAILED' | 'EXPIRED';
+export type ImportMode = 'CREATE_ONLY' | 'UPDATE_OR_CREATE';
+export type ImportRowAction = 'CREATE' | 'UPDATE' | 'NO_CHANGE';
 
 // Tahap 1 (preview) — belum ada yang disimpan ke equipment. batchId dipakai untuk
 // lihat baris & commit di tahap 2.
 export interface ImportPreviewResult {
   batchId: string;
+  mode: ImportMode;
   filename: string;
   totalRows: number;
   okRows: number;
@@ -91,21 +94,114 @@ export interface ImportPreviewResult {
   errorRows: number;
   expiresAt: string;
   canCommit: boolean;
+  createRows: number;
+  updateRows: number;
+  noChangeRows: number;
 }
 
 export interface ImportBatchRow {
   rowNumber: number;
   severity: ImportRowSeverity;
+  action?: ImportRowAction | null;
   messages: string[];
   raw: Record<string, unknown>;
 }
 
-// Tahap 2 (commit) — hasil akhir setelah insert benar-benar terjadi.
+// Tahap 2 (commit) — hasil akhir setelah insert/update benar-benar terjadi.
 export interface ImportCommitResult {
   batchId: string;
   status: ImportBatchStatus;
   createdCount: number;
+  updatedCount: number;
+  operationId?: string;
   committedAt: string;
+}
+
+// ---- Edit Massal ----
+
+// SENGAJA tidak termasuk tagNumber/areaId/serialNumber — lihat BulkEditFieldsDto backend.
+export interface BulkEditFieldsValues {
+  service?: string;
+  description?: string;
+  instrumentNameId?: string;
+  type?: string;
+  manufacturer?: string;
+  model?: string;
+  installationDate?: string;
+  lrv?: number;
+  urv?: number;
+  unit?: string;
+  size?: string;
+  rating?: string;
+  failAction?: FailAction;
+  status?: EquipmentStatus;
+  criticality?: Criticality;
+  remarks?: string;
+}
+
+export type BulkEditFieldKey = keyof BulkEditFieldsValues;
+
+export interface BulkEditFieldChange {
+  field: string;
+  label: string;
+  before: unknown;
+  after: unknown;
+}
+
+export interface BulkEditPreviewRow {
+  equipmentId: string;
+  tagNumber: string;
+  changes: BulkEditFieldChange[];
+}
+
+export interface BulkEditPreviewResult {
+  totalSelected: number;
+  changedCount: number;
+  unchangedCount: number;
+  rows: BulkEditPreviewRow[];
+}
+
+export interface BulkEditCommitResult {
+  operationId: string;
+  updatedCount: number;
+}
+
+// ---- Rollback ----
+
+export type BulkOperationSource = 'IMPORT_UPSERT' | 'MANUAL_BULK_EDIT';
+export type BulkOperationStatus = 'COMMITTED' | 'REVERTED';
+
+export interface BulkOperationListItem {
+  id: string;
+  source: BulkOperationSource;
+  status: BulkOperationStatus;
+  affectedCount: number;
+  createdBy: { id: string; fullName: string };
+  createdAt: string;
+  revertedAt?: string | null;
+  revertedBy?: { id: string; fullName: string } | null;
+  importBatch?: { id: string; filename: string } | null;
+}
+
+export interface RevertRow {
+  equipmentId: string;
+  tagNumber: string;
+  reason?: string;
+}
+
+export interface RevertPreviewResult {
+  operationId: string;
+  totalSnapshots: number;
+  restorableCount: number;
+  conflictedCount: number;
+  restorable: RevertRow[];
+  conflicted: RevertRow[];
+}
+
+export interface RevertCommitResult {
+  operationId: string;
+  restoredCount: number;
+  skippedCount: number;
 }
 
 export interface EquipmentQueryParams {

@@ -1,8 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ImportMode } from '@prisma/client';
 
 export class ImportPreviewResultDto {
   @ApiProperty({ description: 'ID batch — dipakai untuk lihat detail baris & commit' })
   batchId!: string;
+
+  @ApiProperty({ enum: ImportMode, description: 'Mode yang dipakai batch ini' })
+  mode!: ImportMode;
 
   @ApiProperty({ example: 'equipment-2026-09.xlsx' })
   filename!: string;
@@ -24,4 +28,13 @@ export class ImportPreviewResultDto {
 
   @ApiProperty({ description: 'true kalau errorRows === 0 (boleh langsung commit)' })
   canCommit!: boolean;
+
+  @ApiProperty({ description: 'Jumlah baris yang akan membuat equipment baru (hanya relevan mode UPDATE_OR_CREATE)' })
+  createRows!: number;
+
+  @ApiProperty({ description: 'Jumlah baris yang akan meng-update equipment existing (hanya mode UPDATE_OR_CREATE)' })
+  updateRows!: number;
+
+  @ApiProperty({ description: 'Jumlah baris yang datanya identik dengan existing — dilewati saat commit' })
+  noChangeRows!: number;
 }

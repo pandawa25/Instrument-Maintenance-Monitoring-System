@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Equipment, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildSafeOrderBy } from '../../common/utils/safe-order-by.util';
 
@@ -192,6 +192,11 @@ export class EquipmentRepository {
     });
   }
 
+  /** Semua equipment aktif dari daftar ID — dipakai Edit Massal (preview & commit). */
+  findManyByIds(ids: string[]) {
+    return this.prisma.equipment.findMany({ where: { id: { in: ids }, deletedAt: null } });
+  }
+
   create(dto: CreateEquipmentDto) {
     const { installationDate, ...rest } = dto;
     return this.prisma.equipment.create({
@@ -233,6 +238,16 @@ export class EquipmentRepository {
       select: { tagNumber: true },
     });
     return new Set(rows.map((r: { tagNumber: string }) => r.tagNumber.toUpperCase()));
+  }
+
+  /**
+   * Sama seperti findAllActiveTagNumbersUpper(), tapi mengembalikan FULL ROW (bukan cuma tag)
+   * keyed by tag_number uppercase — dipakai mode UPDATE_OR_CREATE untuk diff data lama vs baru
+   * per baris (menentukan action UPDATE/NO_CHANGE) tanpa query per baris.
+   */
+  async findAllActiveEquipmentByTagUpper(): Promise<Map<string, Equipment>> {
+    const rows = await this.prisma.equipment.findMany({ where: { deletedAt: null } });
+    return new Map(rows.map((r: Equipment) => [r.tagNumber.toUpperCase(), r]));
   }
 
   /** Sama seperti findAllActiveTagNumbersUpper(), untuk cek duplikat serial_number (WARNING, bukan ERROR). */
