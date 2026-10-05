@@ -8,6 +8,9 @@ import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
 import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
+import { formatDateOnly, todayInOperationalZone } from './stock-date.util';
+
+const CORRECTIVE_MAINTENANCE_REF = 'CORRECTIVE_MAINTENANCE';
 
 @Injectable()
 export class SparePartsService {
@@ -110,6 +113,13 @@ export class SparePartsService {
       throw new BadRequestException('STOCK_OUT (Stock Out) harus bernilai positif — jumlah yang keluar');
     }
 
+    // Tanggal transaksi tidak boleh di masa depan (perbandingan string yyyy-mm-dd aman karena
+    // formatnya leksikografis = kronologis).
+    const movementDate = dto.movementDate?.slice(0, 10);
+    if (movementDate && movementDate > todayInOperationalZone()) {
+      throw new BadRequestException('Tanggal transaksi tidak boleh di masa depan');
+    }
+
     const quantityDelta = dto.type === 'STOCK_OUT' ? -Math.abs(dto.quantityDelta) : dto.quantityDelta;
 
     await this.repository.createManualMovement({
@@ -117,6 +127,7 @@ export class SparePartsService {
       type: dto.type,
       quantityDelta,
       notes: dto.notes,
+      movementDate,
       createdById,
     });
 
@@ -129,11 +140,16 @@ export class SparePartsService {
    */
   async listAllMovements(query: QueryAllStockMovementsDto): Promise<PaginatedResult<unknown>> {
     const { rows, total } = await this.repository.findAllMovements(query);
+    const references = await this.loadMaintenanceReferences(rows);
+
     const data = rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       quantityDelta: Number(row.quantityDelta),
       balanceAfter: Number(row.balanceAfter),
+      movementDate: formatDateOnly(row.movementDate),
+      referenceType: row.referenceType,
+      reference: this.toReference(row, references),
       notes: row.notes,
       sparePart: row.sparePart,
       createdBy: row.createdBy,
@@ -141,6 +157,32 @@ export class SparePartsService {
     }));
 
     return { data, meta: buildPaginationMeta(query.page, query.limit, total) };
+  }
+
+  /** Ambil info CM (No. e-SPK / tag) untuk semua baris ledger di halaman ini dalam 1 query. */
+  private async loadMaintenanceReferences(rows: any[]) {
+    const ids = [
+      ...new Set(
+        rows.filter((r) => r.referenceType === CORRECTIVE_MAINTENANCE_REF && r.referenceId).map((r) => r.referenceId as string),
+      ),
+    ];
+    const found = await this.repository.findMaintenanceRefs(ids);
+    return new Map<string, any>(found.map((cm: any): [string, any] => [cm.id as string, cm]));
+  }
+
+  /**
+   * Referensi sumber baris ledger untuk UI (kolom "Sumber"). Hanya Corrective Maintenance yang
+   * punya referensi saat ini; baris manual/adjustment -> null. Label = No. e-SPK, fallback tag equipment.
+   */
+  private toReference(row: any, references: Map<string, any>) {
+    if (row.referenceType !== CORRECTIVE_MAINTENANCE_REF || !row.referenceId) return null;
+    const cm = references.get(row.referenceId);
+    return {
+      type: CORRECTIVE_MAINTENANCE_REF,
+      id: row.referenceId as string,
+      label: cm ? (cm.spkNumber ?? cm.equipment?.tagNumber ?? 'Corrective Maintenance') : 'Corrective Maintenance',
+      deleted: Boolean(cm?.deletedAt),
+    };
   }
 
   async getDashboardSummary() {
@@ -166,8 +208,10 @@ export class SparePartsService {
     for (const r of rawTrend) {
       const entry = trendMap.get(r.month);
       if (!entry) continue;
-      if (r.type === 'RESTOCK') entry.stockIn = Number(r.total);
-      if (r.type === 'STOCK_OUT') entry.stockOut = Number(r.total);
+      if (r.direction === 'IN') entry.stockIn = Number(r.total);
+      // Netto pengembalian CM bisa membuat total bulan tertentu negatif (return atas pemakaian
+      // bulan sebelumnya) — chart tidak menampilkan batang negatif, jadi di-clamp ke 0.
+      if (r.direction === 'OUT') entry.stockOut = Math.max(0, Number(r.total));
     }
     const monthlyTrend = Array.from(trendMap.values());
 
@@ -187,13 +231,17 @@ export class SparePartsService {
     await this.findOne(sparePartId); // 404 check
 
     const { rows, total } = await this.repository.findMovements(sparePartId, query);
+    const references = await this.loadMaintenanceReferences(rows);
+
     const data = rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       quantityDelta: Number(row.quantityDelta),
       balanceAfter: Number(row.balanceAfter),
+      movementDate: formatDateOnly(row.movementDate),
       referenceType: row.referenceType,
       referenceId: row.referenceId,
+      reference: this.toReference(row, references),
       notes: row.notes,
       createdBy: row.createdBy,
       createdAt: row.createdAt,

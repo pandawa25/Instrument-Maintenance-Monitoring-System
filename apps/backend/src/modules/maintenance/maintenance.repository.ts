@@ -127,18 +127,29 @@ export class MaintenanceRepository {
   }
 
   /**
-   * Kurangi stock tiap spare part yang dipakai lewat SparePartsRepository
-   * .recordMovement() supaya tercatat di ledger (tipe MAINTENANCE_USAGE) dan
-   * tetap atomic dalam `tx` yang sama dengan perubahan Corrective Maintenance.
-   * recordMovement() sendiri yang menolak (BadRequestException) kalau stock
-   * tidak cukup.
+   * ATURAN STOCK (revisi 5 Okt 2026): stock material Corrective Maintenance dipotong HANYA saat
+   * status menjadi COMPLETED — bukan saat CM dibuat/diisi. Selama Open/In Progress/Waiting
+   * Material/Cancelled, material hanya "daftar kebutuhan" tanpa efek ke stock. Karena COMPLETED
+   * terminal (tidak bisa keluar dari status itu), pengembalian stock hanya terjadi kalau:
+   *   - material CM yang SUDAH Completed diedit (restore daftar lama + potong daftar baru), atau
+   *   - CM yang SUDAH Completed dihapus.
+   * Tanggal transaksi movement = tanggal selesai CM.
    *
-   * `quantity` TIDAK LAGI dibulatkan ke integer (sebelumnya `Math.round`) sejak
-   * `SparePart.stock` dimigrasikan dari Int ke Decimal(10,2) — part dengan
-   * satuan non-bulat (meter kabel, liter oli) sekarang tersimpan presisi apa
-   * adanya, bukan dibulatkan diam-diam. Lihat docs/roadmap.md Risk #1.
+   * Kurangi stock tiap spare part lewat SparePartsRepository.recordMovement() supaya tercatat di
+   * ledger (MAINTENANCE_USAGE) dan atomic dalam `tx` yang sama dengan perubahan CM.
+   * recordMovement() menolak (BadRequestException) kalau stock tidak cukup — artinya CM tidak
+   * bisa di-Completed sampai stock mencukupi (seluruh transaksi di-rollback).
+   *
+   * `quantity` TIDAK dibulatkan ke integer sejak `SparePart.stock` Decimal(10,2).
+   * Lihat docs/roadmap.md Risk #1.
    */
-  private async decrementStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
+  private async decrementStock(
+    tx: any,
+    materials: MaterialRow[],
+    maintenanceId: string,
+    actorId: string,
+    movementDate: Date,
+  ) {
     for (const m of materials) {
       const qty = new Decimal(m.quantity);
       if (qty.lessThanOrEqualTo(0)) continue;
@@ -149,13 +160,20 @@ export class MaintenanceRepository {
         quantityDelta: qty.negated(),
         referenceType: 'CORRECTIVE_MAINTENANCE',
         referenceId: maintenanceId,
+        movementDate,
         createdById: actorId,
       });
     }
   }
 
-  /** Kembalikan stock — dipakai saat material lama diganti (update) atau maintenance dihapus. */
-  private async restoreStock(tx: any, materials: MaterialRow[], maintenanceId: string, actorId: string) {
+  /** Kembalikan stock — hanya untuk CM yang sudah Completed (material diedit / CM dihapus). */
+  private async restoreStock(
+    tx: any,
+    materials: MaterialRow[],
+    maintenanceId: string,
+    actorId: string,
+    movementDate: Date,
+  ) {
     for (const m of materials) {
       const qty = new Decimal(m.quantity);
       if (qty.lessThanOrEqualTo(0)) continue;
@@ -166,6 +184,7 @@ export class MaintenanceRepository {
         quantityDelta: qty,
         referenceType: 'CORRECTIVE_MAINTENANCE',
         referenceId: maintenanceId,
+        movementDate,
         createdById: actorId,
       });
     }
@@ -220,8 +239,10 @@ export class MaintenanceRepository {
         },
       });
 
-      if (materials?.length) {
-        await this.decrementStock(tx, materials, created.id, createdById);
+      // Stock hanya terpotong kalau CM langsung dibuat dengan status COMPLETED (mis. input data
+      // historis); selain itu material cuma daftar kebutuhan sampai nanti di-Completed.
+      if (resolvedStatus === 'COMPLETED' && materials?.length) {
+        await this.decrementStock(tx, materials, created.id, createdById, created.completionDate ?? new Date());
       }
 
       return tx.correctiveMaintenance.findFirst({ where: { id: created.id }, include: LIST_INCLUDE });
@@ -238,7 +259,7 @@ export class MaintenanceRepository {
         : undefined;
 
     return this.prisma.$transaction(async (tx: any) => {
-      await tx.correctiveMaintenance.update({
+      const updated = await tx.correctiveMaintenance.update({
         where: { id },
         data: {
           ...rest,
@@ -248,15 +269,22 @@ export class MaintenanceRepository {
           notificationDate: notificationDate ? new Date(notificationDate) : undefined,
           workOrderDate: workOrderDate ? new Date(workOrderDate) : undefined,
         },
+        select: { status: true, completionDate: true },
       });
 
+      const wasCompleted = previousStatus === 'COMPLETED';
+      const isCompleted = updated.status === 'COMPLETED';
+      const movementDate: Date = updated.completionDate ?? new Date();
+
       if (materials) {
-        // Kembalikan dulu stock dari material lama (supaya tidak "double-counted"),
-        // baru replace dengan daftar baru & kurangi stock sesuai daftar baru.
         const oldMaterials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
           where: { correctiveMaintenanceId: id },
         });
-        await this.restoreStock(tx, oldMaterials, id, actorId);
+        // Stock hanya pernah terpotong kalau CM sebelumnya sudah Completed — kembalikan dulu
+        // daftar lama (supaya tidak "double-counted"), baru potong daftar baru di bawah.
+        if (wasCompleted) {
+          await this.restoreStock(tx, oldMaterials, id, actorId, movementDate);
+        }
 
         await tx.correctiveMaintenanceMaterial.deleteMany({ where: { correctiveMaintenanceId: id } });
 
@@ -269,20 +297,18 @@ export class MaintenanceRepository {
               remarks: m.remarks,
             })),
           });
-          await this.decrementStock(tx, materials, id, actorId);
+          // Berlaku untuk CM yang baru jadi Completed DAN CM Completed yang materialnya diganti.
+          if (isCompleted) {
+            await this.decrementStock(tx, materials, id, actorId, movementDate);
+          }
         }
-      }
-
-      // Status berubah jadi CANCELLED (dan belum pernah di-cancel sebelumnya) — kebutuhan
-      // material ikut batal, stock dikembalikan. Hanya jalan kalau `materials` TIDAK ikut
-      // dikirim di request yang sama (kalau ikut dikirim, sudah ditangani oleh blok
-      // restore+replace materials di atas — menghindari double-restore).
-      if (!materials && dto.status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+      } else if (!wasCompleted && isCompleted) {
+        // Baru di-Completed tanpa mengubah daftar material — potong stock sesuai material yang ada.
         const currentMaterials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
           where: { correctiveMaintenanceId: id },
         });
         if (currentMaterials.length) {
-          await this.restoreStock(tx, currentMaterials, id, actorId);
+          await this.decrementStock(tx, currentMaterials, id, actorId, movementDate);
         }
       }
 
@@ -415,11 +441,19 @@ export class MaintenanceRepository {
 
   softDelete(id: string, actorId: string) {
     return this.prisma.$transaction(async (tx: any) => {
-      // Maintenance dibatalkan/dihapus — kebutuhan material ikut batal, jadi stock dikembalikan.
-      const materials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
-        where: { correctiveMaintenanceId: id },
+      // Stock hanya pernah terpotong untuk CM yang sudah Completed — hanya itu yang perlu
+      // dikembalikan saat dihapus. CM berstatus lain tidak pernah menyentuh stock.
+      const current = await tx.correctiveMaintenance.findUnique({
+        where: { id },
+        select: { status: true, completionDate: true },
       });
-      await this.restoreStock(tx, materials, id, actorId);
+
+      if (current?.status === 'COMPLETED') {
+        const materials: MaterialRow[] = await tx.correctiveMaintenanceMaterial.findMany({
+          where: { correctiveMaintenanceId: id },
+        });
+        await this.restoreStock(tx, materials, id, actorId, current.completionDate ?? new Date());
+      }
 
       return tx.correctiveMaintenance.update({ where: { id }, data: { deletedAt: new Date() } });
     });

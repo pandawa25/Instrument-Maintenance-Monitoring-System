@@ -61,6 +61,21 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
   const isEdit = Boolean(maintenance);
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  // Peringatan dini (bukan validasi): stock baru dipotong saat Completed, jadi kekurangan stock
+  // baru benar-benar menolak saat itu. CM yang sudah Completed dilewati — stock-nya sudah terpotong.
+  const stockShortages: string[] = [];
+  if (form.needsSparePart && maintenance?.status !== 'COMPLETED') {
+    const needed = new Map<string, number>();
+    for (const m of form.materials) {
+      if (!m.sparePartId) continue;
+      needed.set(m.sparePartId, (needed.get(m.sparePartId) ?? 0) + Number(m.quantity || 0));
+    }
+    for (const [sparePartId, qty] of needed) {
+      const sp = sparePartOptions?.find((o) => o.id === sparePartId);
+      if (sp && qty > sp.stock) stockShortages.push(`${sp.kimap} (butuh ${qty}, stock ${sp.stock})`);
+    }
+  }
+
   useEffect(() => {
     setForm(
       maintenance
@@ -357,9 +372,9 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
             ),
           )}
         </Select>
-        {isEdit && form.status === 'CANCELLED' && maintenance?.needsSparePart && (
+        {form.status === 'COMPLETED' && form.needsSparePart && form.materials.length > 0 && (
           <p className="mt-1 text-xs text-warning">
-            Mengubah status ke Cancelled akan mengembalikan stock material yang sudah dipakai.
+            Saat disimpan sebagai Completed, stock material akan dipotong dengan tanggal transaksi = Completion Date.
           </p>
         )}
       </div>
@@ -396,6 +411,16 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
 
         {form.needsSparePart && (
           <div className="mt-3 space-y-2">
+            <p className="text-xs text-text-muted">
+              Material di sini adalah daftar kebutuhan. Stock baru dipotong saat status menjadi Completed (tanggal transaksi =
+              Completion Date) dan ditolak jika stock tidak mencukupi.
+            </p>
+            {stockShortages.length > 0 && (
+              <p className="text-xs text-warning">
+                Stock saat ini belum mencukupi untuk: {stockShortages.join(', ')}. CM ini belum bisa di-Completed sampai stock
+                ditambah.
+              </p>
+            )}
             {form.materials.map((material, index) => (
               <div key={index} className="flex items-start gap-2">
                 <div className="flex-1">

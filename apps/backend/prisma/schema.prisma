@@ -108,8 +108,8 @@ enum SparePartStatus {
 }
 
 enum StockMovementType {
-  MAINTENANCE_USAGE // otomatis: dipakai di Corrective Maintenance (quantityDelta negatif)
-  MAINTENANCE_RETURN // otomatis: dikembalikan krn Corrective Maintenance diedit/dihapus (quantityDelta positif)
+  MAINTENANCE_USAGE // otomatis: dipakai di Corrective Maintenance saat status menjadi COMPLETED (quantityDelta negatif)
+  MAINTENANCE_RETURN // otomatis: dikembalikan krn material CM yang sudah Completed diedit / CM Completed dihapus (quantityDelta positif)
   RESTOCK // manual: Admin tambah stock baru / "Stock In" (quantityDelta positif)
   STOCK_OUT // manual: Admin keluarkan stock di luar Corrective Maintenance — mis. dipakai langsung di lapangan tanpa tiket CM, rusak/scrap, dipindah ke project lain (quantityDelta negatif)
   ADJUSTMENT // manual: koreksi hasil stock opname (quantityDelta boleh +/-)
@@ -548,6 +548,11 @@ model SparePartStockMovement {
   referenceType String?           @map("reference_type") @db.VarChar(50)
   referenceId   String?           @map("reference_id") @db.Uuid
   notes         String?           @db.VarChar(255)
+  // Tanggal TRANSAKSI (kapan barang benar-benar masuk/keluar) — beda dengan createdAt
+  // (kapan baris ini diinput ke sistem). Dipakai untuk filter tanggal & tren bulanan.
+  // Tanpa default DB: selalu diisi aplikasi lewat SparePartsRepository.recordMovement
+  // (default hari ini; untuk pemakaian Corrective Maintenance = tanggal selesai CM).
+  movementDate  DateTime          @map("movement_date") @db.Date
   createdById   String            @map("created_by_id") @db.Uuid
   createdAt     DateTime          @default(now()) @map("created_at")
 
@@ -556,6 +561,7 @@ model SparePartStockMovement {
 
   @@index([sparePartId])
   @@index([referenceType, referenceId])
+  @@index([movementDate])
   @@map("spare_part_stock_movements")
 }
 

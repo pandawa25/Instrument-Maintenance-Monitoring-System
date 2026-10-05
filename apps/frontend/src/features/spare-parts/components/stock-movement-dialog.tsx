@@ -12,8 +12,14 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { useCreateStockMovement, useStockMovements } from '../hooks/use-spare-parts';
 import type { CreateStockMovementPayload, ManualStockMovementType, SparePart } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
+import { formatMovementDate, todayDateInput } from '../utils/date';
 
-const EMPTY_FORM: CreateStockMovementPayload = { type: 'RESTOCK', quantityDelta: 0, notes: '' };
+const emptyForm = (): CreateStockMovementPayload => ({
+  type: 'RESTOCK',
+  quantityDelta: 0,
+  movementDate: todayDateInput(),
+  notes: '',
+});
 
 interface Props {
   open: boolean;
@@ -27,7 +33,7 @@ interface Props {
 // stock (ledger) — dibuka dari tombol "Stock In / Adjustment" pada list/detail.
 export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, onSparePartUpdated }: Props) {
   const [page, setPage] = useState(1);
-  const [form, setForm] = useState<CreateStockMovementPayload>(EMPTY_FORM);
+  const [form, setForm] = useState<CreateStockMovementPayload>(emptyForm);
 
   const { data, isLoading } = useStockMovements(sparePart?.id, { page, limit: 10 });
   const createMutation = useCreateStockMovement();
@@ -51,13 +57,18 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
       return;
     }
 
+    if (!form.movementDate || form.movementDate > todayDateInput()) {
+      toast.error('Tanggal transaksi wajib diisi dan tidak boleh di masa depan');
+      return;
+    }
+
     try {
       const updated = await createMutation.mutateAsync({
         sparePartId: sparePart!.id,
         payload: { ...form, quantityDelta: qty },
       });
       onSparePartUpdated?.(updated);
-      setForm(EMPTY_FORM);
+      setForm(emptyForm());
       setPage(1);
       toast.success('Pergerakan stock berhasil dicatat');
     } catch (err: any) {
@@ -82,7 +93,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
         {canEdit && (
           <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-border p-4">
             <p className="text-sm font-medium text-text">Stock In / Stock Out / Adjustment Manual</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
                 <Label htmlFor="movement-type">Tipe</Label>
                 <Select
@@ -106,6 +117,17 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                   value={form.quantityDelta || ''}
                   onChange={(e) => setForm({ ...form, quantityDelta: Number(e.target.value) })}
                   placeholder={form.type === 'ADJUSTMENT' ? '-2 atau 5' : '10'}
+                />
+              </div>
+              <div>
+                <Label htmlFor="movement-date">Tanggal Transaksi</Label>
+                <Input
+                  id="movement-date"
+                  type="date"
+                  max={todayDateInput()}
+                  value={form.movementDate}
+                  onChange={(e) => setForm({ ...form, movementDate: e.target.value })}
+                  required
                 />
               </div>
               <div>
@@ -139,7 +161,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-                    <th className="px-4 py-2 font-medium">Tanggal</th>
+                    <th className="px-4 py-2 font-medium">Tgl Transaksi</th>
                     <th className="px-4 py-2 font-medium">Tipe</th>
                     <th className="px-4 py-2 font-medium text-center">Delta</th>
                     <th className="px-4 py-2 font-medium text-center">Saldo</th>
@@ -150,7 +172,9 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                 <tbody>
                   {data.data.map((m) => (
                     <tr key={m.id} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2 text-text-muted">{new Date(m.createdAt).toLocaleString('id-ID')}</td>
+                      <td className="px-4 py-2 text-text-muted" title={`Dicatat ${new Date(m.createdAt).toLocaleString('id-ID')}`}>
+                        {formatMovementDate(m.movementDate)}
+                      </td>
                       <td className="px-4 py-2">
                         <StatusBadge value={m.type} />
                       </td>
@@ -159,7 +183,9 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                       </td>
                       <td className="px-4 py-2 text-center text-text">{m.balanceAfter}</td>
                       <td className="px-4 py-2 text-text-muted">{m.createdBy?.fullName ?? '—'}</td>
-                      <td className="px-4 py-2 text-text-muted">{m.notes ?? '—'}</td>
+                      <td className="px-4 py-2 text-text-muted">
+                        {m.reference ? `CM ${m.reference.label}${m.reference.deleted ? ' (dihapus)' : ''}` : (m.notes ?? '—')}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

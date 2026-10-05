@@ -38,13 +38,26 @@ export interface SparePartQueryParams {
 export type StockMovementType = 'MAINTENANCE_USAGE' | 'MAINTENANCE_RETURN' | 'RESTOCK' | 'STOCK_OUT' | 'ADJUSTMENT';
 export type ManualStockMovementType = 'RESTOCK' | 'STOCK_OUT' | 'ADJUSTMENT';
 
+// Sumber baris ledger yang berasal dari Corrective Maintenance (null untuk input manual).
+export interface StockMovementReference {
+  type: 'CORRECTIVE_MAINTENANCE';
+  id: string;
+  /** No. e-SPK CM (fallback tag equipment). */
+  label: string;
+  /** CM-nya sudah dihapus — link ke detail tidak lagi valid. */
+  deleted: boolean;
+}
+
 export interface StockMovement {
   id: string;
   type: StockMovementType;
   quantityDelta: number;
   balanceAfter: number;
+  /** Tanggal transaksi (yyyy-mm-dd) — beda dengan createdAt (waktu input ke sistem). */
+  movementDate: string;
   referenceType: string | null;
   referenceId: string | null;
+  reference: StockMovementReference | null;
   notes: string | null;
   createdBy: { id: string; fullName: string };
   createdAt: string;
@@ -58,6 +71,8 @@ export interface StockMovementQueryParams {
 export interface CreateStockMovementPayload {
   type: ManualStockMovementType;
   quantityDelta: number;
+  /** yyyy-mm-dd; kosong = hari ini. Tidak boleh di masa depan. */
+  movementDate?: string;
   notes?: string;
 }
 
@@ -77,16 +92,22 @@ export interface AllStockMovementItem {
   type: StockMovementType;
   quantityDelta: number;
   balanceAfter: number;
+  movementDate: string;
+  reference: StockMovementReference | null;
   notes: string | null;
   sparePart: SparePartRef;
   createdBy: { id: string; fullName: string };
   createdAt: string;
 }
 
+// Khusus halaman Stock Out: ALL (default) | MANUAL (input manual) | MAINTENANCE (pemakaian Corrective Maintenance).
+export type StockOutSource = 'ALL' | 'MANUAL' | 'MAINTENANCE';
+
 export interface AllStockMovementsQueryParams {
   page: number;
   limit: number;
   search?: string;
+  source?: StockOutSource;
   dateFrom?: string;
   dateTo?: string;
 }
@@ -96,6 +117,7 @@ export interface AllStockMovementsQueryParams {
 export interface CreateStandaloneMovementPayload {
   sparePartId: string;
   quantityDelta: number;
+  movementDate?: string;
   notes?: string;
 }
 

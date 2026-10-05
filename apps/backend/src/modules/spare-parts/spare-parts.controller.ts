@@ -19,7 +19,7 @@ import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QuerySparePartDto } from './dto/query-spare-part.dto';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
-import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
+import { QueryAllStockMovementsDto, resolveStockOutTypes } from './dto/query-all-stock-movements.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -63,9 +63,14 @@ export class SparePartsController {
 
   @Get('stock-out')
   @RequirePermission(PermissionModule.SPARE_PART, 'view')
-  @ApiOperation({ summary: 'Ledger lintas spare part khusus Stock Out — pagination, search, date range' })
+  @ApiOperation({
+    summary:
+      'Ledger pengeluaran stock — Stock Out manual + pemakaian Corrective Maintenance (filter source), pagination, search, date range',
+  })
   listStockOut(@Query() query: QueryAllStockMovementsDto) {
-    query.type = 'STOCK_OUT';
+    // Bukan dari query user: tipe yang tampil ditentukan oleh `source` (lihat resolveStockOutTypes).
+    query.type = undefined;
+    query.types = resolveStockOutTypes(query.source);
     return this.sparePartsService.listAllMovements(query);
   }
 

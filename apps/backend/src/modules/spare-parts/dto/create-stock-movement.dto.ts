@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsNumber, IsOptional, IsString, MaxLength, NotEquals } from 'class-validator';
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, MaxLength, NotEquals } from 'class-validator';
 
 // Hanya 3 tipe yang boleh diinput manual dari API — MAINTENANCE_USAGE/MAINTENANCE_RETURN
 // selalu otomatis dari MaintenanceService, tidak pernah dari endpoint ini.
@@ -19,6 +19,16 @@ export class CreateStockMovementDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @NotEquals(0)
   quantityDelta!: number;
+
+  @ApiProperty({
+    required: false,
+    example: '2026-10-05',
+    description:
+      'Tanggal transaksi (kapan barang benar-benar masuk/keluar), yyyy-mm-dd. Kosong = hari ini. Tidak boleh di masa depan.',
+  })
+  @IsOptional()
+  @IsDateString()
+  movementDate?: string;
 
   @ApiProperty({ required: false, maxLength: 255, example: 'Restock dari PO-2026-001' })
   @IsOptional()

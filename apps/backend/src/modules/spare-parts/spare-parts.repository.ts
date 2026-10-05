@@ -8,9 +8,22 @@ import { CreateSparePartDto } from './dto/create-spare-part.dto';
 import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
 import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
+import { todayInOperationalZone, toDateOnly } from './stock-date.util';
 
 const SPARE_PART_SORTABLE_FIELDS = ['kimap', 'name', 'stock', 'status', 'createdAt', 'updatedAt'] as const;
-const STOCK_MOVEMENT_SORTABLE_FIELDS = ['type', 'quantityDelta', 'balanceAfter', 'createdAt'] as const;
+const STOCK_MOVEMENT_SORTABLE_FIELDS = ['type', 'quantityDelta', 'balanceAfter', 'movementDate', 'createdAt'] as const;
+
+/**
+ * Urutan ledger: default (sortBy 'createdAt' dari PaginationQueryDto, atau 'movementDate')
+ * mengurutkan menurut TANGGAL TRANSAKSI lalu waktu input sebagai pemisah; kolom lain
+ * mengikuti whitelist seperti biasa.
+ */
+function buildMovementOrderBy(sortBy: string, sortOrder: 'asc' | 'desc') {
+  if (sortBy === 'createdAt' || sortBy === 'movementDate') {
+    return [{ movementDate: sortOrder }, { createdAt: sortOrder }];
+  }
+  return buildSafeOrderBy(sortBy, sortOrder, STOCK_MOVEMENT_SORTABLE_FIELDS, 'createdAt');
+}
 
 interface RecordMovementParams {
   sparePartId: string;
@@ -22,6 +35,8 @@ interface RecordMovementParams {
   referenceType?: string;
   referenceId?: string;
   notes?: string;
+  // Tanggal transaksi (yyyy-mm-dd atau Date). Kosong = hari ini (zona waktu operasional).
+  movementDate?: string | Date;
   createdById: string;
 }
 
@@ -163,6 +178,7 @@ export class SparePartsRepository {
         referenceType: params.referenceType,
         referenceId: params.referenceId,
         notes: params.notes,
+        movementDate: toDateOnly(params.movementDate ?? todayInOperationalZone()),
         createdById: params.createdById,
       },
     });
@@ -182,7 +198,7 @@ export class SparePartsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, STOCK_MOVEMENT_SORTABLE_FIELDS, 'createdAt'),
+        orderBy: buildMovementOrderBy(query.sortBy, query.sortOrder),
         include: { createdBy: { select: { id: true, fullName: true } } },
       }),
       this.prisma.sparePartStockMovement.count({ where }),
@@ -199,14 +215,18 @@ export class SparePartsRepository {
   async findAllMovements(query: QueryAllStockMovementsDto) {
     const where: Prisma.SparePartStockMovementWhereInput = {};
 
-    if (query.type) {
+    if (query.types?.length) {
+      where.type = { in: query.types };
+    } else if (query.type) {
       where.type = query.type;
     }
 
+    // Filter menurut TANGGAL TRANSAKSI (kolom DATE) — bukan waktu input, supaya entri
+    // yang dicatat belakangan tetap masuk ke periode transaksi yang benar.
     if (query.dateFrom || query.dateTo) {
-      where.createdAt = {
-        ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
-        ...(query.dateTo ? { lte: new Date(`${query.dateTo}T23:59:59.999Z`) } : {}),
+      where.movementDate = {
+        ...(query.dateFrom ? { gte: toDateOnly(query.dateFrom) } : {}),
+        ...(query.dateTo ? { lte: toDateOnly(query.dateTo) } : {}),
       };
     }
 
@@ -224,7 +244,7 @@ export class SparePartsRepository {
         where,
         skip: query.skip,
         take: query.limit,
-        orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, STOCK_MOVEMENT_SORTABLE_FIELDS, 'createdAt'),
+        orderBy: buildMovementOrderBy(query.sortBy, query.sortOrder),
         include: {
           createdBy: { select: { id: true, fullName: true } },
           sparePart: { select: { id: true, kimap: true, name: true, unit: true } },
@@ -263,20 +283,37 @@ export class SparePartsRepository {
     };
   }
 
-  /** Tren Stock In (RESTOCK) vs Stock Out (STOCK_OUT) per bulan, N bulan terakhir. */
+  /**
+   * Tren Stock In vs Stock Out per bulan (menurut TANGGAL TRANSAKSI), N bulan terakhir.
+   * Stock Out = pengeluaran manual + pemakaian Corrective Maintenance, NETTO dari pengembalian
+   * (MAINTENANCE_RETURN) — dihitung sebagai -SUM(quantity_delta) sehingga return mengurangi total.
+   */
   async getMonthlyStockInOut(months: number) {
-    // `::numeric` (bukan `::bigint`) — quantity_delta sekarang Decimal(10,2),
-    // cast ke bigint akan MEMOTONG pecahan (1.5 -> 1) alih-alih membulatkan.
-    return this.prisma.$queryRaw<{ month: string; type: string; total: Decimal }[]>`
-      SELECT TO_CHAR(DATE_TRUNC('month', "created_at"), 'YYYY-MM') AS month,
-             "type"::text AS type,
-             SUM(ABS("quantity_delta"))::numeric AS total
+    // `::numeric` (bukan `::bigint`) — quantity_delta Decimal(10,2), cast ke bigint memotong pecahan.
+    return this.prisma.$queryRaw<{ month: string; direction: string; total: Decimal }[]>`
+      SELECT TO_CHAR(DATE_TRUNC('month', "movement_date"), 'YYYY-MM') AS month,
+             CASE WHEN "type" = 'RESTOCK' THEN 'IN' ELSE 'OUT' END AS direction,
+             SUM(CASE WHEN "type" = 'RESTOCK' THEN "quantity_delta" ELSE -"quantity_delta" END)::numeric AS total
       FROM "spare_part_stock_movements"
-      WHERE "type" IN ('RESTOCK', 'STOCK_OUT')
-        AND "created_at" >= DATE_TRUNC('month', NOW()) - (${months - 1} || ' months')::interval
+      WHERE "type" IN ('RESTOCK', 'STOCK_OUT', 'MAINTENANCE_USAGE', 'MAINTENANCE_RETURN')
+        AND "movement_date" >= DATE_TRUNC('month', (NOW() AT TIME ZONE 'Asia/Jakarta')::date) - (${months - 1} || ' months')::interval
       GROUP BY 1, 2
       ORDER BY 1 ASC
     `;
+  }
+
+  /**
+   * Info Corrective Maintenance untuk baris ledger yang berasal dari CM (referenceType
+   * CORRECTIVE_MAINTENANCE) — dipakai kolom "Sumber" di halaman Stock Out. Tidak ada FK ke
+   * tabel CM, jadi diambil sekali per halaman. CM yang sudah dihapus tetap dikembalikan
+   * (deletedAt terisi) supaya histori tidak kehilangan referensinya.
+   */
+  findMaintenanceRefs(ids: string[]) {
+    if (!ids.length) return Promise.resolve([]);
+    return this.prisma.correctiveMaintenance.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, spkNumber: true, deletedAt: true, equipment: { select: { tagNumber: true } } },
+    });
   }
 
   /** Daftar spare part yang sudah menyentuh/melewati ambang low-stock (termasuk habis). */

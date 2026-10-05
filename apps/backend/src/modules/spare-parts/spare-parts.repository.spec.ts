@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Decimal } from 'decimal.js';
 import { SparePartsRepository } from './spare-parts.repository';
+import { todayInOperationalZone } from './stock-date.util';
 
 // recordMovement() menerima `tx` generik (bisa PrismaService atau transaction
 // client) — untuk unit test cukup mock 3 method Prisma yang benar-benar dipakai,
@@ -98,5 +99,81 @@ describe('SparePartsRepository.recordMovement', () => {
     await expect(
       repository.recordMovement(tx, { ...baseParams, type: 'ADJUSTMENT', quantityDelta: 1 }),
     ).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('SparePartsRepository — tanggal transaksi (movementDate)', () => {
+  const repository = new SparePartsRepository({} as any);
+
+  it('movementDate eksplisit disimpan sebagai tanggal (date-only, UTC midnight)', async () => {
+    const tx = buildTx({ id: 'sp-1', kimap: 'K-1', stock: 10 });
+
+    await repository.recordMovement(tx, {
+      sparePartId: 'sp-1',
+      createdById: 'u-1',
+      type: 'RESTOCK',
+      quantityDelta: 5,
+      movementDate: '2026-09-28',
+    });
+
+    const data = tx.sparePartStockMovement.create.mock.calls[0][0].data;
+    expect(data.movementDate.toISOString()).toBe('2026-09-28T00:00:00.000Z');
+  });
+
+  it('tanpa movementDate: default hari ini (zona waktu operasional)', async () => {
+    const tx = buildTx({ id: 'sp-1', kimap: 'K-1', stock: 10 });
+
+    await repository.recordMovement(tx, { sparePartId: 'sp-1', createdById: 'u-1', type: 'RESTOCK', quantityDelta: 1 });
+
+    const data = tx.sparePartStockMovement.create.mock.calls[0][0].data;
+    expect(data.movementDate).toBeInstanceOf(Date);
+    expect(data.movementDate.toISOString().slice(0, 10)).toBe(todayInOperationalZone());
+  });
+});
+
+describe('SparePartsRepository.findAllMovements', () => {
+  function buildList() {
+    const prisma = {
+      $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+      sparePartStockMovement: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+    };
+    return { repository: new SparePartsRepository(prisma as any), prisma };
+  }
+
+  const baseQuery = { skip: 0, limit: 20, page: 1, sortBy: 'createdAt', sortOrder: 'desc' } as any;
+
+  it('types (Stock Out gabungan) menghasilkan filter type IN, mengalahkan type tunggal', async () => {
+    const { repository, prisma } = buildList();
+
+    await repository.findAllMovements({ ...baseQuery, types: ['STOCK_OUT', 'MAINTENANCE_USAGE'] });
+
+    expect(prisma.sparePartStockMovement.findMany.mock.calls[0][0].where.type).toEqual({
+      in: ['STOCK_OUT', 'MAINTENANCE_USAGE'],
+    });
+  });
+
+  it('filter tanggal memakai movementDate (bukan createdAt), inklusif di kedua ujung', async () => {
+    const { repository, prisma } = buildList();
+
+    await repository.findAllMovements({ ...baseQuery, type: 'RESTOCK', dateFrom: '2026-09-01', dateTo: '2026-09-30' });
+
+    const where = prisma.sparePartStockMovement.findMany.mock.calls[0][0].where;
+    expect(where).not.toHaveProperty('createdAt');
+    expect(where.movementDate.gte.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+    expect(where.movementDate.lte.toISOString()).toBe('2026-09-30T00:00:00.000Z');
+  });
+
+  it('urutan default: tanggal transaksi dulu, lalu waktu input', async () => {
+    const { repository, prisma } = buildList();
+
+    await repository.findAllMovements({ ...baseQuery, type: 'RESTOCK' });
+
+    expect(prisma.sparePartStockMovement.findMany.mock.calls[0][0].orderBy).toEqual([
+      { movementDate: 'desc' },
+      { createdAt: 'desc' },
+    ]);
   });
 });

@@ -1,7 +1,10 @@
+import { Link } from 'react-router-dom';
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
+import { StatusBadge } from '@/components/shared/status-badge';
 import type { AllStockMovementItem } from '../types/spare-part.types';
+import { formatMovementDate } from '../utils/date';
 
 interface Props {
   items: AllStockMovementItem[];
@@ -9,9 +12,13 @@ interface Props {
   type: 'RESTOCK' | 'STOCK_OUT';
 }
 
-/** Tabel ledger lintas-part — dipakai halaman Stock In (type RESTOCK) & Stock Out. */
+/**
+ * Tabel ledger lintas-part — dipakai halaman Stock In (type RESTOCK) & Stock Out.
+ * Stock Out juga memuat pemakaian otomatis dari Corrective Maintenance, jadi punya kolom "Sumber".
+ */
 export function StockMovementListTable({ items, isLoading, type }: Props) {
   const emptyIcon = type === 'RESTOCK' ? ArrowDownToLine : ArrowUpFromLine;
+  const showSource = type === 'STOCK_OUT';
 
   if (isLoading) {
     return <LoadingState />;
@@ -30,9 +37,10 @@ export function StockMovementListTable({ items, isLoading, type }: Props) {
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-          <th className="px-4 py-2.5 font-medium">Tanggal</th>
+          <th className="px-4 py-2.5 font-medium">Tgl Transaksi</th>
           <th className="px-4 py-2.5 font-medium">KIMAP</th>
           <th className="px-4 py-2.5 font-medium">Nama Material</th>
+          {showSource && <th className="px-4 py-2.5 font-medium">Sumber</th>}
           <th className="px-4 py-2.5 font-medium text-center">Jumlah</th>
           <th className="px-4 py-2.5 font-medium text-center">Saldo Sesudah</th>
           <th className="px-4 py-2.5 font-medium">Dibuat Oleh</th>
@@ -42,9 +50,34 @@ export function StockMovementListTable({ items, isLoading, type }: Props) {
       <tbody>
         {items.map((m) => (
           <tr key={m.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-            <td className="px-4 py-2.5 text-text-muted">{new Date(m.createdAt).toLocaleString('id-ID')}</td>
+            <td className="px-4 py-2.5 text-text">
+              {formatMovementDate(m.movementDate)}
+              <span className="block text-xs text-text-muted">
+                Dicatat {new Date(m.createdAt).toLocaleString('id-ID')}
+              </span>
+            </td>
             <td className="px-4 py-2.5 font-mono text-xs text-text">{m.sparePart.kimap}</td>
             <td className="px-4 py-2.5 text-text">{m.sparePart.name}</td>
+            {showSource && (
+              <td className="px-4 py-2.5">
+                {m.reference ? (
+                  <div className="space-y-1">
+                    <StatusBadge value={m.type} />
+                    <div className="text-xs">
+                      {m.reference.deleted ? (
+                        <span className="text-text-muted">CM {m.reference.label} (dihapus)</span>
+                      ) : (
+                        <Link to={`/maintenance/${m.reference.id}`} className="text-primary hover:underline">
+                          CM {m.reference.label}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-text-muted">Manual</span>
+                )}
+              </td>
+            )}
             <td className={`px-4 py-2.5 text-center font-medium ${m.quantityDelta > 0 ? 'text-success' : 'text-danger'}`}>
               {m.quantityDelta > 0 ? `+${m.quantityDelta}` : m.quantityDelta} {m.sparePart.unit}
             </td>

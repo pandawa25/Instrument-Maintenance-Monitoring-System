@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateStandaloneMovement, useSparePartsLookup } from '../hooks/use-spare-parts';
 import { getErrorMessage } from '@/lib/axios';
+import { todayDateInput } from '../utils/date';
 
 interface Props {
   open: boolean;
@@ -29,6 +30,7 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
   const [sparePartId, setSparePartId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [notes, setNotes] = useState('');
+  const [movementDate, setMovementDate] = useState(todayDateInput());
 
   const { data: spareParts } = useSparePartsLookup();
   const createMutation = useCreateStandaloneMovement(type);
@@ -40,6 +42,7 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
       setSparePartId('');
       setQuantity('');
       setNotes('');
+      setMovementDate(todayDateInput());
     }
   }, [open]);
 
@@ -55,13 +58,17 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
       toast.error('Jumlah harus lebih dari 0');
       return;
     }
+    if (!movementDate || movementDate > todayDateInput()) {
+      toast.error('Tanggal transaksi wajib diisi dan tidak boleh di masa depan');
+      return;
+    }
     if (type === 'STOCK_OUT' && selected && qty > selected.stock) {
       toast.error(`Stock tidak cukup — tersedia ${selected.stock} ${selected.unit}`);
       return;
     }
 
     try {
-      await createMutation.mutateAsync({ sparePartId, quantityDelta: qty, notes: notes || undefined });
+      await createMutation.mutateAsync({ sparePartId, quantityDelta: qty, movementDate, notes: notes || undefined });
       toast.success(`${type === 'RESTOCK' ? 'Stock In' : 'Stock Out'} berhasil dicatat`);
       onOpenChange(false);
     } catch (err: any) {
@@ -94,6 +101,21 @@ export function StockMovementFormDialog({ open, onOpenChange, type }: Props) {
                 Stock saat ini: {selected.stock} {selected.unit}
               </p>
             )}
+          </div>
+
+          <div>
+            <Label htmlFor="movementDate">Tanggal Transaksi</Label>
+            <Input
+              id="movementDate"
+              type="date"
+              max={todayDateInput()}
+              value={movementDate}
+              onChange={(e) => setMovementDate(e.target.value)}
+              required
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Tanggal barang benar-benar {type === 'RESTOCK' ? 'masuk' : 'keluar'} — boleh tanggal lampau jika baru dicatat sekarang.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
