@@ -55,25 +55,21 @@ export class PmPeriodsRepository {
   }
 
   async getNextPeriodNumber(pmProgramId: string): Promise<number> {
-    // SENGAJA tanpa filter deletedAt: unique constraint (pmProgramId, periodNumber) berlaku
-    // juga untuk baris soft-deleted. Kalau hanya menghitung periode aktif, menghapus periode
-    // terakhir lalu menambah periode baru akan memakai ulang nomor yang sama dan gagal di DB.
+    // Hanya periode aktif: uniqueness nomor periode bersifat partial (WHERE deleted_at IS NULL),
+    // jadi nomor milik periode yang sudah dihapus boleh dipakai ulang.
     const last = await this.prisma.pmPeriod.findFirst({
-      where: { pmProgramId },
+      where: { pmProgramId, deletedAt: null },
       orderBy: { periodNumber: 'desc' },
       select: { periodNumber: true },
     });
     return (last?.periodNumber ?? 0) + 1;
   }
 
-  /**
-   * Cari periode dengan nomor tertentu di 1 program — TERMASUK yang soft-deleted, karena
-   * unique constraint (pmProgramId, periodNumber) tetap berlaku untuk baris terhapus.
-   */
+  /** Cari periode AKTIF dengan nomor tertentu di 1 program (nomor periode terhapus dianggap bebas). */
   findByNumber(pmProgramId: string, periodNumber: number) {
     return this.prisma.pmPeriod.findFirst({
-      where: { pmProgramId, periodNumber },
-      select: { id: true, deletedAt: true },
+      where: { pmProgramId, periodNumber, deletedAt: null },
+      select: { id: true },
     });
   }
 

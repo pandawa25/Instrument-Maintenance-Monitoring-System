@@ -53,21 +53,12 @@ describe('PmPeriodsService.createPeriod', () => {
 
   it('menolak nomor yang sudah dipakai periode aktif (409)', async () => {
     const { service, repository } = build();
-    repository.findByNumber.mockResolvedValue({ id: 'other', deletedAt: null });
+    repository.findByNumber.mockResolvedValue({ id: 'other' });
 
     await expect(service.createPeriod(PROGRAM_ID, { periodNumber: 3, plannedDate: '2026-11-01' })).rejects.toThrow(
       /sudah dipakai periode lain/,
     );
     expect(repository.createWithExecutions).not.toHaveBeenCalled();
-  });
-
-  it('menolak nomor yang dipegang periode soft-deleted dengan pesan yang menjelaskan', async () => {
-    const { service, repository } = build();
-    repository.findByNumber.mockResolvedValue({ id: 'gone', deletedAt: new Date() });
-
-    await expect(service.createPeriod(PROGRAM_ID, { periodNumber: 3, plannedDate: '2026-11-01' })).rejects.toThrow(
-      /sudah dihapus/,
-    );
   });
 });
 
@@ -83,7 +74,7 @@ describe('PmPeriodsService.update', () => {
 
   it('menolak nomor yang sudah dipakai periode lain (tidak ada swap diam-diam)', async () => {
     const { service, repository } = build();
-    repository.findByNumber.mockResolvedValue({ id: 'other', deletedAt: null });
+    repository.findByNumber.mockResolvedValue({ id: 'other' });
 
     await expect(service.update('period-1', { periodNumber: 3 })).rejects.toBeInstanceOf(ConflictException);
     expect(repository.update).not.toHaveBeenCalled();

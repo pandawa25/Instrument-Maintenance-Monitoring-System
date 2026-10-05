@@ -386,7 +386,11 @@ model PmPeriod {
   pmProgram  PmProgram           @relation(fields: [pmProgramId], references: [id], onDelete: Cascade)
   executions PmPeriodExecution[]
 
-  @@unique([pmProgramId, periodNumber])
+  // Uniqueness (pmProgramId, periodNumber) HANYA untuk periode aktif — partial unique index
+  // "pm_periods_active_number_key" (WHERE deleted_at IS NULL) ada di migration SQL
+  // 20261005090000_pm_period_number_partial_unique karena Prisma tidak punya syntax partial index.
+  // Jangan terima usulan `migrate dev` yang men-drop index itu (pakai --create-only + review manual).
+  @@index([pmProgramId, periodNumber])
   @@index([plannedDate])
   @@map("pm_periods")
 }

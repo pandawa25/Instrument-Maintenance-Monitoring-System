@@ -134,11 +134,7 @@ export class PmPeriodsService {
     const holder = await this.repository.findByNumber(pmProgramId, periodNumber);
     if (!holder || holder.id === excludeId) return;
 
-    throw new ConflictException(
-      holder.deletedAt
-        ? `Nomor periode ${periodNumber} pernah dipakai periode yang sudah dihapus dan tidak bisa dipakai ulang — pilih nomor lain`
-        : `Nomor periode ${periodNumber} sudah dipakai periode lain pada program ini`,
-    );
+    throw new ConflictException(`Nomor periode ${periodNumber} sudah dipakai periode lain pada program ini`);
   }
 
   async remove(id: string) {

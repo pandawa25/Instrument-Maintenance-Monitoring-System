@@ -72,22 +72,35 @@ describe('PmPeriodsRepository.createWithExecutions', () => {
 });
 
 describe('PmPeriodsRepository.getNextPeriodNumber', () => {
-  it('menghitung periode soft-deleted juga, supaya nomor tidak dipakai ulang dan bentrok dengan unique constraint', async () => {
+  it('hanya menghitung periode aktif, sehingga nomor periode yang sudah dihapus bisa dipakai ulang', async () => {
     const { repository, prisma } = buildRepository();
     prisma.pmPeriod.findFirst.mockResolvedValue({ periodNumber: 4 });
 
     const next = await repository.getNextPeriodNumber('program-1');
 
     expect(next).toBe(5);
-    const where = prisma.pmPeriod.findFirst.mock.calls[0][0].where;
-    expect(where).toEqual({ pmProgramId: 'program-1' });
-    expect(where).not.toHaveProperty('deletedAt');
+    expect(prisma.pmPeriod.findFirst.mock.calls[0][0].where).toEqual({ pmProgramId: 'program-1', deletedAt: null });
   });
 
-  it('mulai dari 1 kalau program belum punya periode', async () => {
+  it('mulai dari 1 kalau program belum punya periode aktif', async () => {
     const { repository, prisma } = buildRepository();
     prisma.pmPeriod.findFirst.mockResolvedValue(null);
 
     expect(await repository.getNextPeriodNumber('program-1')).toBe(1);
+  });
+});
+
+describe('PmPeriodsRepository.findByNumber', () => {
+  it('hanya mencari periode aktif', async () => {
+    const { repository, prisma } = buildRepository();
+    prisma.pmPeriod.findFirst.mockResolvedValue(null);
+
+    await repository.findByNumber('program-1', 1);
+
+    expect(prisma.pmPeriod.findFirst.mock.calls[0][0].where).toEqual({
+      pmProgramId: 'program-1',
+      periodNumber: 1,
+      deletedAt: null,
+    });
   });
 });

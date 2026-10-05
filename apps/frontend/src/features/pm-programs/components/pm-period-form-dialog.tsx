@@ -102,7 +102,7 @@ export function PmPeriodFormDialog({ open, onOpenChange, programId, period, sugg
             />
             <p className="mt-1 text-xs text-text-muted">
               {isEdit
-                ? 'Harus unik di program ini. Nomor milik periode lain (termasuk yang sudah dihapus) tidak bisa dipakai.'
+                ? 'Harus unik di antara periode aktif program ini. Nomor milik periode yang sudah dihapus boleh dipakai lagi.'
                 : 'Terisi otomatis dengan nomor berikutnya — boleh diubah, misalnya untuk melanjutkan penomoran dari data lama.'}
             </p>
           </div>

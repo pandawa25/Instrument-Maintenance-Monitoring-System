@@ -29,7 +29,7 @@ export class PmPeriodsController {
   @Get('next-number')
   @RequirePermission(PermissionModule.PM_PROGRAM, 'create')
   @ApiOperation({
-    summary: 'Nomor periode otomatis berikutnya (nomor terbesar + 1, termasuk periode yang sudah dihapus)',
+    summary: 'Nomor periode otomatis berikutnya (nomor periode aktif terbesar + 1)',
   })
   nextNumber(@Param('programId', ParseUuidPipe) programId: string) {
     return this.service.getNextPeriodNumber(programId);
