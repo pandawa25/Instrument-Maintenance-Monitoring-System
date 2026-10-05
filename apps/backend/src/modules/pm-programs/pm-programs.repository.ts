@@ -8,6 +8,10 @@ import { QueryPmProgramDto } from './dto/query-pm-program.dto';
 import { CreatePmProgramDto } from './dto/create-pm-program.dto';
 import { UpdatePmProgramDto } from './dto/update-pm-program.dto';
 
+// Count relasi periods hanya periode AKTIF — tanpa filter ini Prisma ikut menghitung periode
+// yang sudah di-soft-delete, sehingga "Total Periode" lebih besar dari daftar yang tampil.
+const ACTIVE_PERIODS = { where: { deletedAt: null } } as const;
+
 const DETAIL_INCLUDE = {
   vendor: { select: { id: true, name: true } },
   equipment: {
@@ -22,7 +26,7 @@ const DETAIL_INCLUDE = {
     orderBy: { sortOrder: 'asc' as const },
     include: { activityType: { select: { id: true, code: true, name: true } } },
   },
-  _count: { select: { periods: true } },
+  _count: { select: { periods: ACTIVE_PERIODS } },
 } satisfies Prisma.PmProgramInclude;
 
 /**
@@ -64,7 +68,7 @@ export class PmProgramsRepository {
         orderBy: buildSafeOrderBy(query.sortBy, query.sortOrder, SORTABLE_FIELDS, 'createdAt'),
         include: {
           vendor: { select: { id: true, name: true } },
-          _count: { select: { equipment: true, periods: true } },
+          _count: { select: { equipment: true, periods: ACTIVE_PERIODS } },
         },
       }),
       this.prisma.pmProgram.count({ where }),
