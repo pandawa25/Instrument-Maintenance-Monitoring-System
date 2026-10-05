@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,13 +16,16 @@ interface Props {
   periods: PmPeriodListItem[];
   // Hapus/kelola periode (modul PM_PROGRAM) — berbeda dari canEditExecution.
   canEdit: boolean;
+  // Ubah nomor/tanggal/remarks periode (PM_PROGRAM 'edit') — terpisah dari hapus.
+  canEditPeriod: boolean;
+  onEditPeriod: (period: PmPeriodListItem) => void;
   // Isi hasil eksekusi per equipment (modul PM_EXECUTION) — ini yang dipakai Vendor,
   // yang TIDAK punya canEdit (tidak boleh hapus periode / ubah metadata program).
   canEditExecution: boolean;
   onFillExecution: (executionId: string) => void;
 }
 
-export function PmPeriodList({ periods, canEdit, canEditExecution, onFillExecution }: Props) {
+export function PmPeriodList({ periods, canEdit, canEditPeriod, onEditPeriod, canEditExecution, onFillExecution }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deleteMutation = useDeletePmPeriod();
@@ -71,6 +74,20 @@ export function PmPeriodList({ periods, canEdit, canEditExecution, onFillExecuti
                 {period.completedEquipment}/{period.totalEquipment} equipment selesai
               </span>
               <StatusBadge value={period.status} />
+              {canEditPeriod && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditPeriod(period);
+                  }}
+                  title="Edit periode"
+                  aria-label="Edit periode"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
               {canEdit && (
                 <Button
                   variant="ghost"

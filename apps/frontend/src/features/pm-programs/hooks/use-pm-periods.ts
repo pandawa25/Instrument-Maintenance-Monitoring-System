@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createPmPeriod,
   deletePmPeriod,
+  fetchNextPmPeriodNumber,
   fetchPmPeriodById,
   fetchPmPeriods,
   updatePmPeriod,
@@ -23,6 +24,17 @@ export function usePmPeriodDetail(id: string | undefined) {
     queryKey: [PM_PERIODS_KEY, 'detail', id],
     queryFn: () => fetchPmPeriodById(id!),
     enabled: Boolean(id),
+  });
+}
+
+// Nomor otomatis dari backend (menghitung juga periode yang sudah dihapus), supaya angka yang
+// ditampilkan di form sama dengan yang benar-benar akan dipakai.
+export function useNextPmPeriodNumber(programId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: [PM_PERIODS_KEY, 'next-number', programId],
+    queryFn: () => fetchNextPmPeriodNumber(programId!),
+    enabled: Boolean(programId) && enabled,
+    staleTime: 0,
   });
 }
 

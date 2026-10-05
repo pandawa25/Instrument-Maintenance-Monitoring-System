@@ -9,8 +9,9 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { usePermission } from '@/store/auth.store';
 import { usePmProgramDetail } from '../hooks/use-pm-programs';
 import { usePmPeriods } from '../hooks/use-pm-periods';
+import type { PmPeriodListItem } from '../types/pm-period.types';
 import { PmPeriodList } from '../components/pm-period-list';
-import { PmPeriodCreateDialog } from '../components/pm-period-create-dialog';
+import { PmPeriodFormDialog } from '../components/pm-period-form-dialog';
 import { PmExecutionFormDialog } from '../components/pm-execution-form-dialog';
 import { addFrequencyInterval, toDateInputValue } from '../utils/frequency';
 
@@ -30,24 +31,25 @@ export function PmProgramDetailPage() {
   // equipment (Vendor juga boleh, tapi tidak boleh tambah/hapus periode atau
   // ubah program).
   const canCreatePeriod = usePermission('PM_PROGRAM', 'create');
+  const canEditPeriod = usePermission('PM_PROGRAM', 'edit');
   const canDeletePeriod = usePermission('PM_PROGRAM', 'delete');
   const canEditExecution = usePermission('PM_EXECUTION', 'edit');
 
   const [periodDialogOpen, setPeriodDialogOpen] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState<PmPeriodListItem | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
 
   const { data: program, isLoading: isLoadingProgram } = usePmProgramDetail(id);
   const { data: periods, isLoading: isLoadingPeriods } = usePmPeriods(id);
 
-  const { suggestedDate, nextPeriodNumber } = useMemo(() => {
-    if (!program) return { suggestedDate: toDateInputValue(new Date()), nextPeriodNumber: 1 };
+  // Usulan tanggal periode berikutnya. Nomor periode sendiri diusulkan oleh backend
+  // (lihat useNextPmPeriodNumber di form) karena harus ikut menghitung periode yang sudah dihapus.
+  const suggestedDate = useMemo(() => {
+    if (!program) return toDateInputValue(new Date());
     const latest = periods?.[0]; // findManyByProgram orders periodNumber desc
     const baseDate = latest ? new Date(latest.plannedDate) : new Date(program.startDate);
     const next = latest ? addFrequencyInterval(baseDate, program.frequencyValue, program.frequencyUnit) : baseDate;
-    return {
-      suggestedDate: toDateInputValue(next),
-      nextPeriodNumber: (latest?.periodNumber ?? 0) + 1,
-    };
+    return toDateInputValue(next);
   }, [program, periods]);
 
   if (isLoadingProgram || !program) {
@@ -109,18 +111,25 @@ export function PmProgramDetailPage() {
         <PmPeriodList
           periods={periods ?? []}
           canEdit={canDeletePeriod}
+          canEditPeriod={canEditPeriod}
+          onEditPeriod={setEditingPeriod}
           canEditExecution={canEditExecution}
           onFillExecution={setExecutionId}
         />
       )}
 
       {id && (
-        <PmPeriodCreateDialog
-          open={periodDialogOpen}
-          onOpenChange={setPeriodDialogOpen}
+        <PmPeriodFormDialog
+          open={periodDialogOpen || Boolean(editingPeriod)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPeriodDialogOpen(false);
+              setEditingPeriod(null);
+            }
+          }}
           programId={id}
+          period={editingPeriod}
           suggestedDate={suggestedDate}
-          nextPeriodNumber={nextPeriodNumber}
         />
       )}
 

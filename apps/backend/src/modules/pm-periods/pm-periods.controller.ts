@@ -26,6 +26,15 @@ export class PmPeriodsController {
     return this.service.findAllForProgram(programId);
   }
 
+  @Get('next-number')
+  @RequirePermission(PermissionModule.PM_PROGRAM, 'create')
+  @ApiOperation({
+    summary: 'Nomor periode otomatis berikutnya (nomor terbesar + 1, termasuk periode yang sudah dihapus)',
+  })
+  nextNumber(@Param('programId', ParseUuidPipe) programId: string) {
+    return this.service.getNextPeriodNumber(programId);
+  }
+
   @Post()
   @RequirePermission(PermissionModule.PM_PROGRAM, 'create')
   @AuditLog('PmPeriod')

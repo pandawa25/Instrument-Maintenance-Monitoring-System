@@ -47,6 +47,7 @@ export interface PmPeriodExecutionItem {
 
 export interface PmPeriodDetail {
   id: string;
+  pmProgramId: string;
   periodNumber: number;
   plannedDate: string;
   remarks: string | null;
@@ -56,6 +57,8 @@ export interface PmPeriodDetail {
 }
 
 export interface CreatePmPeriodPayload {
+  /** Kosongkan untuk nomor otomatis (terbesar + 1). */
+  periodNumber?: number;
   plannedDate: string;
   remarks?: string;
 }

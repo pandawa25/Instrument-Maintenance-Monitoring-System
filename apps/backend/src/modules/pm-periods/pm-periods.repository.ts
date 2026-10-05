@@ -66,6 +66,17 @@ export class PmPeriodsRepository {
     return (last?.periodNumber ?? 0) + 1;
   }
 
+  /**
+   * Cari periode dengan nomor tertentu di 1 program — TERMASUK yang soft-deleted, karena
+   * unique constraint (pmProgramId, periodNumber) tetap berlaku untuk baris terhapus.
+   */
+  findByNumber(pmProgramId: string, periodNumber: number) {
+    return this.prisma.pmPeriod.findFirst({
+      where: { pmProgramId, periodNumber },
+      select: { id: true, deletedAt: true },
+    });
+  }
+
   async createWithExecutions(
     pmProgramId: string,
     periodNumber: number,

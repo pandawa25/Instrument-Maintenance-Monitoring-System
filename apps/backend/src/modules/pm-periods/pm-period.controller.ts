@@ -29,7 +29,7 @@ export class PmPeriodController {
   @Patch(':id')
   @RequirePermission(PermissionModule.PM_PROGRAM, 'edit')
   @AuditLog('PmPeriod')
-  @ApiOperation({ summary: 'Update tanggal rencana / remarks periode' })
+  @ApiOperation({ summary: 'Update nomor periode (harus unik per program), tanggal rencana, dan/atau remarks' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmPeriodDto) {
     return this.service.update(id, dto);
   }

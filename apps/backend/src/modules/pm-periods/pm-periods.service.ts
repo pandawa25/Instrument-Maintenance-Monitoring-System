@@ -52,6 +52,7 @@ export class PmPeriodsService {
 
     return {
       id: period.id,
+      pmProgramId: period.pmProgramId,
       periodNumber: period.periodNumber,
       plannedDate: period.plannedDate,
       remarks: period.remarks,
@@ -84,7 +85,13 @@ export class PmPeriodsService {
     // memberi daftar equipment & checklist item TERKINI program itu (snapshot dibuat dari sini).
     const program = await this.programsService.findOne(pmProgramId);
 
-    const periodNumber = await this.repository.getNextPeriodNumber(pmProgramId);
+    // Nomor boleh diisi manual (mis. melanjutkan penomoran dari data lama / melompati nomor);
+    // kalau kosong, otomatis nomor terbesar + 1.
+    const periodNumber =
+      dto.periodNumber ?? (await this.repository.getNextPeriodNumber(pmProgramId));
+    if (dto.periodNumber !== undefined) {
+      await this.assertPeriodNumberAvailable(pmProgramId, periodNumber);
+    }
 
     const checklistTemplate = program.checklistItems.map((item: any) => ({
       activityTypeName: item.activityType.name,
@@ -106,10 +113,32 @@ export class PmPeriodsService {
     return this.findOne(created!.id);
   }
 
+  async getNextPeriodNumber(pmProgramId: string) {
+    await this.programsService.findOne(pmProgramId); // 404 kalau program tidak ada
+    return { nextPeriodNumber: await this.repository.getNextPeriodNumber(pmProgramId) };
+  }
+
   async update(id: string, dto: UpdatePmPeriodDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+
+    // Hanya cek bentrok kalau nomor benar-benar berubah (PATCH yang ikut mengirim nomor lama tetap valid).
+    if (dto.periodNumber !== undefined && dto.periodNumber !== existing.periodNumber) {
+      await this.assertPeriodNumberAvailable(existing.pmProgramId, dto.periodNumber, id);
+    }
+
     await this.repository.update(id, dto);
     return this.findOne(id);
+  }
+
+  private async assertPeriodNumberAvailable(pmProgramId: string, periodNumber: number, excludeId?: string) {
+    const holder = await this.repository.findByNumber(pmProgramId, periodNumber);
+    if (!holder || holder.id === excludeId) return;
+
+    throw new ConflictException(
+      holder.deletedAt
+        ? `Nomor periode ${periodNumber} pernah dipakai periode yang sudah dihapus dan tidak bisa dipakai ulang — pilih nomor lain`
+        : `Nomor periode ${periodNumber} sudah dipakai periode lain pada program ini`,
+    );
   }
 
   async remove(id: string) {
