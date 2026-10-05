@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdatePmPeriodExecutionDto } from './dto/update-pm-period-execution.dto';
 
+// Update checklist berjalan sequential (satu updateMany per item); default timeout
+// interactive transaction Prisma hanya 5 detik (P2028) sehingga checklist panjang rawan gagal.
+const UPDATE_EXECUTION_TX_OPTIONS = { timeout: 30_000, maxWait: 10_000 };
+
 @Injectable()
 export class PmPeriodExecutionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,6 +50,6 @@ export class PmPeriodExecutionsRepository {
           checklistResults: { orderBy: { sortOrder: 'asc' } },
         },
       });
-    });
+    }, UPDATE_EXECUTION_TX_OPTIONS);
   }
 }

@@ -44,6 +44,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       status = this.mapPrismaStatus(exception.code);
       message = this.mapPrismaMessage(exception);
+      // Detail error Prisma (kode + meta) hanya masuk log server, tidak dikirim ke client.
+      // Tanpa ini, error di cabang default ("Database error") tidak meninggalkan jejak apa pun
+      // dan penyebab aslinya (mis. P2028 timeout, P2022 kolom tidak ada) tidak bisa didiagnosis.
+      this.logger.error(
+        `Prisma ${exception.code} pada ${request.method} ${request.url}: ${exception.message}`,
+        exception.stack,
+      );
     } else if (exception instanceof Error) {
       // SENGAJA TIDAK pakai `exception.message` sebagai response ke client — error di
       // cabang ini tidak dikenal/tidak terduga (mis. Prisma.PrismaClientValidationError
@@ -71,6 +78,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return HttpStatus.NOT_FOUND;
       case 'P2003': // FK constraint
         return HttpStatus.BAD_REQUEST;
+      case 'P2028': // interactive transaction timeout / sudah ditutup
+        return HttpStatus.SERVICE_UNAVAILABLE;
       default:
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
@@ -97,6 +106,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return 'Data tidak ditemukan';
       case 'P2003':
         return 'Referensi data tidak valid (foreign key constraint)';
+      case 'P2028':
+        return 'Transaksi database melebihi batas waktu — coba lagi, atau kurangi jumlah data yang diproses sekaligus';
       default:
         return 'Database error';
     }

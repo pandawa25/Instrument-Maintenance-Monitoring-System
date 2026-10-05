@@ -132,7 +132,7 @@ export class PmProgramsRepository {
       }
 
       return tx.pmProgram.findFirst({ where: { id }, include: DETAIL_INCLUDE });
-    });
+    }, { timeout: 30_000, maxWait: 10_000 });
   }
 
   softDelete(id: string) {
