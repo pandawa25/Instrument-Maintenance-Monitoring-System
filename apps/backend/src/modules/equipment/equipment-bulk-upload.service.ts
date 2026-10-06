@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -21,6 +22,7 @@ import {
 } from '@prisma/client';
 import { normalizeTag } from '@imms/shared-utils';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BULK_UPDATE_SQL, BulkUpdateInput, buildBulkUpdateParams } from './equipment-bulk-sql';
 import { EquipmentRepository } from './equipment.repository';
 import { ImportBatchRepository, NewImportRow } from './import-batch.repository';
 import { AreasService } from '../areas/areas.service';
@@ -101,7 +103,7 @@ interface ParsedRow {
 
 /**
  * Field yang `undefined` berarti "kolom kosong di Excel" — PENTING untuk mode UPDATE_OR_CREATE:
- * kosong = tidak mengubah nilai existing (bukan di-set ke null). Lihat buildPartialUpdateData()
+ * kosong = tidak mengubah nilai existing (bukan di-set ke null). Lihat BULK_UPDATE_SQL (equipment-bulk-sql.ts)
  * & hasFieldChanges(). Untuk mode CREATE_ONLY, undefined berarti field itu memang tidak diisi
  * (equipment baru dibuat dengan nilai null/default Prisma untuk field tersebut).
  */
@@ -147,6 +149,8 @@ interface RowValidationResult {
 
 @Injectable()
 export class EquipmentBulkUploadService {
+  private readonly logger = new Logger(EquipmentBulkUploadService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: EquipmentRepository,
@@ -522,13 +526,17 @@ export class EquipmentBulkUploadService {
     });
 
     let operationId: string | undefined;
+    const commitStartedAt = Date.now();
+    const timings: { create?: number; update?: number } = {};
 
     try {
       await this.prisma.$transaction(
         async (tx: Prisma.TransactionClient) => {
+          const createStartedAt = Date.now();
           for (let i = 0; i < equipmentCreateInputs.length; i += 500) {
             await tx.equipment.createMany({ data: equipmentCreateInputs.slice(i, i + 500) });
           }
+          timings.create = Date.now() - createStartedAt;
 
           if (updateRows.length > 0) {
             const snapshots: { id: string; equipmentId: string; beforeData: Prisma.InputJsonValue }[] = [];
@@ -539,6 +547,7 @@ export class EquipmentBulkUploadService {
               .filter((id): id is string => !!id);
             const existingList: Equipment[] = await tx.equipment.findMany({ where: { id: { in: targetIds } } });
             const existingById = new Map<string, Equipment>(existingList.map((e) => [e.id, e]));
+            const bulkInputs: BulkUpdateInput[] = [];
 
             for (const r of updateRows as { payload: unknown; targetEquipmentId: string | null }[]) {
               const payload = r.payload as unknown as { resolved: ResolvedEquipmentRow };
@@ -566,11 +575,20 @@ export class EquipmentBulkUploadService {
                 beforeData: JSON.parse(JSON.stringify(existing)) as Prisma.InputJsonValue,
               });
 
-              await tx.equipment.update({
-                where: { id: equipmentId },
-                data: this.buildPartialUpdateData(resolved),
-              });
+              bulkInputs.push({ equipmentId, resolved });
             }
+
+            // UPDATE massal: 1 statement per ≤500 baris (bukan 1 round-trip per baris).
+            const updateStartedAt = Date.now();
+            for (const chunk of buildBulkUpdateParams(bulkInputs)) {
+              const affected = await tx.$executeRawUnsafe(BULK_UPDATE_SQL, chunk.json);
+              if (affected !== chunk.count) {
+                throw new ConflictException(
+                  `Update massal hanya mengenai ${affected} dari ${chunk.count} baris — sebagian equipment target terhapus sejak preview. Upload & preview ulang file.`,
+                );
+              }
+            }
+            timings.update = Date.now() - updateStartedAt;
 
             operationId = randomUUID();
             await tx.equipmentBulkOperation.create({
@@ -611,6 +629,12 @@ export class EquipmentBulkUploadService {
       throw error;
     }
 
+    // Log durasi per fase — untuk diagnosis kalau commit batch besar masih lambat di produksi.
+    this.logger.log(
+      `Commit batch ${batchId}: create=${equipmentCreateInputs.length} baris (${timings.create ?? 0}ms), ` +
+        `update=${updateRows.length} baris (${timings.update ?? 0}ms), total=${Date.now() - commitStartedAt}ms`,
+    );
+
     const committed = await this.importBatchRepository.findBatchById(batchId);
 
     return {
@@ -624,42 +648,9 @@ export class EquipmentBulkUploadService {
   }
 
   /**
-   * Bangun payload Prisma.EquipmentUpdateInput HANYA dari field yang terisi di Excel
-   * (resolved[field] !== undefined). Field yang kosong di Excel TIDAK disentuh sama sekali —
-   * ini yang membuat mode UPDATE_OR_CREATE aman dipakai untuk update parsial (mis. hanya mau
-   * update Status & Criticality tanpa harus mengisi ulang semua kolom lain).
-   */
-  private buildPartialUpdateData(resolved: ResolvedEquipmentRow): Prisma.EquipmentUncheckedUpdateInput {
-    // Pakai FK scalar (unchecked) — nested `connect` memicu query tambahan per baris.
-    // areaId/instrumentNameId sudah divalidasi di preview.
-    const data: Prisma.EquipmentUncheckedUpdateInput = {
-      areaId: resolved.areaId,
-      instrumentNameId: resolved.instrumentNameId,
-      service: resolved.service,
-    };
-    if (resolved.type !== undefined) data.type = resolved.type ?? null;
-    if (resolved.manufacturer !== undefined) data.manufacturer = resolved.manufacturer ?? null;
-    if (resolved.model !== undefined) data.model = resolved.model ?? null;
-    if (resolved.serialNumber !== undefined) data.serialNumber = resolved.serialNumber ?? null;
-    if (resolved.installationDate !== undefined) {
-      data.installationDate = resolved.installationDate ? new Date(resolved.installationDate) : null;
-    }
-    if (resolved.lrv !== undefined) data.lrv = resolved.lrv ?? null;
-    if (resolved.urv !== undefined) data.urv = resolved.urv ?? null;
-    if (resolved.unit !== undefined) data.unit = resolved.unit ?? null;
-    if (resolved.size !== undefined) data.size = resolved.size ?? null;
-    if (resolved.rating !== undefined) data.rating = resolved.rating ?? null;
-    if (resolved.failAction !== undefined) data.failAction = resolved.failAction ?? null;
-    if (resolved.status !== undefined) data.status = resolved.status;
-    if (resolved.criticality !== undefined) data.criticality = resolved.criticality;
-    if (resolved.remarks !== undefined) data.remarks = resolved.remarks ?? null;
-    return data;
-  }
-
-  /**
    * Bandingkan nilai existing equipment vs resolved (hasil parsing baris Excel) — HANYA untuk
    * field yang terisi di Excel (resolved[field] !== undefined, konsisten dengan semantik
-   * buildPartialUpdateData di atas: kolom kosong = tidak ikut dibandingkan/diubah).
+   * BULK_UPDATE_SQL: kolom kosong = tidak ikut dibandingkan/diubah).
    * true kalau ada minimal satu field yang nilainya beda (action harus UPDATE).
    */
   private hasFieldChanges(existing: Equipment, resolved: ResolvedEquipmentRow): boolean {

@@ -41,6 +41,7 @@ function build(txOverrides: Record<string, unknown> = {}) {
       findUnique: jest.fn(),
       update: jest.fn().mockResolvedValue(undefined),
     },
+    $executeRawUnsafe: jest.fn().mockImplementation(async (_sql: string, json: string) => JSON.parse(json).length),
     equipmentBulkOperation: { create: jest.fn() },
     equipmentChangeSnapshot: { createMany: jest.fn() },
     importBatch: { update: jest.fn() },
@@ -60,7 +61,7 @@ function build(txOverrides: Record<string, unknown> = {}) {
 }
 
 describe('EquipmentBulkUploadService.commitBatch — batch besar', () => {
-  it('memuat equipment target dengan 1 query & update memakai FK scalar (tanpa nested connect)', async () => {
+  it('997 baris UPDATE: 1 findMany + 2 statement raw (chunk 500), tanpa update per baris', async () => {
     const { service, tx, prisma } = build();
 
     const result = await service.commitBatch('b1', 'u1');
@@ -68,11 +69,21 @@ describe('EquipmentBulkUploadService.commitBatch — batch besar', () => {
     expect(result.updatedCount).toBe(N);
     expect(tx.equipment.findMany).toHaveBeenCalledTimes(1);
     expect(tx.equipment.findUnique).not.toHaveBeenCalled();
-    expect(tx.equipment.update).toHaveBeenCalledTimes(N);
-    const data = tx.equipment.update.mock.calls[0][0].data;
-    expect(data).toMatchObject({ areaId: 'a1', instrumentNameId: 'n1', status: 'STANDBY' });
-    expect(data.area).toBeUndefined();
+    expect(tx.equipment.update).not.toHaveBeenCalled();
+    expect(tx.$executeRawUnsafe).toHaveBeenCalledTimes(2); // 500 + 497
+    const [sql, json] = tx.$executeRawUnsafe.mock.calls[0];
+    expect(sql).toContain('jsonb_to_recordset($1::jsonb)');
+    const first = JSON.parse(json)[0];
+    expect(first).toMatchObject({ id: 'eq-0', area_id: 'a1', instrument_name_id: 'n1', status: 'STANDBY', f: { status: true } });
+    expect(first.manufacturer).toBeUndefined(); // kolom kosong tidak dikirim -> tidak disentuh
     expect(prisma.$transaction.mock.calls[0][1]).toMatchObject({ timeout: 120_000 });
+  });
+
+  it('jumlah baris terkena != jumlah dikirim: 409 & batch FAILED', async () => {
+    const { service, importBatchRepository } = build({ $executeRawUnsafe: jest.fn().mockResolvedValue(3) });
+
+    await expect(service.commitBatch('b1', 'u1')).rejects.toThrow(/hanya mengenai 3 dari 500/);
+    expect(importBatchRepository.updateStatus).toHaveBeenCalledWith('b1', 'FAILED');
   });
 
   it('timeout transaksi (P2028): 503 jelas & batch TIDAK ditandai FAILED (bisa commit ulang)', async () => {
