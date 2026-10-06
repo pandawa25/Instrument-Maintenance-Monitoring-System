@@ -321,10 +321,34 @@ export class EquipmentBulkUploadService {
       seenSerialsInFile: new Map(),
     };
 
-    const rows: NewImportRow[] = parsedRows.map(({ rowNumber, row }) => {
+    // Tag kembar dalam satu file TIDAK lagi jadi ERROR (yang dulu memblokir seluruh commit) —
+    // digabung jadi satu baris efektif: baris terakhir menang untuk kolom yang terisi, kolom
+    // kosong tidak menimpa. Baris yang digantikan ditandai WARNING + NO_CHANGE (dilewati).
+    const consolidated = this.consolidateDuplicateTags(parsedRows, ctx.areasByCode);
+
+    const rows: NewImportRow[] = consolidated.map(({ rowNumber, row, raw, supersededBy, mergedFromRows }) => {
+      if (supersededBy !== undefined) {
+        return {
+          rowNumber,
+          severity: 'WARNING' as ImportRowSeverity,
+          messages: [
+            `Tag number duplikat di file ini — baris ini dilewati karena digabung ke baris ${supersededBy} (nilai baris terakhir yang dipakai)`,
+          ],
+          payload: { raw: raw as unknown as Prisma.InputJsonValue, resolved: null },
+          action: 'NO_CHANGE' as ImportRowAction,
+          targetEquipmentId: undefined,
+        };
+      }
+
       const result = this.validateRow(rowNumber, row, ctx);
+      if (mergedFromRows.length > 0 && result.severity !== 'ERROR') {
+        result.messages.unshift(
+          `Tag number muncul di baris ${[...mergedFromRows, rowNumber].join(', ')} — digabung jadi satu (baris terakhir menang untuk kolom yang terisi)`,
+        );
+        result.severity = 'WARNING';
+      }
       const payload: Prisma.InputJsonValue = {
-        raw: row as unknown as Prisma.InputJsonValue,
+        raw: raw as unknown as Prisma.InputJsonValue,
         // Cast lewat `unknown` dulu — ResolvedEquipmentRow adalah interface domain biasa
         // tanpa index signature, jadi TS menolak cast langsung ke Prisma.InputJsonValue
         // (union type JSON Prisma mensyaratkan bentuk yang "comparable", termasuk index
@@ -642,6 +666,59 @@ export class EquipmentBulkUploadService {
     if (resolved.remarks !== undefined) checks.push([existing.remarks ?? null, resolved.remarks ?? null]);
 
     return checks.some(([a, b]) => a !== b);
+  }
+
+  /**
+   * Gabungkan baris-baris dengan tag number (Area Code + Tag No, case-insensitive) yang sama.
+   * Baris terakhir menjadi baris efektif; field-nya = gabungan semua baris (nilai yang lebih
+   * belakang menimpa, kolom kosong tidak menimpa). Baris sebelumnya ditandai `supersededBy`.
+   * Baris yang tag/area-nya belum bisa dihitung (kosong/area tidak dikenal) tidak digabung —
+   * biarkan validateRow melaporkan error aslinya.
+   */
+  private consolidateDuplicateTags(
+    parsedRows: { rowNumber: number; row: ParsedRow }[],
+    areasByCode: Map<string, Area>,
+  ): { rowNumber: number; row: ParsedRow; raw: ParsedRow; supersededBy?: number; mergedFromRows: number[] }[] {
+    const keyOf = (row: ParsedRow): string | undefined => {
+      if (!row.areaCode || !row.tagNo) return undefined;
+      const area = areasByCode.get(row.areaCode.trim().toUpperCase());
+      if (!area) return undefined;
+      return normalizeTag(`${area.areaCode}-${row.tagNo.trim()}`);
+    };
+
+    const groups = new Map<string, number[]>(); // key -> index di parsedRows
+    parsedRows.forEach(({ row }, idx) => {
+      const key = keyOf(row);
+      if (!key) return;
+      const list = groups.get(key);
+      if (list) list.push(idx);
+      else groups.set(key, [idx]);
+    });
+
+    const result = parsedRows.map(({ rowNumber, row }) => ({
+      rowNumber,
+      row,
+      raw: row,
+      supersededBy: undefined as number | undefined,
+      mergedFromRows: [] as number[],
+    }));
+
+    for (const indexes of groups.values()) {
+      if (indexes.length < 2) continue;
+      const lastIdx = indexes[indexes.length - 1];
+      const merged: ParsedRow = {};
+      for (const idx of indexes) {
+        for (const [k, v] of Object.entries(parsedRows[idx].row) as [keyof ParsedRow, unknown][]) {
+          if (v !== undefined && v !== '') (merged as Record<string, unknown>)[k] = v;
+        }
+      }
+      for (const idx of indexes.slice(0, -1)) {
+        result[idx].supersededBy = parsedRows[lastIdx].rowNumber;
+        result[lastIdx].mergedFromRows.push(parsedRows[idx].rowNumber);
+      }
+      result[lastIdx].row = merged;
+    }
+    return result;
   }
 
   private readRow(row: ExcelJS.Row): ParsedRow {
