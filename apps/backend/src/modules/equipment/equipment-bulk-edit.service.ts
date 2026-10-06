@@ -89,9 +89,9 @@ export class EquipmentBulkEditService {
           beforeData: JSON.parse(JSON.stringify(eq)) as Prisma.InputJsonValue,
         }));
 
-        for (const eq of toUpdate) {
-          await tx.equipment.update({ where: { id: eq.id }, data: updateData });
-        }
+        // Nilai yang diterapkan SAMA untuk semua baris → 1 statement updateMany (bukan N update
+        // berurutan yang bisa menembus batas waktu transaksi untuk ratusan equipment).
+        await tx.equipment.updateMany({ where: { id: { in: toUpdate.map((eq) => eq.id) } }, data: updateData });
 
         await tx.equipmentBulkOperation.create({
           data: {
@@ -103,7 +103,7 @@ export class EquipmentBulkEditService {
         });
         await tx.equipmentChangeSnapshot.createMany({ data: snapshots });
       },
-      { timeout: 30_000 },
+      { timeout: 120_000, maxWait: 10_000 },
     );
 
     return { operationId, updatedCount: toUpdate.length };
@@ -138,11 +138,11 @@ export class EquipmentBulkEditService {
     }
   }
 
-  private buildUpdateData(data: BulkEditFieldsDto): Prisma.EquipmentUpdateInput {
-    const update: Prisma.EquipmentUpdateInput = {};
+  private buildUpdateData(data: BulkEditFieldsDto): Prisma.EquipmentUncheckedUpdateManyInput {
+    const update: Prisma.EquipmentUncheckedUpdateManyInput = {};
     if (data.service !== undefined) update.service = data.service;
     if (data.description !== undefined) update.description = data.description ?? null;
-    if (data.instrumentNameId !== undefined) update.instrumentName = { connect: { id: data.instrumentNameId } };
+    if (data.instrumentNameId !== undefined) update.instrumentNameId = data.instrumentNameId;
     if (data.type !== undefined) update.type = data.type ?? null;
     if (data.manufacturer !== undefined) update.manufacturer = data.manufacturer ?? null;
     if (data.model !== undefined) update.model = data.model ?? null;

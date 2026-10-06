@@ -1,5 +1,11 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import {
   Area,
@@ -67,6 +73,10 @@ const MAX_ROWS = 1000;
 // Preview boleh di-commit sampai berapa lama — setelahnya harus preview ulang supaya
 // data referensi (area/instrument name/tag lain) yang dipakai tidak basi.
 const BATCH_EXPIRY_HOURS = 24;
+
+// Transaksi commit: 1000 baris UPDATE = ~1000 statement berurutan ke DB (Railway punya latensi
+// jaringan per query), jadi default Prisma 5 detik & 30 detik tidak cukup (P2028).
+const COMMIT_TX_OPTIONS = { timeout: 120_000, maxWait: 10_000 };
 
 interface ParsedRow {
   areaCode?: string;
@@ -523,6 +533,13 @@ export class EquipmentBulkUploadService {
           if (updateRows.length > 0) {
             const snapshots: { id: string; equipmentId: string; beforeData: Prisma.InputJsonValue }[] = [];
 
+            // Ambil SEMUA equipment target dalam 1 query (bukan findUnique per baris).
+            const targetIds = (updateRows as { targetEquipmentId: string | null }[])
+              .map((r) => r.targetEquipmentId)
+              .filter((id): id is string => !!id);
+            const existingList: Equipment[] = await tx.equipment.findMany({ where: { id: { in: targetIds } } });
+            const existingById = new Map<string, Equipment>(existingList.map((e) => [e.id, e]));
+
             for (const r of updateRows as { payload: unknown; targetEquipmentId: string | null }[]) {
               const payload = r.payload as unknown as { resolved: ResolvedEquipmentRow };
               const resolved = payload.resolved;
@@ -533,7 +550,7 @@ export class EquipmentBulkUploadService {
                 );
               }
 
-              const existing = await tx.equipment.findUnique({ where: { id: equipmentId } });
+              const existing = existingById.get(equipmentId);
               if (!existing || existing.deletedAt) {
                 throw new ConflictException(
                   `Equipment target update untuk tag '${resolved.tagNumber}' sudah tidak ada/terhapus sejak preview — upload & preview ulang file.`,
@@ -575,9 +592,16 @@ export class EquipmentBulkUploadService {
             data: { status: 'COMMITTED', committedAt: new Date() },
           });
         },
-        { timeout: 30_000 },
+        COMMIT_TX_OPTIONS,
       );
     } catch (error) {
+      // Timeout transaksi (P2028) bersifat sementara & seluruh transaksi sudah rollback — batch
+      // dibiarkan VALIDATED supaya bisa di-commit ulang tanpa upload & preview ulang.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2028') {
+        throw new ServiceUnavailableException(
+          'Commit melebihi batas waktu transaksi database dan sudah dibatalkan (tidak ada data yang berubah). Batch masih valid — klik Commit lagi. Kalau terus berulang, pecah file menjadi beberapa bagian.',
+        );
+      }
       await this.importBatchRepository.updateStatus(batchId, 'FAILED');
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(
@@ -605,10 +629,12 @@ export class EquipmentBulkUploadService {
    * ini yang membuat mode UPDATE_OR_CREATE aman dipakai untuk update parsial (mis. hanya mau
    * update Status & Criticality tanpa harus mengisi ulang semua kolom lain).
    */
-  private buildPartialUpdateData(resolved: ResolvedEquipmentRow): Prisma.EquipmentUpdateInput {
-    const data: Prisma.EquipmentUpdateInput = {
-      area: { connect: { id: resolved.areaId } },
-      instrumentName: { connect: { id: resolved.instrumentNameId } },
+  private buildPartialUpdateData(resolved: ResolvedEquipmentRow): Prisma.EquipmentUncheckedUpdateInput {
+    // Pakai FK scalar (unchecked) — nested `connect` memicu query tambahan per baris.
+    // areaId/instrumentNameId sudah divalidasi di preview.
+    const data: Prisma.EquipmentUncheckedUpdateInput = {
+      areaId: resolved.areaId,
+      instrumentNameId: resolved.instrumentNameId,
       service: resolved.service,
     };
     if (resolved.type !== undefined) data.type = resolved.type ?? null;
