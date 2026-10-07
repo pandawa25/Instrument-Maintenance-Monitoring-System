@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { loginRequest } from '../api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
+import { MiniToolsBadge } from '@/features/mini-tools/components/mini-tools-badge';
 
 const HIGHLIGHTS = [
   { icon: Wrench, text: 'Pantau corrective & preventive maintenance dalam satu sistem' },
@@ -39,6 +40,9 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Alat bantu hitung (konversi unit/sinyal) — tersedia sebelum login */}
+      <MiniToolsBadge />
+
       {/* Panel kiri — brand & highlight, disembunyikan di layar sempit supaya form tetap fokus */}
       <div className="relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dim lg:flex lg:flex-col lg:justify-between lg:p-10">
         <BrandPattern />
@@ -73,7 +77,7 @@ export function LoginPage() {
       </div>
 
       {/* Panel kanan — form login */}
-      <div className="flex w-full flex-1 flex-col justify-between px-6 py-8 sm:px-10 lg:w-[54%] lg:px-16">
+      <div className="flex w-full flex-1 flex-col justify-between px-6 pb-8 pt-14 sm:px-10 lg:w-[54%] lg:px-16 lg:pt-8">
         <div className="flex items-center justify-between lg:justify-end">
           <div className="flex items-center gap-2 lg:hidden">
             <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 rounded-lg" />

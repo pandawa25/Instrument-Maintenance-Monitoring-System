@@ -1,6 +1,6 @@
 # Roadmap Pengembangan — Instrument Maintenance Monitoring System
 
-**Status:** Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar).
+**Status:** Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar; Mini Tools di halaman login).
 Revisi sebelumnya 3 Oktober 2026, menggantikan revisi yang ditulis saat sistem masih 3
 modul/6 tabel — sudah usang karena sebagian besar isi "Phase 2"-nya di revisi lama sudah
 selesai dikerjakan (dengan penomoran phase berbeda, lihat README `Status Pengembangan`).
@@ -23,6 +23,7 @@ Sistem sudah melewati tahap MVP murni — pertumbuhannya:
 | Analytics | Dashboard ringkas (4 summary card + 3 chart) | + KPI (MTTR/MTBF/PM Compliance Rate, 3 level agregasi) + Instrument Health Index (skor komposit percentile-based) |
 | Testing | — | Jest unit test backend (6 suite, 45 test — auth, RBAC, stock ledger, audit log, dashboard KPI) + CI (build+test otomatis tiap PR) |
 | Security hardening | — | 10/10 temuan audit (security, correctness, UX, DevOps) selesai — lihat `docs/system-audit-2026-10-03.md` |
+| Utilitas lapangan | — | **Mini Tools** di halaman login (8 Okt 2026): badge mengambang kiri atas → konversi pressure/flow/signal sejenis (gauge↔absolut, massa↔volume dengan densitas, 4–20 mA ↔ 1–5 V ↔ 0–10 V ↔ 3–15 psi ↔ %) dan Pressure ↔ Signal berdasarkan range LRV–URV. Murni client-side (tanpa API), logika di `features/mini-tools/utils/conversion.ts` + 33 test. Konversi satuan murni: kondisi standar gas (Nm³/Sm³/SCF) tidak dikoreksi; atmosfer gauge↔absolut = 101,325 kPa; belum ada akar kuadrat (flow DP) |
 
 **Yang BELUM dikerjakan (bukan oversight, sengaja di luar scope sampai sekarang):**
 - Work Order formal (approval workflow, assignment) — saat ini cuma field referensi manual ke ERP eksternal, sesuai keputusan desain di README.
