@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   convertFlow,
+  dpToFlow,
+  flowCompatibility,
+  flowToDp,
+  fractionToSignal,
+  FLOW_GROUPS,
   convertPressure,
   convertSignal,
   formatNumber,
@@ -48,8 +53,49 @@ describe('convertFlow', () => {
     expect(convertFlow(1, 'm3h', 'Lmin')).toBeCloseTo(16.6667, 4);
     expect(convertFlow(1, 'gpm', 'm3h')).toBeCloseTo(0.2271247, 6);
     expect(convertFlow(1, 'bbld', 'm3h')).toBeCloseTo(0.00662447, 8);
-    expect(convertFlow(1, 'mmscfd', 'm3h')).toBeCloseTo(1179.8686, 3);
     expect(convertFlow(60, 'cfm', 'ft3h')).toBeCloseTo(3600, 6);
+  });
+
+  it('gas standar: satuan per jam & per hari', () => {
+    expect(convertFlow(24, 'Sm3d', 'Sm3h')).toBeCloseTo(1, 10);
+    expect(convertFlow(1, 'Nm3h', 'Nm3d')).toBeCloseTo(24, 10);
+    expect(convertFlow(1, 'mmscfd', 'mscfd')).toBeCloseTo(1000, 6);
+    expect(convertFlow(1, 'mmscfd', 'scfd')).toBeCloseTo(1e6, 3);
+    expect(convertFlow(24, 'mmscfd', 'mmscfh')).toBeCloseTo(1, 10);
+    expect(convertFlow(1, 'scfh', 'scfd')).toBeCloseTo(24, 10);
+    expect(convertFlow(1, 'mscfh', 'scfh')).toBeCloseTo(1000, 6);
+  });
+
+  it('gas standar: kondisi referensi berbeda dikoreksi (1 Nm³ ≠ 1 Sm³)', () => {
+    // Sm³ pada 15 °C lebih "besar" dari Nm³ pada 0 °C: 288,15 / 273,15
+    expect(convertFlow(1, 'Nm3h', 'Sm3h')).toBeCloseTo(1.0549149, 6);
+    expect(convertFlow(1, 'Sm3h', 'Nm3h')).toBeCloseTo(1 / 1.0549149, 6);
+    // 1 MMSCFD (60 °F, 14,696 psia) ≈ 28.262,5 Sm³/day ≈ 1.116,3 Nm³/h (hitungan independen hukum gas ideal)
+    expect(convertFlow(1, 'mmscfd', 'Sm3d')).toBeCloseTo(28262.455, 1);
+    expect(convertFlow(1, 'mmscfd', 'Nm3h')).toBeCloseTo(1116.3008, 2);
+    expect(convertFlow(1, 'scfd', 'Sm3d')).toBeCloseTo(0.028262455, 8);
+  });
+
+  it('gas standar ↔ volumetrik/massa tidak didukung → null (butuh P, T, Z operasi)', () => {
+    expect(flowCompatibility('mmscfd', 'm3h')).toBe('unsupported');
+    expect(flowCompatibility('kgh', 'Sm3h')).toBe('unsupported');
+    expect(convertFlow(1, 'mmscfd', 'm3h')).toBeNull();
+    expect(convertFlow(1, 'Sm3h', 'th', 1000)).toBeNull();
+  });
+
+  it('flowCompatibility: direct / needs-density', () => {
+    expect(flowCompatibility('m3h', 'bbld')).toBe('direct');
+    expect(flowCompatibility('Sm3h', 'scfd')).toBe('direct');
+    expect(flowCompatibility('th', 'm3h')).toBe('needs-density');
+  });
+
+  it('semua satuan flow terdaftar di tepat satu grup & punya id unik', () => {
+    const ids = FLOW_GROUPS.flatMap((g) => g.units.map((u) => u.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(FLOW_GROUPS.map((g) => g.kind)).toEqual(['volume', 'gas', 'mass']);
+    expect(FLOW_GROUPS.find((g) => g.kind === 'gas')!.units.map((u) => u.label)).toEqual(
+      expect.arrayContaining(['Nm³/h', 'Nm³/day', 'Sm³/h', 'Sm³/day', 'SCFH', 'SCFD', 'MMSCFH', 'MMSCFD'].map((l) => expect.stringContaining(l))),
+    );
   });
 
   it('massa', () => {
@@ -129,6 +175,65 @@ describe('processToSignal / signalToProcess', () => {
   it('sinyal selain mA', () => {
     expect(processToSignal(5, 0, 10, '0-10V')!.signal).toBeCloseTo(5, 10);
     expect(processToSignal(2.5, 0, 10, '3-15psi')!.signal).toBeCloseTo(6, 10);
+  });
+});
+
+describe('dpToFlow / flowToDp (akar kuadrat)', () => {
+  it('DP 25 % span → flow 50 %', () => {
+    const r = dpToFlow(62.5, 0, 250, 100);
+    expect(r).toMatchObject({ ok: true, dpFraction: 0.25, flowFraction: 0.5, value: 50, outOfRange: false });
+  });
+
+  it('titik ujung: DP = LRV → flow 0; DP = URV → flow maks', () => {
+    expect(dpToFlow(0, 0, 250, 100)).toMatchObject({ ok: true, value: 0, outOfRange: false });
+    expect(dpToFlow(250, 0, 250, 100)).toMatchObject({ ok: true, value: 100, outOfRange: false });
+  });
+
+  it('LRV bukan 0: flow nol pada LRV', () => {
+    expect(dpToFlow(100, 50, 250, 100)).toMatchObject({ ok: true, dpFraction: 0.25, value: 50 });
+  });
+
+  it('DP di atas URV ditandai di luar range', () => {
+    const r = dpToFlow(300, 0, 250, 100);
+    expect(r.ok && r.outOfRange).toBe(true);
+    expect(r.ok && r.value).toBeCloseTo(109.5445, 3);
+  });
+
+  it('kasus tidak valid memberi alasan', () => {
+    expect(dpToFlow(-1, 0, 250, 100)).toEqual({ ok: false, reason: 'negative-dp' });
+    expect(dpToFlow(5, 10, 10, 100)).toEqual({ ok: false, reason: 'zero-span' });
+    expect(dpToFlow(5, 0, 10, 0)).toEqual({ ok: false, reason: 'invalid-flow-max' });
+    expect(dpToFlow(5, 0, 10, -3)).toEqual({ ok: false, reason: 'invalid-flow-max' });
+    expect(flowToDp(-1, 100, 0, 250)).toEqual({ ok: false, reason: 'negative-flow' });
+    expect(flowToDp(5, 100, 7, 7)).toEqual({ ok: false, reason: 'zero-span' });
+    expect(flowToDp(5, 0, 0, 250)).toEqual({ ok: false, reason: 'invalid-flow-max' });
+  });
+
+  it('flow → DP: 50 % flow = 25 % DP', () => {
+    expect(flowToDp(50, 100, 0, 250)).toMatchObject({ ok: true, dpFraction: 0.25, flowFraction: 0.5, value: 62.5 });
+    expect(flowToDp(50, 100, 50, 250)).toMatchObject({ ok: true, value: 100 });
+  });
+
+  it('flow di atas maksimum ditandai di luar range', () => {
+    const r = flowToDp(120, 100, 0, 250);
+    expect(r.ok && r.outOfRange).toBe(true);
+    expect(r.ok && r.value).toBeCloseTo(360, 8);
+  });
+
+  it('bolak-balik konsisten', () => {
+    const dp = flowToDp(37.5, 120, 10, 400);
+    expect(dp.ok).toBe(true);
+    if (!dp.ok) return;
+    const back = dpToFlow(dp.value, 10, 400, 120);
+    expect(back.ok && back.value).toBeCloseTo(37.5, 10);
+  });
+
+  it('sinyal: DP linear vs sinyal ter-akar-kuadrat pada 25 % DP', () => {
+    const r = dpToFlow(62.5, 0, 250, 100);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(fractionToSignal(r.dpFraction, '4-20mA')).toBeCloseTo(8, 10); // transmitter DP linear
+    expect(fractionToSignal(r.flowFraction, '4-20mA')).toBeCloseTo(12, 10); // dengan sqrt extraction
   });
 });
 

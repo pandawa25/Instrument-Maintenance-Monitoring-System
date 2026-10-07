@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { loginRequest } from '../api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
 import { MiniToolsBadge } from '@/features/mini-tools/components/mini-tools-badge';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 const HIGHLIGHTS = [
   { icon: Wrench, text: 'Pantau corrective & preventive maintenance dalam satu sistem' },
@@ -23,6 +24,9 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Satu instance Mini Tools saja (bukan dua yang disembunyikan CSS): di desktop berada di bawah
+  // logo panel kiri, di layar sempit di bawah logo header.
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,16 +44,16 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Alat bantu hitung (konversi unit/sinyal) — tersedia sebelum login */}
-      <MiniToolsBadge />
-
       {/* Panel kiri — brand & highlight, disembunyikan di layar sempit supaya form tetap fokus */}
       <div className="relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dim lg:flex lg:flex-col lg:justify-between lg:p-10">
         <BrandPattern />
 
-        <div className="relative flex items-center gap-2.5 text-white">
-          <img src="/brand/app-mark.png" alt="IMMS" className="h-9 w-9 rounded-lg shadow-sm" />
-          <span className="text-sm font-semibold tracking-wide">IMMS</span>
+        <div className="relative flex flex-col items-start gap-3">
+          <div className="flex items-center gap-2.5 text-white">
+            <img src="/brand/app-mark.png" alt="IMMS" className="h-9 w-9 rounded-lg shadow-sm" />
+            <span className="text-sm font-semibold tracking-wide">IMMS</span>
+          </div>
+          {isDesktop && <MiniToolsBadge />}
         </div>
 
         <div className="relative">
@@ -77,11 +81,14 @@ export function LoginPage() {
       </div>
 
       {/* Panel kanan — form login */}
-      <div className="flex w-full flex-1 flex-col justify-between px-6 pb-8 pt-14 sm:px-10 lg:w-[54%] lg:px-16 lg:pt-8">
-        <div className="flex items-center justify-between lg:justify-end">
-          <div className="flex items-center gap-2 lg:hidden">
-            <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 rounded-lg" />
-            <img src="/brand/wordmark-h28.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-4 w-auto" />
+      <div className="flex w-full flex-1 flex-col justify-between px-6 py-8 sm:px-10 lg:w-[54%] lg:px-16">
+        <div className="flex items-start justify-between lg:justify-end">
+          <div className="flex flex-col items-start gap-3 lg:hidden">
+            <div className="flex items-center gap-2">
+              <img src="/brand/app-mark.png" alt="IMMS" className="h-8 w-8 rounded-lg" />
+              <img src="/brand/wordmark-h28.png" alt="IMMS — Instrument Maintenance & Monitoring System" className="h-4 w-auto" />
+            </div>
+            {!isDesktop && <MiniToolsBadge />}
           </div>
           <ThemeToggle />
         </div>

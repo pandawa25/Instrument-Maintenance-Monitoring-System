@@ -7,18 +7,18 @@ import { cn } from '@/lib/utils';
 import {
   FLOW_UNITS,
   PRESSURE_UNITS,
-  SIGNALS,
   convertFlow,
   convertPressure,
   convertSignal,
+  flowCompatibility,
   getSignal,
-  needsDensity,
   parseNumber,
   type PressureReference,
   type Quantity,
 } from '../utils/conversion';
 import { NumberField } from './number-field';
 import { ResultCard } from './result-card';
+import { UnitOptions } from './unit-options';
 
 const QUANTITIES: { value: Quantity; label: string }[] = [
   { value: 'pressure', label: 'Pressure' },
@@ -39,12 +39,6 @@ const DEFAULT_PAIRS: Record<Quantity, Pair> = {
 
 const DEFAULT_VALUES: Record<Quantity, string> = { pressure: '1', flow: '1', signal: '12' };
 
-function optionsFor(quantity: Quantity): { value: string; label: string }[] {
-  if (quantity === 'pressure') return PRESSURE_UNITS.map((u) => ({ value: u.id, label: u.label }));
-  if (quantity === 'signal') return SIGNALS.map((s) => ({ value: s.id, label: s.label }));
-  return FLOW_UNITS.map((u) => ({ value: u.id, label: u.label }));
-}
-
 function unitLabel(quantity: Quantity, id: string): string {
   if (quantity === 'signal') return getSignal(id).unit;
   const list = quantity === 'pressure' ? PRESSURE_UNITS : FLOW_UNITS;
@@ -64,8 +58,10 @@ export function UnitConverter() {
 
   const pair = pairs[quantity];
   const valueText = values[quantity];
-  const options = useMemo(() => optionsFor(quantity), [quantity]);
-  const densityNeeded = quantity === 'flow' && needsDensity(pair.from, pair.to);
+  const compatibility = quantity === 'flow' ? flowCompatibility(pair.from, pair.to) : 'direct';
+  const densityNeeded = compatibility === 'needs-density';
+  const involvesGas =
+    quantity === 'flow' && [pair.from, pair.to].some((id) => FLOW_UNITS.find((u) => u.id === id)?.kind === 'gas');
 
   const result = useMemo(() => {
     const n = parseNumber(valueText);
@@ -111,11 +107,7 @@ export function UnitConverter() {
         <div>
           <Label htmlFor="mt-uc-from">Dari</Label>
           <Select id="mt-uc-from" value={pair.from} onChange={(e) => setPair({ from: e.target.value })}>
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+            <UnitOptions quantity={quantity} />
           </Select>
         </div>
         <Button
@@ -131,11 +123,7 @@ export function UnitConverter() {
         <div>
           <Label htmlFor="mt-uc-to">Ke</Label>
           <Select id="mt-uc-to" value={pair.to} onChange={(e) => setPair({ to: e.target.value })}>
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+            <UnitOptions quantity={quantity} />
           </Select>
         </div>
       </div>
@@ -168,13 +156,23 @@ export function UnitConverter() {
         </div>
       )}
 
+      {compatibility === 'unsupported' && (
+        <p role="status" className="text-xs text-warning">
+          Gas standar hanya bisa dikonversi ke satuan gas standar lain. Ke volume aktual (m³/h) butuh tekanan, suhu, dan
+          faktor kompresibilitas operasi; ke massa butuh densitas standar.
+        </p>
+      )}
+
       <ResultCard label="Hasil" value={result} unit={unitLabel(quantity, pair.to)} />
 
       {quantity === 'pressure' && fromRef !== toRef && (
         <p className="text-xs text-text-muted">Gauge ↔ absolut memakai atmosfer standar 101,325 kPa; pakai barometer lapangan bila perlu presisi.</p>
       )}
-      {quantity === 'flow' && (
-        <p className="text-xs text-text-muted">Konversi satuan murni — kondisi standar gas (Nm³, Sm³, SCF) tidak dikoreksi.</p>
+      {involvesGas && (
+        <p className="text-xs text-text-muted">
+          Kondisi standar: Nm³ = 0 °C, Sm³ = 15 °C (keduanya 1,01325 bar), SCF = 60 °F &amp; 14,696 psia. Dikonversi dengan
+          koreksi suhu/tekanan (gas ideal) — cek definisi pada kontrak Anda.
+        </p>
       )}
       {quantity === 'signal' && (
         <p className="text-xs text-text-muted">Linear lewat persen span. Nilai di luar range (mis. 3,8 mA) diekstrapolasi.</p>

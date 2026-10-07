@@ -15,6 +15,7 @@ import {
 } from '../utils/conversion';
 import { NumberField } from './number-field';
 import { ResultCard } from './result-card';
+import { PressureOptions, SignalOptions } from './unit-options';
 
 type Direction = 'toSignal' | 'toProcess';
 
@@ -84,11 +85,7 @@ export function ProcessSignalConverter() {
           <div>
             <Label htmlFor="mt-ps-unit">Satuan</Label>
             <Select id="mt-ps-unit" value={unit} onChange={(e) => setUnit(e.target.value)}>
-              {PRESSURE_UNITS.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.label}
-                </option>
-              ))}
+              <PressureOptions />
             </Select>
           </div>
         </div>
@@ -101,11 +98,7 @@ export function ProcessSignalConverter() {
       <div>
         <Label htmlFor="mt-ps-signal">Jenis sinyal</Label>
         <Select id="mt-ps-signal" value={signalId} onChange={(e) => setSignalId(e.target.value)}>
-          {SIGNALS.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
+          <SignalOptions />
         </Select>
       </div>
 
