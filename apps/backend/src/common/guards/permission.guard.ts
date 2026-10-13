@@ -33,7 +33,15 @@ export class PermissionGuard implements CanActivate {
       throw new ForbiddenException('Anda tidak memiliki akses untuk melakukan aksi ini');
     }
 
-    const allowed = await this.permissionsService.hasPermission(user, required.module, required.action);
+    // action boleh berupa daftar -> lolos kalau user punya SALAH SATU aksi tsb.
+    const actions = Array.isArray(required.action) ? required.action : [required.action];
+    let allowed = false;
+    for (const action of actions) {
+      if (await this.permissionsService.hasPermission(user, required.module, action)) {
+        allowed = true;
+        break;
+      }
+    }
     if (!allowed) {
       throw new ForbiddenException('Anda tidak memiliki akses untuk melakukan aksi ini');
     }

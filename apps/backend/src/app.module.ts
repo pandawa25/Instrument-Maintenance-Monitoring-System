@@ -20,6 +20,7 @@ import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { HealthModule } from './modules/health/health.module';
+import { MaintenanceHistoryModule } from './modules/maintenance-history/maintenance-history.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { HealthModule } from './modules/health/health.module';
     PermissionsModule,
     UsersModule,
     MaintenanceModule,
+    MaintenanceHistoryModule,
     VendorsModule,
     PmActivityTypesModule,
     PmProgramsModule,

@@ -208,9 +208,12 @@ export class EquipmentController {
     return this.equipmentService.getManufacturers();
   }
 
+  // Export hanya untuk role yang punya hak TULIS di Equipment (create/edit) — role read-only
+  // (mis. "View") tidak boleh menarik dump data lewat export. Disamakan dengan tombol di
+  // frontend (equipment-list-page: canExport), jangan diubah sepihak di salah satu sisi.
   @Get('export')
-  @RequirePermission(PermissionModule.EQUIPMENT, 'view')
-  @ApiOperation({ summary: 'Export Excel data equipment sesuai filter yang aktif' })
+  @RequirePermission(PermissionModule.EQUIPMENT, ['create', 'edit'])
+  @ApiOperation({ summary: 'Export Excel data equipment sesuai filter yang aktif (butuh hak create/edit Equipment)' })
   async exportExcel(@Query() query: QueryEquipmentDto, @Res({ passthrough: true }) res: Response) {
     const buffer = await this.equipmentService.exportToExcel(query);
     res.set({

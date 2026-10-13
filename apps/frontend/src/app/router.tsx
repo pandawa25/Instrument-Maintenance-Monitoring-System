@@ -9,6 +9,7 @@ import { EquipmentDetailPage } from '@/features/equipment/pages/equipment-detail
 import { InstrumentNameListPage } from '@/features/instrument-names/pages/instrument-name-list-page';
 import { MaintenanceListPage } from '@/features/maintenance/pages/maintenance-list-page';
 import { MaintenanceDetailPage } from '@/features/maintenance/pages/maintenance-detail-page';
+import { MaintenanceHistoryPage } from '@/features/maintenance-history/pages/maintenance-history-page';
 import { UserManagementPage } from '@/features/users/pages/user-management-page';
 import { RolePermissionPage } from '@/features/permissions/pages/role-permission-page';
 import { VendorListPage } from '@/features/vendors/pages/vendor-list-page';
@@ -66,8 +67,14 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        // History Maintenance read-only dan memakai hak CORRECTIVE_MAINTENANCE (view) —
+        // lihat catatan di MaintenanceHistoryController.
         element: <RequirePermission module="CORRECTIVE_MAINTENANCE" />,
         children: [
+          {
+            element: <DashboardLayout title="History Maintenance" />,
+            children: [{ path: '/maintenance-history', element: <MaintenanceHistoryPage /> }],
+          },
           {
             element: <DashboardLayout title="Corrective Maintenance" />,
             children: [

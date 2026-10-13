@@ -37,6 +37,9 @@ export function EquipmentListPage() {
   const navigate = useNavigate();
   const canCreate = usePermission('EQUIPMENT', 'create');
   const canEdit = usePermission('EQUIPMENT', 'edit');
+  // Export hanya untuk role yang punya hak tulis (create/edit) — role read-only (mis. "View")
+  // tidak melihat tombolnya. Backend (GET /equipment/export) menolak 403 dengan aturan yang sama.
+  const canExport = canCreate || canEdit;
   // Rollback dikunci Admin only di backend (@Roles('Admin')) — tombol ini hanya dirender
   // untuk Admin supaya role lain tidak melihat UI yang request-nya pasti ditolak 403.
   const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
@@ -124,10 +127,12 @@ export function EquipmentListPage() {
         description="Kelola data equipment dan instrument di setiap area."
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-              <Download className="h-4 w-4" />
-              {isExporting ? 'Mengekspor...' : 'Export'}
-            </Button>
+            {canExport && (
+              <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Mengekspor...' : 'Export'}
+              </Button>
+            )}
             {isAdmin && (
               <Button variant="outline" onClick={() => setRollbackOpen(true)}>
                 <History className="h-4 w-4" />

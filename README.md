@@ -173,6 +173,7 @@ chore: update dependency
 - [x] Instrument Health Index (Phase 3c) — skor komposit 0-100 per instrument dari MTTR/MTBF/failure frequency (percentile relatif antar instrument) + penyesuaian criticality
 - [x] UI/UX Refresh — Foundation (Phase 4a) — design token CSS-variable + dark mode, sidebar collapsible, avatar dropdown menu, toast notification, redesign halaman Login
 - [x] UI/UX Refresh — Rollout ke seluruh modul (Phase 4b) — PageHeader/EmptyState/LoadingState konsisten + toast notification di semua form, diterapkan ke 9 modul (Area, Equipment, Instrument Name, Vendor, PM Activity Type, Spare Part, Corrective Maintenance, PM Programs, User Management)
+- [x] History Maintenance — riwayat kegiatan maintenance (corrective + preventive) beserta pemakaian material per equipment; dicari lewat tag number. Memakai hak akses Corrective Maintenance (view)
 - [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
 
 ### Refresh Token & Session Hardening

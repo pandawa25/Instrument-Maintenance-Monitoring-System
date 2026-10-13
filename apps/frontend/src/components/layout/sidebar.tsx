@@ -6,6 +6,7 @@ import {
   Gauge,
   Tag,
   Wrench,
+  History,
   Users,
   CalendarClock,
   Building2,
@@ -61,6 +62,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Kegiatan Maintenance',
     items: [
+      // Path sengaja BUKAN di bawah /maintenance — NavLink Corrective Maintenance ('/maintenance')
+      // akan ikut ter-highlight untuk semua sub-path-nya, termasuk history.
+      { to: '/maintenance-history', label: 'History Maintenance', icon: History, module: 'CORRECTIVE_MAINTENANCE' },
       { to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, module: 'CORRECTIVE_MAINTENANCE' },
       { to: '/pm-programs', label: 'Preventive Maintenance', icon: CalendarClock, module: 'PM_PROGRAM' },
     ],

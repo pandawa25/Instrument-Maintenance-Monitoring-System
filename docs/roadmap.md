@@ -1,6 +1,6 @@
 # Roadmap Pengembangan — Instrument Maintenance Monitoring System
 
-**Status:** Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar; Mini Tools di halaman login, revisi: gas per jam/hari, Pressure ↔ Flow √DP, badge di bawah logo).
+**Status:** Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar; Mini Tools di halaman login, revisi: gas per jam/hari, Pressure ↔ Flow √DP, badge di bawah logo). Update 13 Oktober 2026: History Maintenance; export Equipment hanya untuk role dengan hak create/edit; perbaikan auth setelah pindah domain (trust proxy, CORS multi-origin).
 Revisi sebelumnya 3 Oktober 2026, menggantikan revisi yang ditulis saat sistem masih 3
 modul/6 tabel — sudah usang karena sebagian besar isi "Phase 2"-nya di revisi lama sudah
 selesai dikerjakan (dengan penomoran phase berbeda, lihat README `Status Pengembangan`).
@@ -24,6 +24,7 @@ Sistem sudah melewati tahap MVP murni — pertumbuhannya:
 | Testing | — | Jest unit test backend (6 suite, 45 test — auth, RBAC, stock ledger, audit log, dashboard KPI) + CI (build+test otomatis tiap PR) |
 | Security hardening | — | 10/10 temuan audit (security, correctness, UX, DevOps) selesai — lihat `docs/system-audit-2026-10-03.md` |
 | Utilitas lapangan | — | **Mini Tools** di halaman login (8 Okt 2026): badge di bawah logo (desktop & mobile) → tab **Unit** (pressure/flow/signal sejenis; flow gas dalam satuan per jam & per hari: Nm³/Sm³/scf/Mscf/MMscf per h/d dengan koreksi suhu/tekanan gas ideal), **Pressure ↔ Signal** (range LRV–URV) dan **Pressure ↔ Flow** (DP transmitter, flow ∝ √DP, dua arah, plus output sinyal linear vs akar kuadrat). Murni client-side, logika di `features/mini-tools/utils/conversion.ts` + 37 test. Batasan: gas ↔ volume aktual/massa tidak didukung (butuh P, T, Z/densitas); DP→flow mengasumsikan densitas, koefisien discharge, dan ekspansi konstan; kondisi standar Nm³ 0 °C, Sm³ 15 °C, SCF 60 °F/14,696 psia |
+| History Maintenance | — | **History Maintenance** (13 Okt 2026): menu di atas Corrective Maintenance (`/maintenance-history`). Halaman awal = pencarian tag number → pilih equipment → tombol *Tampilkan History*. Hasil: header equipment, ringkasan (total kegiatan, corrective/preventive, downtime, kegiatan terakhir), rekap pemakaian material, dan timeline gabungan Corrective + Preventive (COMPLETED) terbaru dulu, dengan filter jenis & rentang tanggal. Material per tiket ditandai *Terpakai* (CM Completed — stok benar-benar terpotong) atau *Kebutuhan* (belum selesai). Backend `GET /maintenance-history/equipment-search` & `/equipment/:id`; hak akses memakai `CORRECTIVE_MAINTENANCE` view (tanpa entri baru di matriks/enum). Batasan: PM belum mencatat material, jadi material hanya dari Corrective; maks 1000 baris per sumber per equipment |
 
 **Yang BELUM dikerjakan (bukan oversight, sengaja di luar scope sampai sekarang):**
 - Work Order formal (approval workflow, assignment) — saat ini cuma field referensi manual ke ERP eksternal, sesuai keputusan desain di README.
