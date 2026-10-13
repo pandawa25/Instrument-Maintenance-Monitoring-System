@@ -1,9 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { CalendarCheck, ExternalLink, Wrench } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
-import { usePermission } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
 import { formatDate, formatHours, formatNumber } from '../utils/format';
 import type { CorrectiveDetail, HistoryEvent, HistoryMaterial, PreventiveDetail } from '../types/maintenance-history.types';
@@ -132,65 +128,18 @@ function PreventiveBody({ detail }: { detail: PreventiveDetail }) {
   );
 }
 
-export function HistoryEventCard({ event }: { event: HistoryEvent }) {
-  // Tautan ke halaman detail hanya muncul untuk role yang boleh membuka modul tujuannya.
-  const canViewPm = usePermission('PM_PROGRAM', 'view');
-  const isCorrective = event.kind === 'CORRECTIVE';
-  const Icon = isCorrective ? Wrench : CalendarCheck;
-
+// Isi lengkap satu kegiatan — hanya dirender saat baris di tree dibuka (lihat history-event-row.tsx).
+export function HistoryEventDetail({ event }: { event: HistoryEvent }) {
   return (
-    <li className="relative pl-12" data-kind={event.kind}>
-      <span
-        aria-hidden
-        className={cn(
-          'absolute left-0 top-3 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-background',
-          isCorrective ? 'bg-warning/15 text-warning' : 'bg-secondary/15 text-secondary',
-        )}
-      >
-        <Icon className="h-4 w-4" />
-      </span>
-
-      <Card className="p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-semibold text-text">{formatDate(event.date)}</span>
-              <span className={cn('font-medium', isCorrective ? 'text-warning' : 'text-secondary')}>
-                {isCorrective ? 'Corrective' : 'Preventive'}
-              </span>
-              <StatusBadge value={event.status} dot />
-            </div>
-            <h5 className="mt-1 break-words text-sm font-semibold text-text">{event.title}</h5>
-          </div>
-
-          {isCorrective && (
-            <Link
-              to={`/maintenance/${event.id}`}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              Detail <ExternalLink className="h-3 w-3" />
-            </Link>
-          )}
-          {!isCorrective && event.preventive && canViewPm && (
-            <Link
-              to={`/pm-programs/${event.preventive.programId}`}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              Program PM <ExternalLink className="h-3 w-3" />
-            </Link>
-          )}
-        </div>
-
-        {event.corrective && <CorrectiveBody detail={event.corrective} />}
-        {event.preventive && <PreventiveBody detail={event.preventive} />}
-        <MaterialList materials={event.materials} />
-
-        {event.remarks && (
-          <p className="mt-3 border-t border-border pt-2 text-xs text-text-muted">
-            <span className="font-medium">Catatan:</span> {event.remarks}
-          </p>
-        )}
-      </Card>
-    </li>
+    <div>
+      {event.corrective && <CorrectiveBody detail={event.corrective} />}
+      {event.preventive && <PreventiveBody detail={event.preventive} />}
+      <MaterialList materials={event.materials} />
+      {event.remarks && (
+        <p className="mt-3 border-t border-border pt-2 text-xs text-text-muted">
+          <span className="font-medium">Catatan:</span> {event.remarks}
+        </p>
+      )}
+    </div>
   );
 }

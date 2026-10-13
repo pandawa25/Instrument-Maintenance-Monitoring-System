@@ -37,7 +37,7 @@ describe('MaintenanceHistoryPage', () => {
     expect(historyMock).not.toHaveBeenCalled();
   });
 
-  it('alur lengkap: cari -> pilih -> Tampilkan History -> header, ringkasan, material, timeline', async () => {
+  it('alur lengkap: cari -> pilih -> Tampilkan History -> header, ringkasan, material, tree', async () => {
     searchMock.mockResolvedValue([OPTION_PT101]);
     historyMock.mockResolvedValue(HISTORY_PT101);
     const user = userEvent.setup();
@@ -52,12 +52,23 @@ describe('MaintenanceHistoryPage', () => {
     expect(await screen.findByRole('heading', { name: 'PT-101' })).toBeInTheDocument();
     expect(historyMock).toHaveBeenCalledWith('eq-1', { type: 'ALL', dateFrom: '', dateTo: '' });
 
-    // timeline: urutan terbaru dulu
-    const items = within(screen.getByRole('list', { name: /timeline history/i })).getAllByRole('heading', { level: 5 });
-    expect(items.map((h) => h.textContent)).toEqual(['Pembacaan tidak stabil', 'PM Kalibrasi — Periode 3', 'Transmitter drift']);
+    // tree: bulan terbaru terbuka, urutan terbaru dulu; bulan lama tertutup
+    const tree = screen.getByRole('list', { name: /tree history/i });
+    const rows = within(tree).getAllByRole('link');
+    expect(rows.map((a) => a.textContent)).toEqual(['Pembacaan tidak stabil']);
+    expect(within(tree).getByRole('button', { name: /september 2026/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(tree).getByRole('button', { name: /agustus 2026/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(tree).getByRole('link', { name: 'Pembacaan tidak stabil' })).toHaveAttribute('href', '/maintenance/cm-2');
 
-    // material: yang belum selesai ditandai "Kebutuhan", yang selesai "Terpakai"
+    // ringkasan tidak dirender sampai dibuka
+    expect(screen.queryByText('Kebutuhan')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /buka ringkasan pembacaan tidak stabil/i }));
     expect(screen.getByText('Kebutuhan')).toBeInTheDocument();
+
+    // buka semua -> kegiatan lama ikut tampil, material yang selesai ditandai "Terpakai"
+    await user.click(screen.getByRole('button', { name: /buka semua/i }));
+    expect(within(tree).getByText('Transmitter drift')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /buka ringkasan transmitter drift/i }));
     expect(screen.getByText('Terpakai')).toBeInTheDocument();
 
     // rekap material
