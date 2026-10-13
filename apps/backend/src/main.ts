@@ -1,4 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -10,7 +11,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
   // Tanpa URI versioning untuk MVP — semua route ada langsung di /api/*
@@ -22,11 +23,16 @@ async function bootstrap() {
   // (req.cookies) — lihat modules/auth.
   app.use(cookieParser());
 
+  // Percaya header X-Forwarded-* dari N proxy di depan (Railway edge, Cloudflare).
+  // Tanpa ini req.ip = IP proxy untuk SEMUA user, sehingga rate limiter (login 5/menit)
+  // dihitung bersama dan satu orang salah password bisa mengunci login seluruh akun.
+  app.set('trust proxy', config.get<number>('trustProxy') ?? 0);
+
   // credentials:true WAJIB untuk refresh token cookie ikut terkirim
   // cross-origin (frontend & backend beda subdomain Railway); origin TIDAK
   // boleh '*' selama credentials true (browser menolaknya).
   app.enableCors({
-    origin: config.get<string>('corsOrigin'),
+    origin: config.get<string[]>('corsOrigins'),
     credentials: true,
   });
 

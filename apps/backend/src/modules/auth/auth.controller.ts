@@ -25,24 +25,28 @@ export class AuthController {
 
   private cookieOptions(expires?: Date): CookieOptions {
     const secure = this.config.get<boolean>('cookieSecure') ?? false;
+    const domain = this.config.get<string | undefined>('cookieDomain');
+    const sameSiteOverride = this.config.get<'none' | 'lax' | 'strict' | undefined>('cookieSameSite');
+    // SameSite=None WAJIB Secure (ditolak browser kalau tidak) — jadi override 'none'
+    // tanpa Secure diturunkan ke 'lax'. Default: None kalau Secure (frontend & backend
+    // beda domain/subdomain), Lax di lokal (HTTP polos, sama "site").
+    const sameSite = sameSiteOverride && !(sameSiteOverride === 'none' && !secure) ? sameSiteOverride : secure ? 'none' : 'lax';
     return {
       httpOnly: true,
       secure,
-      // SameSite=None WAJIB Secure (ditolak browser kalau tidak) — dipakai di
-      // production (Railway, HTTPS) karena frontend & backend beda subdomain.
-      // Lokal (docker-compose, HTTP polos) pakai Lax, cukup karena sama "site".
-      sameSite: secure ? 'none' : 'lax',
+      sameSite,
       path: REFRESH_COOKIE_PATH,
       expires,
+      ...(domain ? { domain } : {}),
     };
   }
 
   private requestMeta(req: Request) {
-    const forwardedFor = req.headers['x-forwarded-for'];
-    const ipAddress = typeof forwardedFor === 'string' ? forwardedFor.split(',')[0]?.trim() : req.ip;
+    // req.ip sudah proxy-aware lewat 'trust proxy' (main.ts) — jangan baca X-Forwarded-For
+    // mentah, karena client bisa memalsukannya dan menyamarkan IP di login history.
     return {
       userAgent: req.headers['user-agent'],
-      ipAddress,
+      ipAddress: req.ip,
     };
   }
 
@@ -79,7 +83,7 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
     await this.authService.logout(rawToken);
-    res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+    res.clearCookie(REFRESH_COOKIE_NAME, this.cookieOptions());
     return { success: true };
   }
 

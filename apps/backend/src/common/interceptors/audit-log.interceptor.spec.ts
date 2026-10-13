@@ -66,7 +66,8 @@ describe('AuditLogInterceptor', () => {
 
     const request = {
       method: 'POST',
-      headers: { 'user-agent': 'jest-agent', 'x-forwarded-for': '10.0.0.5' },
+      ip: '10.0.0.5', // req.ip proxy-aware (trust proxy), bukan header mentah
+      headers: { 'user-agent': 'jest-agent', 'x-forwarded-for': '1.2.3.4' },
       params: {},
       body: { areaCode: 'AR-01', areaName: 'Area Satu' },
       user: authUser,

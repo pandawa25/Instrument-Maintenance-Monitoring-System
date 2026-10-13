@@ -59,8 +59,8 @@ export class AuditLogInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const forwardedFor = request.headers['x-forwarded-for'];
-    const ipAddress = typeof forwardedFor === 'string' ? forwardedFor.split(',')[0]?.trim() : request.ip;
+    // request.ip proxy-aware lewat 'trust proxy' (main.ts); header X-Forwarded-For mentah bisa dipalsukan.
+    const ipAddress = request.ip;
     const userAgent = request.headers['user-agent'];
 
     return next.handle().pipe(
