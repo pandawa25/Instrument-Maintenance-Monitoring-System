@@ -163,6 +163,7 @@ chore: update dependency
 - [x] Dashboard — summary cards, chart maintenance per bulan/area/failure category (Recharts), tabel 10 maintenance terbaru
 - [x] Module Manage User (backend + frontend, Admin only) — CRUD user, assign role, reset password; proteksi self-lockout (tidak bisa nonaktifkan/hapus akun sendiri)
 - [x] Module Spare Part / Material + integrasi kebutuhan material di Corrective Maintenance
+- [x] Bulk Upload Spare Part (Admin only, 19 Okt 2026) — template Excel, preview→simpan stateless, mode Tambah Baru / Tambah & Update, saldo awal tercatat di ledger
 - [x] Stock Movement Ledger (Phase 2) — audit trail lengkap perubahan stock, restock/adjustment manual
 - [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history

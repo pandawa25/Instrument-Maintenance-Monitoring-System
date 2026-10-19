@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,9 +10,15 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PermissionModule } from '@prisma/client';
 import { SparePartsService } from './spare-parts.service';
 import { CreateSparePartDto } from './dto/create-spare-part.dto';
@@ -21,6 +28,10 @@ import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
 import { QueryAllStockMovementsDto, resolveStockOutTypes } from './dto/query-all-stock-movements.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { BulkUploadSparePartDto } from './dto/bulk-upload-spare-part.dto';
+import { SparePartsBulkUploadService } from './spare-parts-bulk-upload.service';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -32,7 +43,10 @@ import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('spare-parts')
 export class SparePartsController {
-  constructor(private readonly sparePartsService: SparePartsService) {}
+  constructor(
+    private readonly sparePartsService: SparePartsService,
+    private readonly bulkUploadService: SparePartsBulkUploadService,
+  ) {}
 
   @Get()
   @RequirePermission(PermissionModule.SPARE_PART, 'view')
@@ -72,6 +86,56 @@ export class SparePartsController {
     query.type = undefined;
     query.types = resolveStockOutTypes(query.source);
     return this.sparePartsService.listAllMovements(query);
+  }
+
+  // Bulk upload: SENGAJA dikunci @Roles('Admin') (statis) DI ATAS permission SPARE_PART 'create' —
+  // sesuai permintaan, hanya Admin yang boleh, apa pun isi matriks permission role lain.
+  // Dua POST di bawah menerima file yang sama (stateless: commit memvalidasi ulang file-nya).
+  @Get('bulk-upload/template')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @RequirePermission(PermissionModule.SPARE_PART, 'create')
+  @ApiOperation({ summary: '[Admin only] Download template Excel bulk upload spare part' })
+  async downloadBulkUploadTemplate(@Res({ passthrough: true }) res: Response) {
+    const buffer = await this.bulkUploadService.generateTemplate();
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="spare-part-bulk-upload-template.xlsx"',
+    });
+    return new StreamableFile(buffer);
+  }
+
+  @Post('bulk-upload/preview')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @RequirePermission(PermissionModule.SPARE_PART, 'create')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '[Admin only] Validasi file Excel (maks 1000 baris) — tidak menyimpan apa pun' })
+  previewBulkUpload(@UploadedFile() file: Express.Multer.File, @Body() dto: BulkUploadSparePartDto) {
+    if (!file) throw new BadRequestException('File tidak ditemukan — pastikan field form-data bernama "file"');
+    return this.bulkUploadService.preview(file.buffer, file.originalname, dto.mode ?? 'CREATE_ONLY');
+  }
+
+  @Post('bulk-upload/commit')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @RequirePermission(PermissionModule.SPARE_PART, 'create')
+  @AuditLog('SparePart')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      '[Admin only] Simpan file yang sama dengan preview — divalidasi ulang, ditolak bila masih ada baris ERROR; semua baris dalam satu transaksi',
+  })
+  commitBulkUpload(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: BulkUploadSparePartDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!file) throw new BadRequestException('File tidak ditemukan — pastikan field form-data bernama "file"');
+    return this.bulkUploadService.commit(file.buffer, dto.mode ?? 'CREATE_ONLY', user.id);
   }
 
   @Get('dashboard/summary')

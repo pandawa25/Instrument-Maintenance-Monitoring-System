@@ -12,6 +12,9 @@ import type {
   SparePartQueryParams,
   StockMovement,
   StockMovementQueryParams,
+  BulkUploadCommitResult,
+  BulkUploadMode,
+  BulkUploadPreview,
 } from '../types/spare-part.types';
 
 export async function fetchSpareParts(params: SparePartQueryParams) {
@@ -93,6 +96,41 @@ export async function fetchInventorySummary() {
 export async function fetchInventoryCharts(months?: number) {
   const { data } = await api.get<{ data: InventoryCharts }>('/spare-parts/dashboard/charts', {
     params: { months },
+  });
+  return data.data;
+}
+
+// ===== Bulk Upload (Admin only — backend @Roles('Admin')) =====
+export async function downloadSparePartBulkTemplate() {
+  const response = await api.get('/spare-parts/bulk-upload/template', { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'spare-part-bulk-upload-template.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+function bulkFormData(file: File, mode: BulkUploadMode) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mode', mode);
+  return formData;
+}
+
+// Stateless: preview TIDAK menyimpan apa pun. Commit mengirim file yang sama dan divalidasi ulang di server.
+export async function previewSparePartBulk(file: File, mode: BulkUploadMode) {
+  const { data } = await api.post<{ data: BulkUploadPreview }>('/spare-parts/bulk-upload/preview', bulkFormData(file, mode), {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.data;
+}
+
+export async function commitSparePartBulk(file: File, mode: BulkUploadMode) {
+  const { data } = await api.post<{ data: BulkUploadCommitResult }>('/spare-parts/bulk-upload/commit', bulkFormData(file, mode), {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data.data;
 }

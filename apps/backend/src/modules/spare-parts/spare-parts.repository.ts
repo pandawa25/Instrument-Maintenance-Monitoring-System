@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma, StockMovementType } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,6 +10,21 @@ import { UpdateSparePartDto } from './dto/update-spare-part.dto';
 import { QueryStockMovementDto } from './dto/query-stock-movement.dto';
 import { QueryAllStockMovementsDto } from './dto/query-all-stock-movements.dto';
 import { todayInOperationalZone, toDateOnly } from './stock-date.util';
+
+// UPDATE massal Bulk Upload Spare Part — 1 parameter JSON ($1), tanpa interpolasi string.
+// Kolom kosong di Excel tidak disentuh lewat set `f` (pola sama dengan equipment-bulk-sql.ts).
+// `stock` SENGAJA tidak ada di sini: stok hanya berubah lewat ledger (recordMovement).
+const BULK_UPDATE_SPARE_PART_SQL = `
+UPDATE spare_parts AS sp SET
+  name = CASE WHEN jsonb_exists(v.f, 'name') THEN v.name ELSE sp.name END,
+  unit = CASE WHEN jsonb_exists(v.f, 'unit') THEN v.unit ELSE sp.unit END,
+  min_stock = CASE WHEN jsonb_exists(v.f, 'min_stock') THEN v.min_stock ELSE sp.min_stock END,
+  status = CASE WHEN jsonb_exists(v.f, 'status') THEN v.status::"SparePartStatus" ELSE sp.status END,
+  remarks = CASE WHEN jsonb_exists(v.f, 'remarks') THEN v.remarks ELSE sp.remarks END,
+  updated_at = (NOW() AT TIME ZONE 'UTC')
+FROM jsonb_to_recordset($1::jsonb) AS v(id uuid, name text, unit text, min_stock numeric, status text, remarks text, f jsonb)
+WHERE sp.id = v.id AND sp.deleted_at IS NULL
+`;
 
 const SPARE_PART_SORTABLE_FIELDS = ['kimap', 'name', 'stock', 'status', 'createdAt', 'updatedAt'] as const;
 const STOCK_MOVEMENT_SORTABLE_FIELDS = ['type', 'quantityDelta', 'balanceAfter', 'movementDate', 'createdAt'] as const;
@@ -149,6 +165,102 @@ export class SparePartsRepository {
    * Tidak ada row-level locking (SELECT ... FOR UPDATE) — risiko race condition
    * diterima sadar untuk MVP (tim kecil, kemungkinan sangat rendah).
    */
+  /**
+   * Semua spare part termasuk yang sudah di-soft-delete — kolom `kimap` unique di DB tanpa
+   * mempedulikan deleted_at, jadi KIMAP milik part terhapus tetap tidak bisa dipakai ulang.
+   * Dipakai Bulk Upload untuk validasi tanpa query per baris.
+   */
+  async findAllForBulk() {
+    return this.prisma.sparePart.findMany({
+      select: { id: true, kimap: true, name: true, unit: true, minStock: true, status: true, remarks: true, deletedAt: true },
+    });
+  }
+
+  /**
+   * Terapkan hasil Bulk Upload dalam SATU transaksi. Dirancang konstan terhadap jumlah baris
+   * (round-trip ke DB Railway mahal, lihat docs/roadmap.md Risk #21): CREATE = createMany per
+   * 500 baris, UPDATE = 1 statement `UPDATE ... FROM jsonb_to_recordset` per 500 baris.
+   *
+   * Stok awal part baru ditulis langsung (stock = saldo awal) bersama 1 baris ledger ADJUSTMENT
+   * INITIAL_BALANCE per part — hasil akhirnya identik dengan createWithInitialStock() (jalur
+   * create manual), hanya saja dibatch. Stok part yang sudah ada TIDAK pernah disentuh di sini.
+   */
+  async applyBulk(params: {
+    creates: { kimap: string; name: string; unit: string; stock: number; minStock: number; status: string; remarks?: string }[];
+    updates: { id: string; name?: string; unit?: string; minStock?: number; status?: string; remarks?: string }[];
+    createdById: string;
+  }): Promise<{ created: number; updated: number }> {
+    const movementDate = toDateOnly(todayInOperationalZone());
+    const CHUNK = 500;
+
+    return this.prisma.$transaction(
+      async (tx: any) => {
+        for (let i = 0; i < params.creates.length; i += CHUNK) {
+          const slice = params.creates.slice(i, i + CHUNK).map((c) => ({ id: randomUUID(), ...c }));
+          await tx.sparePart.createMany({
+            data: slice.map((c) => ({
+              id: c.id,
+              kimap: c.kimap,
+              name: c.name,
+              unit: c.unit,
+              stock: c.stock,
+              minStock: c.minStock,
+              status: c.status,
+              remarks: c.remarks,
+            })),
+          });
+          const withStock = slice.filter((c) => c.stock > 0);
+          if (withStock.length > 0) {
+            await tx.sparePartStockMovement.createMany({
+              data: withStock.map((c) => ({
+                sparePartId: c.id,
+                type: 'ADJUSTMENT' as StockMovementType,
+                quantityDelta: c.stock,
+                balanceAfter: c.stock,
+                referenceType: 'INITIAL_BALANCE',
+                notes: 'Saldo awal dari bulk upload',
+                movementDate,
+                createdById: params.createdById,
+              })),
+            });
+          }
+        }
+
+        for (let i = 0; i < params.updates.length; i += CHUNK) {
+          const slice = params.updates.slice(i, i + CHUNK);
+          const records = slice.map((u) => {
+            const f: Record<string, true> = {};
+            const record: Record<string, unknown> = { id: u.id };
+            const optional: [string, unknown][] = [
+              ['name', u.name],
+              ['unit', u.unit],
+              ['min_stock', u.minStock],
+              ['status', u.status],
+              ['remarks', u.remarks],
+            ];
+            for (const [column, value] of optional) {
+              if (value !== undefined) {
+                record[column] = value;
+                f[column] = true;
+              }
+            }
+            record.f = f;
+            return record;
+          });
+          const affected = await tx.$executeRawUnsafe(BULK_UPDATE_SPARE_PART_SQL, JSON.stringify(records));
+          if (affected !== slice.length) {
+            throw new ConflictException(
+              `Update massal hanya mengenai ${affected} dari ${slice.length} baris — sebagian spare part terhapus sejak preview. Upload & preview ulang file.`,
+            );
+          }
+        }
+
+        return { created: params.creates.length, updated: params.updates.length };
+      },
+      { timeout: 120_000, maxWait: 10_000 },
+    );
+  }
+
   async recordMovement(tx: any, params: RecordMovementParams): Promise<Decimal> {
     const sparePart = await tx.sparePart.findUnique({ where: { id: params.sparePartId } });
     if (!sparePart) {

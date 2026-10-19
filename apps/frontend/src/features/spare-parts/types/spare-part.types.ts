@@ -148,3 +148,36 @@ export interface InventoryCharts {
   monthlyTrend: MonthlyStockTrend[];
   lowStockItems: LowStockItem[];
 }
+
+// ===== Bulk Upload (Admin only) =====
+export type BulkUploadMode = 'CREATE_ONLY' | 'UPDATE_OR_CREATE';
+export type BulkRowSeverity = 'OK' | 'WARNING' | 'ERROR';
+export type BulkRowAction = 'CREATE' | 'UPDATE' | 'NO_CHANGE';
+
+export interface BulkUploadRow {
+  rowNumber: number;
+  severity: BulkRowSeverity;
+  action: BulkRowAction;
+  messages: string[];
+  raw: { kimap?: string; name?: string; unit?: string; stock?: string; minStock?: string; status?: string; remarks?: string };
+}
+
+export interface BulkUploadPreview {
+  mode: BulkUploadMode;
+  filename: string;
+  totalRows: number;
+  okRows: number;
+  warningRows: number;
+  errorRows: number;
+  createRows: number;
+  updateRows: number;
+  noChangeRows: number;
+  canCommit: boolean;
+  rows: BulkUploadRow[];
+}
+
+export interface BulkUploadCommitResult {
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+}

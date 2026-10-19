@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  commitSparePartBulk,
   createSparePart,
   createStandaloneMovement,
   createStockMovement,
@@ -11,10 +12,12 @@ import {
   fetchStockIn,
   fetchStockMovements,
   fetchStockOut,
+  previewSparePartBulk,
   updateSparePart,
 } from '../api/spare-parts.api';
 import type {
   AllStockMovementsQueryParams,
+  BulkUploadMode,
   CreateStandaloneMovementPayload,
   CreateStockMovementPayload,
   SparePartFormValues,
@@ -128,5 +131,20 @@ export function useInventoryCharts(months = 6) {
   return useQuery({
     queryKey: [SPARE_PARTS_KEY, 'dashboard', 'charts', months],
     queryFn: () => fetchInventoryCharts(months),
+  });
+}
+
+export function usePreviewSparePartBulk() {
+  return useMutation({
+    mutationFn: ({ file, mode }: { file: File; mode: BulkUploadMode }) => previewSparePartBulk(file, mode),
+  });
+}
+
+export function useCommitSparePartBulk() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ file, mode }: { file: File; mode: BulkUploadMode }) => commitSparePartBulk(file, mode),
+    // Seluruh data spare part (list, dropdown CM, dashboard inventory, ledger) bisa berubah.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [SPARE_PARTS_KEY] }),
   });
 }

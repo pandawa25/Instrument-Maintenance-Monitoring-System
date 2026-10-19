@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PackageSearch, Plus } from 'lucide-react';
+import { PackageSearch, Plus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,7 +13,8 @@ import { SparePartTable } from '../components/spare-part-table';
 import { SparePartFormDialog } from '../components/spare-part-form-dialog';
 import { SparePartDetailDialog } from '../components/spare-part-detail-dialog';
 import { StockMovementDialog } from '../components/stock-movement-dialog';
-import { usePermission } from '@/store/auth.store';
+import { SparePartBulkUploadDialog } from '../components/spare-part-bulk-upload-dialog';
+import { useAuthStore, usePermission } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -22,9 +23,12 @@ const DEFAULT_PARAMS: SparePartQueryParams = { page: 1, limit: 20, search: '', s
 export function SparePartListPage() {
   const canCreate = usePermission('SPARE_PART', 'create');
   const canEdit = usePermission('SPARE_PART', 'edit');
+  // Bulk upload khusus Admin (backend mengunci @Roles('Admin') — tombol disembunyikan untuk role lain).
+  const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
 
   const [params, setParams] = useState<SparePartQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SparePart | null>(null);
   const [viewingItem, setViewingItem] = useState<SparePart | null>(null);
   const [deletingItem, setDeletingItem] = useState<SparePart | null>(null);
@@ -61,11 +65,21 @@ export function SparePartListPage() {
         title="Master Spare Part / Material"
         description="Kelola master spare part / material untuk kebutuhan Corrective Maintenance."
         action={
-          canCreate && (
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              Tambah Spare Part
-            </Button>
+          (canCreate || isAdmin) && (
+            <div className="flex flex-wrap gap-2">
+              {isAdmin && (
+                <Button variant="outline" onClick={() => setBulkOpen(true)}>
+                  <Upload className="h-4 w-4" />
+                  Bulk Upload
+                </Button>
+              )}
+              {canCreate && (
+                <Button onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Tambah Spare Part
+                </Button>
+              )}
+            </div>
           )
         }
       />
@@ -102,6 +116,8 @@ export function SparePartListPage() {
 
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}
       </Card>
+
+      {isAdmin && <SparePartBulkUploadDialog open={bulkOpen} onOpenChange={setBulkOpen} />}
 
       <SparePartFormDialog open={formOpen} onOpenChange={setFormOpen} sparePart={editingItem} />
 
