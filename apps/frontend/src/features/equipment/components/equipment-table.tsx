@@ -5,6 +5,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { cn } from '@/lib/utils';
 import { isValveInstrumentCode, type Equipment, type EquipmentStatus } from '../types/equipment.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 // Aksen warna kiri per baris — scan cepat status tanpa harus baca kolom Status
 // (konsisten dengan warna StatusBadge: success/warning/danger).
@@ -88,15 +89,7 @@ export function EquipmentTable({
       </thead>
       <tbody>
         {equipment.map((item) => (
-          <tr
-            key={item.id}
-            onClick={(e) => {
-              // Klik pada kontrol di dalam baris (checkbox, tombol aksi, tautan) punya aksinya sendiri.
-              if ((e.target as HTMLElement).closest('button, a, input, label')) return;
-              onView(item);
-            }}
-            className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-2/60"
-          >
+          <tr key={item.id} {...dataRowProps(() => onView(item))}>
             {selectionEnabled && (
               <td className="px-4 py-2.5">
                 <input

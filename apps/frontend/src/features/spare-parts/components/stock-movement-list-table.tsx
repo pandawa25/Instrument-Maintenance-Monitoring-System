@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { AllStockMovementItem } from '../types/spare-part.types';
 import { formatMovementDate } from '../utils/date';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   items: AllStockMovementItem[];
@@ -49,7 +50,7 @@ export function StockMovementListTable({ items, isLoading, type }: Props) {
       </thead>
       <tbody>
         {items.map((m) => (
-          <tr key={m.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+          <tr key={m.id} {...dataRowProps()}>
             <td className="px-4 py-2.5 text-text">
               {formatMovementDate(m.movementDate)}
               <span className="block text-xs text-text-muted">

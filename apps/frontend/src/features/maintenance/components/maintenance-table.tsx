@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { Maintenance } from '../types/maintenance.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   items: Maintenance[];
@@ -39,7 +40,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
       </thead>
       <tbody>
         {items.map((item) => (
-          <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+          <tr key={item.id} {...dataRowProps(() => onView(item))}>
             <td className="px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber ?? '-'}</td>
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}

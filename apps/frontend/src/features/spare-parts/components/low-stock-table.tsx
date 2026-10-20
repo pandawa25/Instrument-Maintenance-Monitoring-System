@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { LowStockItem } from '../types/spare-part.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   items?: LowStockItem[];
@@ -34,7 +35,7 @@ export function LowStockTable({ items, isLoading }: Props) {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-border last:border-0">
+                <tr key={item.id} {...dataRowProps()}>
                   <td className="px-4 py-2 font-mono text-xs text-text">{item.kimap}</td>
                   <td className="px-4 py-2 text-text">{item.name}</td>
                   <td className={`px-4 py-2 text-center font-medium ${item.stock === 0 ? 'text-danger' : 'text-warning'}`}>

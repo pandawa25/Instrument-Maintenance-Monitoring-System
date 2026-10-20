@@ -4,6 +4,7 @@ import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { dataRowProps } from '@/components/shared/data-row';
 import { useDashboardKpi } from '../hooks/use-dashboard';
 import type { KpiByArea, KpiByInstrument, KpiMetrics } from '../types/dashboard.types';
 
@@ -88,7 +89,7 @@ function ByAreaTable({ rows, isLoading }: { rows?: KpiByArea[]; isLoading: boole
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.areaCode} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                <tr key={row.areaCode} {...dataRowProps()}>
                   <td className="px-4 py-2 text-text">
                     {row.areaCode} <span className="text-text-muted">— {row.areaName}</span>
                   </td>
@@ -147,7 +148,7 @@ function ByInstrumentTable({ rows, isLoading }: { rows?: KpiByInstrument[]; isLo
             </thead>
             <tbody>
               {filtered.map((row) => (
-                <tr key={row.tagNumber} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                <tr key={row.tagNumber} {...dataRowProps()}>
                   <td className="px-4 py-2 font-mono text-xs text-text">
                     {row.tagNumber} <span className="font-sans text-text-muted">— {row.service}</span>
                   </td>

@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { LatestMaintenanceItem, UpcomingPmPeriod } from '../types/dashboard.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 const FAILURE_CATEGORY_LABEL: Record<string, string> = {
   INSTRUMENT: 'Instrument',
@@ -14,6 +15,7 @@ const FAILURE_CATEGORY_LABEL: Record<string, string> = {
 };
 
 export function LatestMaintenanceTable({ items, isLoading }: { items?: LatestMaintenanceItem[]; isLoading: boolean }) {
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -41,7 +43,7 @@ export function LatestMaintenanceTable({ items, isLoading }: { items?: LatestMai
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                <tr key={item.id} {...dataRowProps(() => navigate(`/maintenance/${item.id}`))}>
                   <td className="px-4 py-2 text-text-muted">{new Date(item.maintenanceDate).toLocaleDateString('id-ID')}</td>
                   <td className="px-4 py-2 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
                   <td className="px-4 py-2 text-text-muted">{item.areaCode}</td>

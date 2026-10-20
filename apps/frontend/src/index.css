@@ -25,6 +25,10 @@
     --background: 214 28% 94%;
     --text: 214 42% 14%;
     --text-muted: 212 16% 42%;
+
+    /* Zebra tabel: baris genap biru sangat muda, ganjil putih (surface). Hover sedikit lebih pekat. */
+    --row-alt: 208 100% 95.5%;
+    --row-hover: 208 85% 90%;
   }
 
   .dark {
@@ -46,6 +50,9 @@
     --background: 215 30% 7%;
     --text: 210 20% 93%;
     --text-muted: 215 14% 65%;
+
+    --row-alt: 210 30% 19%;
+    --row-hover: 208 38% 25%;
   }
 
   html,
@@ -88,5 +95,22 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer components {
+  /* Baris data tabel — dipakai lewat dataRowProps() (components/shared/data-row.ts) supaya semua
+     modul seragam: garis pemisah, zebra (genap = biru muda), hover, dan kursor pointer bila baris bisa diklik. */
+  .data-row {
+    @apply border-b border-border transition-colors last:border-0;
+  }
+  .data-row:nth-child(even) {
+    background-color: hsl(var(--row-alt));
+  }
+  .data-row:hover {
+    background-color: hsl(var(--row-hover));
+  }
+  .data-row-click {
+    cursor: pointer;
   }
 }

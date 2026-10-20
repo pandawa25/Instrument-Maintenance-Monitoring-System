@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { InstrumentName } from '../types/instrument-name.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   items: InstrumentName[];
@@ -35,7 +36,7 @@ export function InstrumentNameTable({ items, isLoading, canEdit, onEdit, onDelet
       </thead>
       <tbody>
         {items.map((item) => (
-          <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+          <tr key={item.id} {...dataRowProps(() => onView(item))}>
             <td className="px-4 py-2.5 font-mono text-xs text-text">{item.code}</td>
             <td className="px-4 py-2.5 text-text">{item.name}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.description || '—'}</td>

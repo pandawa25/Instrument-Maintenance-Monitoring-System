@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { Vendor } from '../types/vendor.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   vendors: Vendor[];
@@ -37,7 +38,7 @@ export function VendorTable({ vendors, isLoading, canEdit, onEdit, onDelete, onV
       </thead>
       <tbody>
         {vendors.map((vendor) => (
-          <tr key={vendor.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+          <tr key={vendor.id} {...dataRowProps(() => onView(vendor))}>
             <td className="px-4 py-2.5 text-text">{vendor.name}</td>
             <td className="px-4 py-2.5 text-text-muted">{vendor.contactPerson || '—'}</td>
             <td className="px-4 py-2.5 text-text-muted">{vendor.phone || '—'}</td>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { PERMISSION_MODULE_LABELS } from '@/types/permissions';
 import type { RolePermissionCell, RolePermissionMatrixRow } from '../types/permission.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface PermissionMatrixTableProps {
   roles: RolePermissionMatrixRow[];
@@ -65,7 +66,7 @@ export function PermissionMatrixTable({ roles, onToggle, savingKey }: Permission
               const rowKey = `${activeRole.roleId}:${cell.module}`;
               const isSaving = savingKey?.startsWith(rowKey);
               return (
-                <tr key={cell.module} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                <tr key={cell.module} {...dataRowProps()}>
                   <td className="px-4 py-2.5 font-medium text-text">{PERMISSION_MODULE_LABELS[cell.module]}</td>
                   {COLUMNS.map((col) => (
                     <td key={col.key} className="px-4 py-2.5 text-center">

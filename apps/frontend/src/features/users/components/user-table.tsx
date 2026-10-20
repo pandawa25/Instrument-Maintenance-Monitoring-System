@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { ManagedUser } from '../types/user.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   users: ManagedUser[];
@@ -39,7 +40,7 @@ export function UserTable({ users, isLoading, currentUserId, onEdit, onChangePas
         {users.map((user) => {
           const isSelf = user.id === currentUserId;
           return (
-            <tr key={user.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+            <tr key={user.id} {...dataRowProps()}>
               <td className="px-4 py-2.5 text-text">
                 {user.fullName}
                 {isSelf && <span className="ml-1.5 text-xs text-text-muted">(Anda)</span>}

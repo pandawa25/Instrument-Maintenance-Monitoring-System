@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useDashboardHealthIndex } from '../hooks/use-dashboard';
 import type { HealthCategory } from '../types/dashboard.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 const SUMMARY_ORDER: { key: keyof ReturnType<typeof zeroSummary>; label: string; category: HealthCategory }[] = [
   { key: 'good', label: 'Good', category: 'GOOD' },
@@ -22,6 +24,7 @@ function fmt(value: number | null, suffix: string): string {
 }
 
 export function HealthIndexSection() {
+  const navigate = useNavigate();
   const [months, setMonths] = useState(12);
   const [search, setSearch] = useState('');
   const { data, isLoading } = useDashboardHealthIndex(months);
@@ -119,7 +122,7 @@ export function HealthIndexSection() {
               </thead>
               <tbody>
                 {filtered.map((item) => (
-                  <tr key={item.equipmentId} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                  <tr key={item.equipmentId} {...dataRowProps(() => navigate(`/equipment/${item.equipmentId}`))}>
                     <td className="px-4 py-2 font-mono text-xs text-text">
                       {item.tagNumber} <span className="font-sans text-text-muted">— {item.service}</span>
                     </td>

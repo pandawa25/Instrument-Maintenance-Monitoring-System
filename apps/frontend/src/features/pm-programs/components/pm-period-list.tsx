@@ -11,6 +11,7 @@ import { usePmPeriodDetail, useDeletePmPeriod } from '../hooks/use-pm-periods';
 import { PmBulkExecutionFormDialog } from './pm-bulk-execution-form-dialog';
 import type { PmPeriodListItem } from '../types/pm-period.types';
 import { getErrorMessage } from '@/lib/axios';
+import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   periods: PmPeriodListItem[];
@@ -190,7 +191,7 @@ function PmPeriodExecutionsPanel({
         </thead>
         <tbody>
           {detail.executions.map((exec) => (
-            <tr key={exec.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+            <tr key={exec.id} {...dataRowProps()}>
               {canEdit && (
                 <td className="px-4 py-2">
                   <input

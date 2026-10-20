@@ -13,6 +13,7 @@ import { useCreateStockMovement, useStockMovements } from '../hooks/use-spare-pa
 import type { CreateStockMovementPayload, ManualStockMovementType, SparePart } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
 import { formatMovementDate, todayDateInput } from '../utils/date';
+import { dataRowProps } from '@/components/shared/data-row';
 
 const emptyForm = (): CreateStockMovementPayload => ({
   type: 'RESTOCK',
@@ -171,7 +172,7 @@ export function StockMovementDialog({ open, onOpenChange, sparePart, canEdit, on
                 </thead>
                 <tbody>
                   {data.data.map((m) => (
-                    <tr key={m.id} className="border-b border-border last:border-0">
+                    <tr key={m.id} {...dataRowProps()}>
                       <td className="px-4 py-2 text-text-muted" title={`Dicatat ${new Date(m.createdAt).toLocaleString('id-ID')}`}>
                         {formatMovementDate(m.movementDate)}
                       </td>

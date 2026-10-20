@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import type { PmProgramListItem } from '../types/pm-program.types';
+import { dataRowProps } from '@/components/shared/data-row';
 
 const FREQUENCY_UNIT_LABEL: Record<string, string> = {
   DAY: 'Hari',
@@ -46,11 +47,7 @@ export function PmProgramTable({ programs, isLoading, canEdit, onEdit, onDelete,
       </thead>
       <tbody>
         {programs.map((program) => (
-          <tr
-            key={program.id}
-            className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-2/60"
-            onClick={() => onView(program)}
-          >
+          <tr key={program.id} {...dataRowProps(() => onView(program))}>
             <td className="px-4 py-2.5 font-medium text-text">{program.name}</td>
             <td className="px-4 py-2.5 text-text-muted">{program.vendor.name}</td>
             <td className="px-4 py-2.5 text-text-muted">
@@ -62,7 +59,7 @@ export function PmProgramTable({ programs, isLoading, canEdit, onEdit, onDelete,
             <td className="px-4 py-2.5">
               <StatusBadge value={program.status} />
             </td>
-            <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+            <td className="px-4 py-2.5">
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" onClick={() => onView(program)} title="Lihat Periode" aria-label="Lihat Periode">
                   <Eye className="h-4 w-4" />
