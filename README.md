@@ -75,7 +75,7 @@ docker compose -f docker/docker-compose.yml up --build
 
 ### Lampiran Evidence (Attachment)
 
-Foto/PDF evidence Corrective Maintenance & PM Execution disimpan sebagai file di
+Foto/PDF evidence Corrective Maintenance & PM Execution, serta foto & datasheet Master Equipment, disimpan sebagai file di
 disk (`UPLOAD_DIR`, default `./uploads`), bukan di database. Di Railway, **wajib**
 tambahkan [Volume](https://docs.railway.app/reference/volumes) yang di-mount ke
 path yang sama dengan `UPLOAD_DIR` (mis. `/data/uploads`) — tanpa Volume, semua
@@ -166,6 +166,7 @@ chore: update dependency
 - [x] Bulk Upload Spare Part (Admin only, 19 Okt 2026) — template Excel, preview→simpan stateless, mode Tambah Baru / Tambah & Update, saldo awal tercatat di ledger
 - [x] Stock Movement Ledger (Phase 2) — audit trail lengkap perubahan stock, restock/adjustment manual
 - [x] Attachment / Evidence Upload (Phase 2) — lampiran foto/PDF untuk Corrective Maintenance & PM Execution
+- [x] Dokumen Equipment (20 Okt 2026) — foto & datasheet/manual per equipment di halaman detail (hak akses mengikuti matriks modul Equipment); baris tabel Equipment bisa diklik untuk membuka detail
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
 - [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
 - [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD

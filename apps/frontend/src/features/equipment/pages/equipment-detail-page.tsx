@@ -8,6 +8,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
+import { DocumentsSection } from '@/features/attachments/components/documents-section';
 import { useEquipmentById } from '../hooks/use-equipment';
 import { EquipmentForm } from '../components/equipment-form';
 import { usePermission } from '@/store/auth.store';
@@ -140,6 +141,9 @@ export function EquipmentDetailPage() {
               <StatusBadge value={equipment.criticality} />
             </div>
             <DetailFieldsGrid fields={fields} />
+            <div className="mt-4 border-t border-border/60 pt-4">
+              <DocumentsSection entityType="EQUIPMENT" entityId={equipment.id} canEdit={canEdit} />
+            </div>
           </>
         ) : (
           <EquipmentForm equipment={equipment} onSuccess={() => setMode('view')} onCancel={() => setMode('view')} />

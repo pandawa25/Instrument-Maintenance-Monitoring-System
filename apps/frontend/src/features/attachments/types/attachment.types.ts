@@ -1,4 +1,4 @@
-export type AttachmentEntityType = 'CORRECTIVE_MAINTENANCE' | 'PM_PERIOD_EXECUTION';
+export type AttachmentEntityType = 'CORRECTIVE_MAINTENANCE' | 'PM_PERIOD_EXECUTION' | 'EQUIPMENT';
 
 export interface Attachment {
   id: string;

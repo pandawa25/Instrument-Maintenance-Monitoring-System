@@ -119,7 +119,7 @@ export function AttachmentsSection({ entityType, entityId, canEdit }: Props) {
   );
 }
 
-function AttachmentTile({
+export function AttachmentTile({
   attachment,
   canEdit,
   onOpen,

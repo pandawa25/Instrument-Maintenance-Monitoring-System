@@ -8,6 +8,9 @@ import { extname, join } from 'path';
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 export const MAX_FILES_PER_ENTITY = 10;
+// Equipment menampung foto lapangan + datasheet + manual, jadi batasnya lebih longgar.
+export const MAX_FILES_BY_ENTITY: Record<string, number> = { EQUIPMENT: 20 };
+export const maxFilesFor = (entityType: string): number => MAX_FILES_BY_ENTITY[entityType] ?? MAX_FILES_PER_ENTITY;
 
 /**
  * Root folder penyimpanan file — dibaca langsung dari process.env (bukan lewat

@@ -88,7 +88,15 @@ export function EquipmentTable({
       </thead>
       <tbody>
         {equipment.map((item) => (
-          <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+          <tr
+            key={item.id}
+            onClick={(e) => {
+              // Klik pada kontrol di dalam baris (checkbox, tombol aksi, tautan) punya aksinya sendiri.
+              if ((e.target as HTMLElement).closest('button, a, input, label')) return;
+              onView(item);
+            }}
+            className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-2/60"
+          >
             {selectionEnabled && (
               <td className="px-4 py-2.5">
                 <input
@@ -106,7 +114,14 @@ export function EquipmentTable({
                 STATUS_ROW_ACCENT[item.status] ?? 'border-l-transparent',
               )}
             >
-              {item.tagNumber}
+              {/* Tombol sungguhan (bukan hanya onClick di <tr>) supaya baris bisa dibuka lewat keyboard. */}
+              <button
+                type="button"
+                onClick={() => onView(item)}
+                className="font-mono text-xs font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                {item.tagNumber}
+              </button>
             </td>
             <td className="px-4 py-2.5 text-text-muted">{item.instrumentName.name}</td>
             <td className="px-4 py-2.5 text-text">{item.service}</td>

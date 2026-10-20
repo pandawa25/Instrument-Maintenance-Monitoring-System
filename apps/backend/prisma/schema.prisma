@@ -767,6 +767,7 @@ model EquipmentChangeSnapshot {
 enum AttachmentEntityType {
   CORRECTIVE_MAINTENANCE
   PM_PERIOD_EXECUTION
+  EQUIPMENT // foto & datasheet/dokumen master equipment (hak akses: EQUIPMENT view/edit, bukan Admin-only)
 }
 
 // Lampiran foto/dokumen evidence (bukti pengerjaan) untuk Corrective Maintenance
