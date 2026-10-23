@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { loginRequest } from '../api/auth.api';
+import { getLoginErrorMessage } from '../utils/login-error';
 import { useAuthStore } from '@/store/auth.store';
 import { MiniToolsBadge } from '@/features/mini-tools/components/mini-tools-badge';
 import { useMediaQuery } from '@/lib/use-media-query';
@@ -35,8 +36,8 @@ export function LoginPage() {
       const { accessToken, user } = await loginRequest({ email, password });
       setSession(accessToken, user);
       navigate('/dashboard');
-    } catch {
-      toast.error('Email atau password salah');
+    } catch (error) {
+      toast.error(getLoginErrorMessage(error));
     } finally {
       setLoading(false);
     }
