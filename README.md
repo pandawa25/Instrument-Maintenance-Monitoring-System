@@ -188,6 +188,7 @@ chore: update dependency
 - `CORS_ORIGIN` di backend **wajib** diisi origin frontend yang eksak (bukan `*`) — browser menolak cookie cross-origin kalau `Access-Control-Allow-Origin` wildcard sementara `credentials: true`.
 - **Pindah domain / custom domain (mis. tigalimabelas.com)** — checklist env agar login tidak gagal:
   1. Backend `CORS_ORIGIN` = origin frontend baru persis seperti di address bar (`https://tigalimabelas.com`, tanpa trailing slash). Beberapa origin dipisah koma (apex + `www`).
+     Mendukung wildcard subdomain: `CORS_ORIGIN=https://tigalimabelas.com,https://*.tigalimabelas.com` (cocok untuk `app.`, `www.`, `staging.`, dst — apex harus ditulis terpisah). Setelah mengubah env backend, **redeploy backend** agar terbaca.
   2. Frontend `VITE_API_BASE_URL` = URL API (`https://api.tigalimabelas.com/api`) — ini variabel **build-time**, perlu **redeploy/rebuild** frontend setelah diubah.
   3. Sebaiknya API juga di subdomain yang sama (`api.tigalimabelas.com`), bukan `*.up.railway.app`: cookie refresh token jadi first-party. Cookie dari domain berbeda dianggap third-party dan diblokir Safari/Chrome tertentu (login berhasil tapi sesi hilang saat reload).
   4. `TRUST_PROXY` = jumlah proxy di depan backend (default 1 di production; 2 kalau Cloudflare proxy aktif). Tanpa ini semua user terlihat berasal dari satu IP dan limit login 5x/menit dipakai bersama.

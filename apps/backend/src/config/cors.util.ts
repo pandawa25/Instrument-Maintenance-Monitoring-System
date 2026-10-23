@@ -30,3 +30,21 @@ function normalizeOrigin(value: string): string {
   }
   return value.replace(/\/+$/, '').toLowerCase();
 }
+
+/**
+ * Ubah daftar origin (hasil parseCorsOrigins) menjadi opsi `origin` untuk cors().
+ *
+ * Entri berbentuk `https://*.contoh.com` menjadi pola yang cocok dengan SEMUA subdomain
+ * (app.contoh.com, staging.app.contoh.com, ...) sehingga mengganti/menambah subdomain frontend
+ * tidak lagi membutuhkan perubahan env. Wildcard TIDAK mencakup apex (`https://contoh.com`) —
+ * daftarkan terpisah bila perlu. Scheme tetap harus sama persis (https tidak cocok dengan http).
+ */
+export function toCorsOriginOption(origins: string[]): (string | RegExp)[] {
+  return origins.map((origin) => {
+    const match = /^(https?):\/\/\*\.([a-z0-9.-]+)(:\d+)?$/i.exec(origin);
+    if (!match) return origin;
+    const [, scheme, domain, port] = match;
+    const escaped = domain.replace(/\./g, '\\.');
+    return new RegExp(`^${scheme.toLowerCase()}://[a-z0-9-]+(\\.[a-z0-9-]+)*\\.${escaped.toLowerCase()}${port ?? ''}$`);
+  });
+}

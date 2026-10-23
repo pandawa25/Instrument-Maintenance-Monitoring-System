@@ -1,3 +1,4 @@
+import { toCorsOriginOption } from './config/cors.util';
 import { NestFactory, Reflector } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
@@ -32,7 +33,7 @@ async function bootstrap() {
   // cross-origin (frontend & backend beda subdomain Railway); origin TIDAK
   // boleh '*' selama credentials true (browser menolaknya).
   app.enableCors({
-    origin: config.get<string[]>('corsOrigins'),
+    origin: toCorsOriginOption(config.get<string[]>('corsOrigins') ?? []),
     credentials: true,
   });
 

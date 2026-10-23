@@ -1,4 +1,4 @@
-import { parseCorsOrigins } from './cors.util';
+import { parseCorsOrigins, toCorsOriginOption } from './cors.util';
 
 describe('parseCorsOrigins', () => {
   it('memakai fallback kalau env kosong', () => {
@@ -27,5 +27,37 @@ describe('parseCorsOrigins', () => {
 
   it('nilai tanpa scheme tetap dibersihkan (best effort)', () => {
     expect(parseCorsOrigins('TigaLimaBelas.com/')).toEqual(['tigalimabelas.com']);
+  });
+});
+
+describe('toCorsOriginOption — wildcard subdomain', () => {
+  const allowed = (origins: string[], candidate: string) =>
+    toCorsOriginOption(parseCorsOrigins(origins.join(','))).some((o) => (typeof o === 'string' ? o === candidate : o.test(candidate)));
+
+  it('origin biasa dipertahankan apa adanya (cocok persis)', () => {
+    expect(allowed(['https://tigalimabelas.com'], 'https://tigalimabelas.com')).toBe(true);
+    expect(allowed(['https://tigalimabelas.com'], 'https://app.tigalimabelas.com')).toBe(false);
+  });
+
+  it('https://*.domain cocok dengan semua subdomain, termasuk bertingkat', () => {
+    const list = ['https://*.tigalimabelas.com'];
+    expect(allowed(list, 'https://app.tigalimabelas.com')).toBe(true);
+    expect(allowed(list, 'https://staging.app.tigalimabelas.com')).toBe(true);
+  });
+
+  it('wildcard TIDAK mencakup apex, scheme lain, atau domain yang hanya mirip', () => {
+    const list = ['https://*.tigalimabelas.com'];
+    expect(allowed(list, 'https://tigalimabelas.com')).toBe(false);
+    expect(allowed(list, 'http://app.tigalimabelas.com')).toBe(false);
+    expect(allowed(list, 'https://app.tigalimabelas.com.evil.com')).toBe(false);
+    expect(allowed(list, 'https://evil-tigalimabelas.com')).toBe(false);
+    expect(allowed(list, 'https://tigalimabelas.com.evil.com')).toBe(false);
+  });
+
+  it('bisa digabung dengan apex dan origin lain', () => {
+    const list = ['https://tigalimabelas.com', 'https://*.tigalimabelas.com', 'https://imms.up.railway.app'];
+    expect(allowed(list, 'https://tigalimabelas.com')).toBe(true);
+    expect(allowed(list, 'https://app.tigalimabelas.com')).toBe(true);
+    expect(allowed(list, 'https://imms.up.railway.app')).toBe(true);
   });
 });
