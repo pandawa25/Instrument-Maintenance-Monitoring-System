@@ -7,6 +7,7 @@ import {
   deleteSparePart,
   fetchInventoryCharts,
   fetchInventorySummary,
+  fetchSparePartById,
   fetchSpareParts,
   fetchSparePartsForDropdown,
   fetchStockIn,
@@ -40,6 +41,16 @@ export function useSparePartsLookup() {
     queryKey: [SPARE_PARTS_KEY, 'dropdown'],
     queryFn: fetchSparePartsForDropdown,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Detail + saldo awal untuk form edit; hanya diambil saat dibutuhkan (Admin membuka dialog edit). */
+export function useSparePartDetail(id: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: [SPARE_PARTS_KEY, 'detail', id],
+    queryFn: () => fetchSparePartById(id as string),
+    enabled: enabled && Boolean(id),
+    staleTime: 0,
   });
 }
 

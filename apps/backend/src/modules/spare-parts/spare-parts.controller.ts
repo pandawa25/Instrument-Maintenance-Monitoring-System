@@ -157,7 +157,7 @@ export class SparePartsController {
   @RequirePermission(PermissionModule.SPARE_PART, 'view')
   @ApiOperation({ summary: 'Detail satu spare part / material' })
   findOne(@Param('id', ParseUuidPipe) id: string) {
-    return this.sparePartsService.findOne(id);
+    return this.sparePartsService.findDetail(id);
   }
 
   @Post()
@@ -172,8 +172,12 @@ export class SparePartsController {
   @RequirePermission(PermissionModule.SPARE_PART, 'edit')
   @AuditLog('SparePart')
   @ApiOperation({ summary: 'Update spare part / material' })
-  update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateSparePartDto) {
-    return this.sparePartsService.update(id, dto);
+  update(
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() dto: UpdateSparePartDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sparePartsService.update(id, dto, user);
   }
 
   @Delete(':id')

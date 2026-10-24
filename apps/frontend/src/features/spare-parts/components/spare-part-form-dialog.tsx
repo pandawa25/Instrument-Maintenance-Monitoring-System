@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { useCreateSparePart, useUpdateSparePart } from '../hooks/use-spare-parts';
+import { useCreateSparePart, useSparePartDetail, useUpdateSparePart } from '../hooks/use-spare-parts';
+import { useAuthStore } from '@/store/auth.store';
 import type { SparePart, SparePartFormValues } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -31,6 +32,25 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
   const updateMutation = useUpdateSparePart();
   const isEdit = Boolean(sparePart);
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Koreksi saldo awal: khusus Admin (backend juga menolak role lain). Saldo awal diambil dari
+  // detail (baris ledger INITIAL_BALANCE) — `sparePart.stock` pada list adalah stock SAAT INI.
+  const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
+  const canEditOpening = isEdit && isAdmin;
+  const detail = useSparePartDetail(sparePart?.id, open && canEditOpening);
+  const [openingStock, setOpeningStock] = useState<string>('');
+  const originalOpening = detail.data?.openingStock;
+  const currentStock = detail.data?.stock ?? sparePart?.stock ?? 0;
+  const openingNumber = openingStock === '' ? NaN : Number(openingStock);
+  const openingChanged = originalOpening !== undefined && !Number.isNaN(openingNumber) && openingNumber !== originalOpening;
+  const projectedStock = openingChanged ? Math.round((currentStock + openingNumber - (originalOpening ?? 0)) * 100) / 100 : currentStock;
+  const openingInvalid = canEditOpening && openingStock !== '' && (Number.isNaN(openingNumber) || openingNumber < 0 || projectedStock < 0);
+
+  // Bergantung pada nilai primitif (bukan objek `detail.data`) supaya ketikan user tidak ter-reset
+  // oleh re-render/refetch yang menghasilkan nilai sama.
+  useEffect(() => {
+    if (originalOpening !== undefined) setOpeningStock(String(originalOpening));
+  }, [originalOpening, sparePart?.id, open]);
 
   useEffect(() => {
     if (open) {
@@ -61,7 +81,10 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
         // supaya selalu tercatat di ledger. minStock boleh diedit langsung
         // (cuma ambang alert, bukan saldo).
         const { stock: _stock, ...updatePayload } = form;
-        await updateMutation.mutateAsync({ id: sparePart.id, payload: { ...updatePayload, minStock } });
+        await updateMutation.mutateAsync({
+          id: sparePart.id,
+          payload: { ...updatePayload, minStock, ...(canEditOpening && openingChanged ? { openingStock: openingNumber } : {}) },
+        });
         toast.success('Spare part / material berhasil diperbarui');
       } else {
         const payload: SparePartFormValues = {
@@ -111,20 +134,49 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="stock">Stock {isEdit && <span className="font-normal text-text-muted">(saldo awal)</span>}</Label>
-              <Input
-                id="stock"
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.stock}
-                disabled={isEdit}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
-              />
-              {isEdit && (
-                <p className="mt-1 text-xs text-text-muted">
-                  Gunakan tombol "Stock In / Out / Adjustment" pada baris tabel, atau halaman Stock In / Stock Out, untuk mengubah stock.
-                </p>
+              {canEditOpening ? (
+                <>
+                  <Label htmlFor="openingStock">Stok Awal</Label>
+                  <Input
+                    id="openingStock"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={openingStock}
+                    disabled={detail.isLoading || detail.isError}
+                    onChange={(e) => setOpeningStock(e.target.value)}
+                    aria-invalid={openingInvalid || undefined}
+                  />
+                  <p className="mt-1 text-xs text-text-muted">
+                    Stock saat ini: <span className="font-medium">{currentStock}</span>
+                    {openingChanged && (
+                      <>
+                        {' '}→ menjadi <span className={projectedStock < 0 ? 'font-medium text-danger' : 'font-medium'}>{projectedStock}</span>
+                      </>
+                    )}
+                    . Mutasi Stock In/Out tetap tercatat; hanya saldo awal yang dikoreksi.
+                  </p>
+                  {detail.isError && <p className="mt-1 text-xs text-danger">Gagal memuat saldo awal. Tutup dan buka lagi dialog ini.</p>}
+                  {openingInvalid && <p className="mt-1 text-xs text-danger">Saldo awal tidak valid atau membuat stock negatif.</p>}
+                </>
+              ) : (
+                <>
+                  <Label htmlFor="stock">Stock {isEdit && <span className="font-normal text-text-muted">(saat ini)</span>}</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={form.stock}
+                    disabled={isEdit}
+                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                  />
+                  {isEdit && (
+                    <p className="mt-1 text-xs text-text-muted">
+                      Gunakan tombol "Stock In / Out / Adjustment" pada baris tabel, atau halaman Stock In / Stock Out, untuk mengubah stock.
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div>
@@ -177,7 +229,7 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || openingInvalid || (canEditOpening && detail.isLoading)}>
               {isSaving ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </DialogFooter>

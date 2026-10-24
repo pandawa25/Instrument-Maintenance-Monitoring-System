@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { SparePartsService } from './spare-parts.service';
 import { resolveStockOutTypes } from './dto/query-all-stock-movements.dto';
 import { todayInOperationalZone } from './stock-date.util';
@@ -11,6 +11,9 @@ function build() {
     findMaintenanceRefs: jest.fn().mockResolvedValue([]),
     getMonthlyStockInOut: jest.fn().mockResolvedValue([]),
     findLowStockItems: jest.fn().mockResolvedValue([]),
+    findByKimap: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue(undefined),
+    updateWithOpeningStock: jest.fn().mockResolvedValue(undefined),
   };
   return { service: new SparePartsService(repository as any), repository };
 }
@@ -134,5 +137,31 @@ describe('SparePartsService.getDashboardCharts — tren netto', () => {
 
     expect(monthlyTrend.find((m: any) => m.month === key(0))).toMatchObject({ stockIn: 12, stockOut: 7.5 });
     expect(monthlyTrend.find((m: any) => m.month === key(1))).toMatchObject({ stockIn: 0, stockOut: 0 });
+  });
+});
+
+describe('SparePartsService.update — koreksi saldo awal', () => {
+  const admin = { id: 'u-1', role: 'Admin' };
+  const teknisi = { id: 'u-2', role: 'Teknisi' };
+
+  it('Admin: openingStock diteruskan ke repository terpisah dari field master', async () => {
+    const { service, repository } = build();
+    await service.update('sp-1', { name: 'Baru', openingStock: 12 }, admin);
+    expect(repository.updateWithOpeningStock).toHaveBeenCalledWith('sp-1', { name: 'Baru' }, 12, 'u-1');
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('non-Admin dengan openingStock → 403 dan tidak ada yang tertulis', async () => {
+    const { service, repository } = build();
+    await expect(service.update('sp-1', { openingStock: 12 }, teknisi)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.updateWithOpeningStock).not.toHaveBeenCalled();
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('tanpa openingStock: jalur update biasa, user non-Admin tetap boleh edit field lain', async () => {
+    const { service, repository } = build();
+    await service.update('sp-1', { name: 'Baru' }, teknisi);
+    expect(repository.update).toHaveBeenCalledWith('sp-1', { name: 'Baru' });
+    expect(repository.updateWithOpeningStock).not.toHaveBeenCalled();
   });
 });

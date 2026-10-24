@@ -13,6 +13,11 @@ export interface SparePart {
   updatedAt: string;
 }
 
+/** Respons GET /spare-parts/:id — SparePart + saldo awal (baris ledger INITIAL_BALANCE). */
+export interface SparePartDetail extends SparePart {
+  openingStock: number;
+}
+
 export interface SparePartFormValues {
   kimap: string;
   name: string;
@@ -21,6 +26,8 @@ export interface SparePartFormValues {
   minStock?: number | string;
   status: SparePartStatus;
   remarks?: string;
+  /** Koreksi saldo awal — hanya diterima backend dari Admin. */
+  openingStock?: number;
 }
 
 export interface SparePartQueryParams {

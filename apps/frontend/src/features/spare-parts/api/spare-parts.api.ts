@@ -8,6 +8,7 @@ import type {
   InventoryCharts,
   InventorySummary,
   SparePart,
+  SparePartDetail,
   SparePartFormValues,
   SparePartQueryParams,
   StockMovement,
@@ -25,7 +26,7 @@ export async function fetchSpareParts(params: SparePartQueryParams) {
 }
 
 export async function fetchSparePartById(id: string) {
-  const { data } = await api.get<{ data: SparePart }>(`/spare-parts/${id}`);
+  const { data } = await api.get<{ data: SparePartDetail }>(`/spare-parts/${id}`);
   return data.data;
 }
 

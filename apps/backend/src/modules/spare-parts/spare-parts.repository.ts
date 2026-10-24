@@ -112,6 +112,16 @@ export class SparePartsRepository {
     return this.prisma.sparePart.findFirst({ where: { id, deletedAt: null } });
   }
 
+  /** Saldo awal = baris ledger INITIAL_BALANCE (0 bila part dibuat tanpa stok awal). */
+  async findOpeningBalance(sparePartId: string): Promise<number> {
+    const row = await this.prisma.sparePartStockMovement.findFirst({
+      where: { sparePartId, referenceType: 'INITIAL_BALANCE' },
+      orderBy: { createdAt: 'asc' },
+      select: { quantityDelta: true },
+    });
+    return row ? Number(row.quantityDelta) : 0;
+  }
+
   findByKimap(kimap: string) {
     return this.prisma.sparePart.findFirst({ where: { kimap, deletedAt: null } });
   }
@@ -143,8 +153,90 @@ export class SparePartsRepository {
     });
   }
 
-  update(id: string, dto: UpdateSparePartDto) {
+  update(id: string, dto: Omit<UpdateSparePartDto, 'openingStock'>) {
     return this.prisma.sparePart.update({ where: { id }, data: dto });
+  }
+
+  /**
+   * Update field master + koreksi SALDO AWAL dalam 1 transaction.
+   *
+   * Saldo awal = baris ledger ADJUSTMENT/INITIAL_BALANCE (dibuat saat create / bulk upload).
+   * Koreksi menulis ulang baris itu lalu menggeser `balanceAfter` semua baris SESUDAHNYA dan
+   * `SparePart.stock` sebesar selisih — jadi stock tetap = saldo awal + total mutasi.
+   * Part lama yang tidak punya baris saldo awal (dibuat dengan stock 0) dibuatkan barisnya,
+   * di-backdate ke tanggal pembuatan part.
+   *
+   * Ditolak bila koreksi membuat saldo (saat ini maupun riwayat) menjadi negatif — artinya
+   * mutasi keluar yang sudah tercatat tidak akan punya stok pendukung.
+   */
+  updateWithOpeningStock(
+    id: string,
+    data: Omit<UpdateSparePartDto, 'openingStock'>,
+    openingStock: number,
+    createdById: string,
+  ) {
+    return this.prisma.$transaction(async (tx: any) => {
+      const part = await tx.sparePart.findUnique({ where: { id } });
+      if (!part) throw new BadRequestException(`Spare part dengan id '${id}' tidak ditemukan`);
+
+      const opening = await tx.sparePartStockMovement.findFirst({
+        where: { sparePartId: id, referenceType: 'INITIAL_BALANCE' },
+        orderBy: { createdAt: 'asc' },
+      });
+      const cutoff: Date = opening ? opening.createdAt : new Date(0);
+      const oldOpening = opening ? new Decimal(opening.quantityDelta) : new Decimal(0);
+      const delta = new Decimal(openingStock).minus(oldOpening);
+
+      if (!delta.isZero()) {
+        const later = await tx.sparePartStockMovement.findMany({
+          where: { sparePartId: id, ...(opening ? { id: { not: opening.id }, createdAt: { gte: cutoff } } : {}) },
+          select: { balanceAfter: true },
+        });
+        const lowest = later.reduce(
+          (min: Decimal, r: { balanceAfter: Decimal }) => Decimal.min(min, new Decimal(r.balanceAfter)),
+          new Decimal(part.stock),
+        );
+        if (lowest.plus(delta).isNegative()) {
+          throw new BadRequestException(
+            `Saldo awal tidak bisa diturunkan ke ${openingStock}: stock akan menjadi negatif ` +
+              `(saldo terendah pada riwayat mutasi saat ini ${lowest.toString()}, selisih ${delta.toString()})`,
+          );
+        }
+
+        await tx.sparePartStockMovement.updateMany({
+          where: { sparePartId: id, ...(opening ? { id: { not: opening.id }, createdAt: { gte: cutoff } } : {}) },
+          data: { balanceAfter: { increment: delta } },
+        });
+
+        const note = `Saldo awal dikoreksi: ${oldOpening.toString()} → ${openingStock}`;
+        if (opening) {
+          await tx.sparePartStockMovement.update({
+            where: { id: opening.id },
+            data: { quantityDelta: openingStock, balanceAfter: openingStock, notes: note },
+          });
+        } else {
+          await tx.sparePartStockMovement.create({
+            data: {
+              sparePartId: id,
+              type: 'ADJUSTMENT',
+              quantityDelta: openingStock,
+              balanceAfter: openingStock,
+              referenceType: 'INITIAL_BALANCE',
+              notes: note,
+              movementDate: toDateOnly(part.createdAt),
+              createdById,
+              createdAt: part.createdAt,
+            },
+          });
+        }
+        await tx.sparePart.update({ where: { id }, data: { stock: { increment: delta } } });
+      }
+
+      if (Object.keys(data).length > 0) {
+        await tx.sparePart.update({ where: { id }, data });
+      }
+      return tx.sparePart.findUnique({ where: { id } });
+    });
   }
 
   softDelete(id: string) {

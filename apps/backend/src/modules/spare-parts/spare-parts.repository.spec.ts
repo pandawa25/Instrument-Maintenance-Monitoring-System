@@ -177,3 +177,63 @@ describe('SparePartsRepository.findAllMovements', () => {
     ]);
   });
 });
+
+describe('SparePartsRepository.updateWithOpeningStock', () => {
+  function build(opts: { stock: number; opening?: { id: string; qty: number } | null; later?: number[] }) {
+    const created = new Date('2026-10-01T00:00:00Z');
+    const tx = {
+      sparePart: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'sp-1', stock: new Decimal(opts.stock), createdAt: created }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      sparePartStockMovement: {
+        findFirst: jest.fn().mockResolvedValue(
+          opts.opening ? { id: opts.opening.id, quantityDelta: new Decimal(opts.opening.qty), createdAt: created } : null,
+        ),
+        findMany: jest.fn().mockResolvedValue((opts.later ?? []).map((b) => ({ balanceAfter: new Decimal(b) }))),
+        updateMany: jest.fn().mockResolvedValue(undefined),
+        update: jest.fn().mockResolvedValue(undefined),
+        create: jest.fn().mockResolvedValue(undefined),
+      },
+    };
+    const prisma = { $transaction: (fn: any) => fn(tx) };
+    return { tx, repository: new SparePartsRepository(prisma as any) };
+  }
+
+  it('menaikkan saldo awal: geser balance sesudahnya + stock sebesar selisih', async () => {
+    const { tx, repository } = build({ stock: 12, opening: { id: 'm-0', qty: 10 }, later: [15, 12] });
+    await repository.updateWithOpeningStock('sp-1', {}, 20, 'u-1');
+    expect(tx.sparePartStockMovement.updateMany.mock.calls[0][0].data.balanceAfter.increment.toNumber()).toBe(10);
+    expect(tx.sparePartStockMovement.update.mock.calls[0][0].data).toMatchObject({ quantityDelta: 20, balanceAfter: 20 });
+    expect(tx.sparePart.update.mock.calls[0][0].data.stock.increment.toNumber()).toBe(10);
+    expect(tx.sparePartStockMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('menurunkan saldo awal yang membuat saldo riwayat negatif → ditolak, tidak ada tulisan', async () => {
+    const { tx, repository } = build({ stock: 3, opening: { id: 'm-0', qty: 10 }, later: [2, 3] });
+    await expect(repository.updateWithOpeningStock('sp-1', {}, 5, 'u-1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.sparePartStockMovement.updateMany).not.toHaveBeenCalled();
+    expect(tx.sparePart.update).not.toHaveBeenCalled();
+  });
+
+  it('part tanpa baris saldo awal: dibuatkan baris INITIAL_BALANCE (backdate) dan semua baris digeser', async () => {
+    const { tx, repository } = build({ stock: 4, opening: null, later: [5, 4] });
+    await repository.updateWithOpeningStock('sp-1', {}, 8, 'u-1');
+    expect(tx.sparePartStockMovement.create.mock.calls[0][0].data).toMatchObject({
+      type: 'ADJUSTMENT',
+      referenceType: 'INITIAL_BALANCE',
+      quantityDelta: 8,
+      balanceAfter: 8,
+    });
+    expect(tx.sparePartStockMovement.updateMany.mock.calls[0][0].data.balanceAfter.increment.toNumber()).toBe(8);
+  });
+
+  it('nilai tidak berubah: tidak menyentuh ledger/stock, hanya field master', async () => {
+    const { tx, repository } = build({ stock: 10, opening: { id: 'm-0', qty: 10 } });
+    await repository.updateWithOpeningStock('sp-1', { name: 'X' }, 10, 'u-1');
+    expect(tx.sparePartStockMovement.updateMany).not.toHaveBeenCalled();
+    expect(tx.sparePartStockMovement.update).not.toHaveBeenCalled();
+    expect(tx.sparePart.update).toHaveBeenCalledTimes(1);
+    expect(tx.sparePart.update.mock.calls[0][0].data).toEqual({ name: 'X' });
+  });
+});

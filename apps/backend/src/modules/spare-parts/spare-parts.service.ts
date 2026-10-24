@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { SparePart } from '@prisma/client';
 import { SparePartsRepository } from './spare-parts.repository';
 import { CreateSparePartDto } from './dto/create-spare-part.dto';
@@ -56,6 +56,12 @@ export class SparePartsService {
     return this.toListItem(row);
   }
 
+  /** Detail untuk form edit: findOne + saldo awal (dipisah agar jalur internal tidak kena query tambahan). */
+  async findDetail(id: string) {
+    const item = await this.findOne(id);
+    return { ...item, openingStock: await this.repository.findOpeningBalance(id) };
+  }
+
   async create(dto: CreateSparePartDto, createdById: string) {
     const existing = await this.repository.findByKimap(dto.kimap);
     if (existing) {
@@ -67,8 +73,13 @@ export class SparePartsService {
     return this.findOne(created.id);
   }
 
-  async update(id: string, dto: UpdateSparePartDto) {
+  async update(id: string, dto: UpdateSparePartDto, actor?: { id: string; role: string }) {
     await this.findOne(id); // memastikan ada & belum dihapus
+
+    const { openingStock, ...fields } = dto;
+    if (openingStock !== undefined && actor?.role !== 'Admin') {
+      throw new ForbiddenException('Hanya Admin yang dapat mengoreksi saldo awal');
+    }
 
     if (dto.kimap) {
       const existing = await this.repository.findByKimap(dto.kimap);
@@ -77,7 +88,11 @@ export class SparePartsService {
       }
     }
 
-    await this.repository.update(id, dto);
+    if (openingStock !== undefined && actor) {
+      await this.repository.updateWithOpeningStock(id, fields, openingStock, actor.id);
+    } else {
+      await this.repository.update(id, fields);
+    }
     return this.findOne(id);
   }
 
