@@ -3,10 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const mutateAsync = vi.fn().mockResolvedValue({});
-let role = 'Admin';
-vi.mock('@/store/auth.store', () => ({
-  useAuthStore: (sel: (s: any) => unknown) => sel({ user: { role } }),
-}));
 vi.mock('../hooks/use-spare-parts', () => ({
   useCreateSparePart: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateSparePart: () => ({ mutateAsync, isPending: false }),
@@ -26,7 +22,7 @@ const part: any = {
 };
 
 describe('SparePartFormDialog — koreksi stok awal', () => {
-  beforeEach(() => { mutateAsync.mockClear(); role = 'Admin'; });
+  beforeEach(() => { mutateAsync.mockClear(); });
 
   it('Admin: field Stok Awal terisi saldo awal (bukan stock saat ini) dan bisa diedit', async () => {
     render(<SparePartFormDialog open onOpenChange={() => {}} sparePart={part} />);
@@ -68,10 +64,10 @@ describe('SparePartFormDialog — koreksi stok awal', () => {
     expect(screen.getByRole('button', { name: 'Simpan' })).not.toBeDisabled();
   });
 
-  it('non-Admin: field stock tetap terkunci (tanpa Stok Awal)', () => {
-    role = 'Teknisi';
+  it('tidak bergantung pada role: user dengan hak edit (mis. Teknisi) mendapat field Stok Awal yang bisa diedit', async () => {
     render(<SparePartFormDialog open onOpenChange={() => {}} sparePart={part} />);
-    expect(screen.queryByLabelText('Stok Awal')).toBeNull();
-    expect(screen.getByLabelText(/^Stock/)).toBeDisabled();
+    const input = (await screen.findByLabelText('Stok Awal')) as HTMLInputElement;
+    await waitFor(() => expect(input.value).toBe('10'));
+    expect(input).not.toBeDisabled();
   });
 });

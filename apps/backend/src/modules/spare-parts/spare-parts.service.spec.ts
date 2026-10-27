@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { SparePartsService } from './spare-parts.service';
 import { resolveStockOutTypes } from './dto/query-all-stock-movements.dto';
 import { todayInOperationalZone } from './stock-date.util';
@@ -144,18 +144,17 @@ describe('SparePartsService.update — koreksi saldo awal', () => {
   const admin = { id: 'u-1', role: 'Admin' };
   const teknisi = { id: 'u-2', role: 'Teknisi' };
 
-  it('Admin: openingStock diteruskan ke repository terpisah dari field master', async () => {
+  it('openingStock diteruskan ke repository terpisah dari field master', async () => {
     const { service, repository } = build();
     await service.update('sp-1', { name: 'Baru', openingStock: 12 }, admin);
     expect(repository.updateWithOpeningStock).toHaveBeenCalledWith('sp-1', { name: 'Baru' }, 12, 'u-1');
     expect(repository.update).not.toHaveBeenCalled();
   });
 
-  it('non-Admin dengan openingStock → 403 dan tidak ada yang tertulis', async () => {
+  it('Teknisi (hak edit Spare Part) boleh mengoreksi saldo awal', async () => {
     const { service, repository } = build();
-    await expect(service.update('sp-1', { openingStock: 12 }, teknisi)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(repository.updateWithOpeningStock).not.toHaveBeenCalled();
-    expect(repository.update).not.toHaveBeenCalled();
+    await service.update('sp-1', { openingStock: 12 }, teknisi);
+    expect(repository.updateWithOpeningStock).toHaveBeenCalledWith('sp-1', {}, 12, 'u-2');
   });
 
   it('tanpa openingStock: jalur update biasa, user non-Admin tetap boleh edit field lain', async () => {

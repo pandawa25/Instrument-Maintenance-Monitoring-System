@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { SparePart } from '@prisma/client';
 import { SparePartsRepository } from './spare-parts.repository';
 import { CreateSparePartDto } from './dto/create-spare-part.dto';
@@ -73,13 +73,12 @@ export class SparePartsService {
     return this.findOne(created.id);
   }
 
-  async update(id: string, dto: UpdateSparePartDto, actor?: { id: string; role: string }) {
+  async update(id: string, dto: UpdateSparePartDto, actor?: { id: string }) {
     await this.findOne(id); // memastikan ada & belum dihapus
 
+    // Koreksi saldo awal mengikuti hak EDIT Spare Part (dicek controller via matriks permission,
+    // jadi Teknisi boleh) — tidak ada pembatasan role statis di sini.
     const { openingStock, ...fields } = dto;
-    if (openingStock !== undefined && actor?.role !== 'Admin') {
-      throw new ForbiddenException('Hanya Admin yang dapat mengoreksi saldo awal');
-    }
 
     if (dto.kimap) {
       const existing = await this.repository.findByKimap(dto.kimap);

@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateSparePart, useSparePartDetail, useUpdateSparePart } from '../hooks/use-spare-parts';
-import { useAuthStore } from '@/store/auth.store';
 import type { SparePart, SparePartFormValues } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
 
@@ -33,10 +32,10 @@ export function SparePartFormDialog({ open, onOpenChange, sparePart }: Props) {
   const isEdit = Boolean(sparePart);
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  // Koreksi saldo awal: khusus Admin (backend juga menolak role lain). Saldo awal diambil dari
-  // detail (baris ledger INITIAL_BALANCE) — `sparePart.stock` pada list adalah stock SAAT INI.
-  const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
-  const canEditOpening = isEdit && isAdmin;
+  // Koreksi saldo awal tersedia untuk siapa pun yang bisa membuka dialog edit (hak 'edit' Spare Part
+  // — Admin & Teknisi; backend memeriksa permission yang sama). Saldo awal diambil dari detail
+  // (baris ledger INITIAL_BALANCE) — `sparePart.stock` pada list adalah stock SAAT INI.
+  const canEditOpening = isEdit;
   const detail = useSparePartDetail(sparePart?.id, open && canEditOpening);
   const [openingStock, setOpeningStock] = useState<string>('');
   const originalOpening = detail.data?.openingStock;
