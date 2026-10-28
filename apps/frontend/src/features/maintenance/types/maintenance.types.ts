@@ -5,7 +5,21 @@ export type FailureCategory =
   | 'COMMUNICATION'
   | 'CONFIGURATION'
   | 'CALIBRATION'
-  | 'PROCESS';
+  | 'PROCESS'
+  | 'CONTROL_SYSTEM'
+  | 'UTILITY'
+  | 'OTHER';
+
+export type FailureMode =
+  | 'NO_OUTPUT'
+  | 'ERRATIC'
+  | 'DRIFT'
+  | 'STUCK'
+  | 'LEAKAGE'
+  | 'PLUGGED'
+  | 'SPURIOUS'
+  | 'COMMUNICATION_LOSS'
+  | 'OTHER';
 
 export type MaintenanceStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_MATERIAL' | 'COMPLETED' | 'CANCELLED';
 
@@ -52,6 +66,7 @@ export interface Maintenance {
   equipment: EquipmentRef;
   area: AreaRef;
   failureCategory: FailureCategory;
+  failureMode: FailureMode | null;
   problemDescription: string;
   rootCause: string | null;
   actionTaken: string | null;
@@ -85,7 +100,10 @@ export interface MaintenanceFormValues {
   spkNumber: string;
   maintenanceDate: string;
   equipmentId: string;
-  failureCategory: FailureCategory;
+  /** '' = belum dipilih (form baru) — wajib dipilih sebelum submit. */
+  failureCategory: FailureCategory | '';
+  /** '' = tidak diisi; saat edit dikirim null supaya nilai lama terhapus. */
+  failureMode?: FailureMode | '' | null;
   problemDescription: string;
   rootCause?: string;
   actionTaken?: string;

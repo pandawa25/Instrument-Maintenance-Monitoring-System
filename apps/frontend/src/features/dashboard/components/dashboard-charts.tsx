@@ -23,16 +23,7 @@ import type {
 } from '../types/dashboard.types';
 import { useChartColors } from '../hooks/use-chart-colors';
 import { Card } from '@/components/ui/card';
-
-const FAILURE_CATEGORY_LABEL: Record<string, string> = {
-  INSTRUMENT: 'Instrument',
-  ELECTRICAL: 'Electrical',
-  MECHANICAL: 'Mechanical',
-  COMMUNICATION: 'Communication',
-  CONFIGURATION: 'Configuration',
-  CALIBRATION: 'Calibration',
-  PROCESS: 'Process',
-};
+import { FAILURE_CATEGORY_LABEL } from '@/features/maintenance/utils/failure';
 
 function monthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number);

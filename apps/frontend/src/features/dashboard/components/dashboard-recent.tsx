@@ -3,16 +3,7 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { LatestMaintenanceItem, UpcomingPmPeriod } from '../types/dashboard.types';
 import { dataRowProps } from '@/components/shared/data-row';
-
-const FAILURE_CATEGORY_LABEL: Record<string, string> = {
-  INSTRUMENT: 'Instrument',
-  ELECTRICAL: 'Electrical',
-  MECHANICAL: 'Mechanical',
-  COMMUNICATION: 'Communication',
-  CONFIGURATION: 'Configuration',
-  CALIBRATION: 'Calibration',
-  PROCESS: 'Process',
-};
+import { FAILURE_CATEGORY_LABEL } from '@/features/maintenance/utils/failure';
 
 export function LatestMaintenanceTable({ items, isLoading }: { items?: LatestMaintenanceItem[]; isLoading: boolean }) {
   const navigate = useNavigate();

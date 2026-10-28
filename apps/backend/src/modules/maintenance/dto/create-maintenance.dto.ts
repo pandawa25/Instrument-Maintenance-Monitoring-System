@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Criticality, FailureCategory, MaintenanceStatus } from '@prisma/client';
+import { Criticality, FailureCategory, FailureMode, MaintenanceStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -44,6 +44,11 @@ export class CreateMaintenanceDto {
   @ApiProperty({ enum: FailureCategory })
   @IsEnum(FailureCategory)
   failureCategory!: FailureCategory;
+
+  @ApiProperty({ enum: FailureMode, required: false, description: 'Gejala kegagalan (opsional)' })
+  @IsOptional()
+  @IsEnum(FailureMode)
+  failureMode?: FailureMode;
 
   @ApiProperty({ maxLength: 1000 })
   @IsString()

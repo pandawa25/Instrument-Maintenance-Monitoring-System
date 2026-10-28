@@ -46,6 +46,7 @@ export interface HistoryMaterial {
 export interface CorrectiveDetail {
   spkNumber: string | null;
   failureCategory: string;
+  failureMode?: string | null;
   priority: string;
   problemDescription: string;
   rootCause: string | null;

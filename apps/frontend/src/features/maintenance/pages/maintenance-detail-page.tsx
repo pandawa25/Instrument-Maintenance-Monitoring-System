@@ -12,17 +12,7 @@ import { AttachmentsSection } from '@/features/attachments/components/attachment
 import { useMaintenanceById } from '../hooks/use-maintenance';
 import { MaintenanceForm } from '../components/maintenance-form';
 import { usePermission } from '@/store/auth.store';
-import type { Maintenance } from '../types/maintenance.types';
-
-const FAILURE_CATEGORY_LABEL: Record<Maintenance['failureCategory'], string> = {
-  INSTRUMENT: 'Instrument',
-  ELECTRICAL: 'Electrical',
-  MECHANICAL: 'Mechanical',
-  COMMUNICATION: 'Communication',
-  CONFIGURATION: 'Configuration',
-  CALIBRATION: 'Calibration',
-  PROCESS: 'Process',
-};
+import { failureCategoryLabel, failureModeLabel } from '../utils/failure';
 
 // Halaman View/Edit Corrective Maintenance (1 URL, mode toggle) — menggantikan
 // MaintenanceDetailDialog + MaintenanceFormDialog (mode edit) yang sebelumnya dipakai
@@ -92,7 +82,8 @@ export function MaintenanceDetailPage() {
     { section: 'Info Utama', label: 'Maintenance Date', value: new Date(maintenance.maintenanceDate).toLocaleDateString('id-ID') },
     { section: 'Info Utama', label: 'Equipment', value: `${maintenance.equipment.tagNumber} — ${maintenance.equipment.service}` },
     { section: 'Info Utama', label: 'Area', value: `${maintenance.area.areaCode} — ${maintenance.area.areaName}` },
-    { section: 'Info Utama', label: 'Failure Category', value: FAILURE_CATEGORY_LABEL[maintenance.failureCategory] },
+    { section: 'Info Utama', label: 'Failure Category', value: failureCategoryLabel(maintenance.failureCategory) },
+    { section: 'Info Utama', label: 'Failure Mode', value: failureModeLabel(maintenance.failureMode) },
     { section: 'Info Utama', label: 'Technician / PIC', value: maintenance.technician.fullName },
     {
       section: 'Info Utama',

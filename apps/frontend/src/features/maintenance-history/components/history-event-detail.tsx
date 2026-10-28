@@ -1,13 +1,9 @@
 import type { ReactNode } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { cn } from '@/lib/utils';
+import { failureCategoryLabel, failureModeLabel } from '@/features/maintenance/utils/failure';
 import { formatDate, formatHours, formatNumber } from '../utils/format';
 import type { CorrectiveDetail, HistoryEvent, HistoryMaterial, PreventiveDetail } from '../types/maintenance-history.types';
-
-function humanize(value: string): string {
-  const text = value.replace(/_/g, ' ').toLowerCase();
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
@@ -73,7 +69,8 @@ function CorrectiveBody({ detail }: { detail: CorrectiveDetail }) {
   const team = [detail.technician, ...detail.additionalTechnicians].join(', ');
   return (
     <dl className="mt-3 grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
-      <Field label="Kategori Kegagalan">{humanize(detail.failureCategory)}</Field>
+      <Field label="Kategori Kegagalan">{failureCategoryLabel(detail.failureCategory)}</Field>
+      {detail.failureMode && <Field label="Failure Mode">{failureModeLabel(detail.failureMode)}</Field>}
       <Field label="Prioritas">
         <StatusBadge value={detail.priority} />
       </Field>

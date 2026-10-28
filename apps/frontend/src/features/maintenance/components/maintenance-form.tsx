@@ -16,12 +16,14 @@ import {
 import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
 import { getSelectableStatuses, MAINTENANCE_STATUS_LABELS } from '../utils/maintenance-status.util';
+import { FAILURE_CATEGORY_OPTIONS, FAILURE_MODE_OPTIONS } from '../utils/failure';
 
 const EMPTY_FORM: MaintenanceFormValues = {
   spkNumber: '',
   maintenanceDate: '',
   equipmentId: '',
-  failureCategory: 'INSTRUMENT',
+  failureCategory: '', // sengaja kosong: nilai awal yang terisi membuat satu kategori membengkak
+  failureMode: '',
   problemDescription: '',
   rootCause: '',
   actionTaken: '',
@@ -84,6 +86,7 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
             maintenanceDate: maintenance.maintenanceDate.slice(0, 10),
             equipmentId: maintenance.equipment.id,
             failureCategory: maintenance.failureCategory,
+            failureMode: maintenance.failureMode ?? '',
             problemDescription: maintenance.problemDescription,
             rootCause: maintenance.rootCause ?? '',
             actionTaken: maintenance.actionTaken ?? '',
@@ -151,9 +154,16 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
       return;
     }
 
+    if (!form.failureCategory) {
+      toast.error('Pilih Failure Category');
+      return;
+    }
+
     try {
       const payload: MaintenanceFormValues = {
         ...form,
+        // '' -> null saat edit (menghapus nilai lama), undefined saat create (tidak dikirim).
+        failureMode: form.failureMode || (isEdit ? null : undefined),
         spkNumber: form.spkNumber.trim(),
         downtimeHours: form.downtimeHours === '' ? undefined : Number(form.downtimeHours),
         completionDate: form.completionDate || undefined,
@@ -243,15 +253,36 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
           id="failureCategory"
           value={form.failureCategory}
           onChange={(e) => setForm({ ...form, failureCategory: e.target.value as MaintenanceFormValues['failureCategory'] })}
+          required
         >
-          <option value="INSTRUMENT">Instrument</option>
-          <option value="ELECTRICAL">Electrical</option>
-          <option value="MECHANICAL">Mechanical</option>
-          <option value="COMMUNICATION">Communication</option>
-          <option value="CONFIGURATION">Configuration</option>
-          <option value="CALIBRATION">Calibration</option>
-          <option value="PROCESS">Process</option>
+          <option value="">Pilih kategori...</option>
+          {FAILURE_CATEGORY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </Select>
+        <p className="mt-1 text-xs text-text-muted" data-testid="failure-category-hint">
+          {FAILURE_CATEGORY_OPTIONS.find((o) => o.value === form.failureCategory)?.hint ??
+            'Pilih bagian yang bermasalah. Kalau belum jelas, pilih Other / Unknown dulu.'}
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="failureMode">Failure Mode (opsional)</Label>
+        <Select
+          id="failureMode"
+          value={form.failureMode ?? ''}
+          onChange={(e) => setForm({ ...form, failureMode: e.target.value as MaintenanceFormValues['failureMode'] })}
+        >
+          <option value="">Gejala kegagalan...</option>
+          {FAILURE_MODE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-xs text-text-muted">Bagaimana kegagalannya terlihat.</p>
       </div>
 
       <div>

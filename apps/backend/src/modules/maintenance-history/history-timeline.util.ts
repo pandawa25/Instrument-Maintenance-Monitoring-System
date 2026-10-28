@@ -19,6 +19,7 @@ export interface HistoryMaterial {
 export interface CorrectiveDetail {
   spkNumber: string | null;
   failureCategory: string;
+  failureMode: string | null;
   priority: string;
   problemDescription: string;
   rootCause: string | null;
@@ -90,6 +91,7 @@ export interface CorrectiveRow {
   maintenanceDate: Date;
   completionDate: Date | null;
   failureCategory: string;
+  failureMode?: string | null;
   priority: string;
   status: string;
   problemDescription: string;
@@ -160,6 +162,7 @@ export function buildCorrectiveEvent(row: CorrectiveRow): HistoryEvent {
     corrective: {
       spkNumber: row.spkNumber,
       failureCategory: row.failureCategory,
+      failureMode: row.failureMode ?? null,
       priority: row.priority,
       problemDescription: row.problemDescription,
       rootCause: row.rootCause,

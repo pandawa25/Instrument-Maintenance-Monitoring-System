@@ -50,6 +50,23 @@ enum FailureCategory {
   CONFIGURATION
   CALIBRATION
   PROCESS
+  CONTROL_SYSTEM // DCS/PLC/SIS: I/O card, controller, logic, software (ditambah 28 Okt 2026)
+  UTILITY // suplai pendukung: instrument air, power supply, hydraulic
+  OTHER // tidak masuk kategori lain / belum diketahui
+}
+
+// Gejala kegagalan (BAGAIMANA gagalnya terlihat) — field opsional di Corrective Maintenance,
+// melengkapi FailureCategory (BAGIAN/disiplin mana). Sengaja pendek agar mudah diisi.
+enum FailureMode {
+  NO_OUTPUT // tidak ada output / sinyal hilang
+  ERRATIC // output tidak stabil
+  DRIFT // geser / di luar toleransi
+  STUCK // macet / tidak bergerak (valve, actuator)
+  LEAKAGE // bocor
+  PLUGGED // tersumbat
+  SPURIOUS // alarm / trip palsu
+  COMMUNICATION_LOSS // komunikasi putus
+  OTHER
 }
 
 enum MaintenanceStatus {
@@ -464,6 +481,8 @@ model CorrectiveMaintenance {
   equipmentId        String            @map("equipment_id") @db.Uuid
   areaId             String            @map("area_id") @db.Uuid
   failureCategory    FailureCategory   @map("failure_category")
+  // Opsional (record lama NULL) — lihat enum FailureMode.
+  failureMode        FailureMode?      @map("failure_mode")
   problemDescription String            @map("problem_description") @db.VarChar(1000)
   rootCause          String?           @map("root_cause") @db.VarChar(1000)
   actionTaken        String?           @map("action_taken") @db.VarChar(1000)
