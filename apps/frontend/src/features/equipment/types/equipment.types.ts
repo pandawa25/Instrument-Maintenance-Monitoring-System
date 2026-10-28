@@ -14,7 +14,25 @@ export const FAIL_ACTION_LABEL: Record<FailAction, string> = {
 export const VALVE_INSTRUMENT_CODES = ['CV', 'SV', 'KV', 'UV'] as const;
 
 export function isValveInstrumentCode(code: string | null | undefined): boolean {
-  return !!code && (VALVE_INSTRUMENT_CODES as readonly string[]).includes(code);
+  return !!code && (VALVE_INSTRUMENT_CODES as readonly string[]).includes(code.trim().toUpperCase());
+}
+
+/**
+ * Apakah instrument name ini tipe valve (pakai Size/Rating/Fail Action, bukan LRV/URV/Unit)?
+ * Instrument Name bisa ditambah user dengan kode bebas (mis. PSV, BDV, XV), jadi deteksi tidak
+ * cukup lewat kode: nama yang mengandung kata "valve" juga dianggap valve. "Valve Positioner"
+ * dikecualikan — itu aksesori kontrol, bukan valve-nya.
+ */
+export function isValveInstrumentName(ref: { code?: string | null; name?: string | null } | null | undefined): boolean {
+  if (!ref) return false;
+  if (isValveInstrumentCode(ref.code)) return true;
+  const name = ref.name ?? '';
+  return /\bvalve\b/i.test(name) && !/positioner/i.test(name);
+}
+
+/** Equipment sudah punya data valve (size/rating/fail action) walau tipenya tidak dikenali sebagai valve. */
+export function hasValveData(e: { size?: string | null; rating?: string | null; failAction?: string | null }): boolean {
+  return Boolean(e.size || e.rating || e.failAction);
 }
 
 export interface InstrumentNameRef {

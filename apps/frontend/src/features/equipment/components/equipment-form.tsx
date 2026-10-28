@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateEquipment, useUpdateEquipment } from '../hooks/use-equipment';
 import { useAreasLookup, useInstrumentNames } from '../hooks/use-equipment-lookups';
-import { isValveInstrumentCode, type Equipment, type EquipmentFormValues, type FailAction } from '../types/equipment.types';
+import { isValveInstrumentName, type Equipment, type EquipmentFormValues, type FailAction } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const EMPTY_FORM: EquipmentFormValues = {
@@ -65,7 +65,7 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: Props) {
 
   const selectedArea = areas?.find((area) => area.id === form.areaId);
   const selectedInstrumentName = instrumentNames?.find((item) => item.id === form.instrumentNameId);
-  const isValve = isValveInstrumentCode(selectedInstrumentName?.code);
+  const isValve = isValveInstrumentName(selectedInstrumentName);
 
   useEffect(() => {
     if (equipment) {
@@ -113,8 +113,8 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: Props) {
     const composedTagNumber = `${selectedArea.areaCode}-${tagSuffix}`.trim();
 
     try {
-      // Equipment valve (CV/SV/KV/UV) pakai Size/Rating/Fail Action, equipment lain pakai
-      // LRV/URV/Unit — keduanya saling eksklusif, jadi field yang tidak relevan dikosongkan
+      // Equipment valve (CV/SV/KV/UV atau nama mengandung "valve") pakai Size/Rating/Fail Action,
+      // equipment lain pakai LRV/URV/Unit — keduanya saling eksklusif, jadi field yang tidak relevan dikosongkan
       // saat submit supaya tidak ada data basi tersisa kalau instrument type pernah diganti.
       const payload: EquipmentFormValues = {
         ...form,
@@ -267,26 +267,28 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: Props) {
 
       {isValve ? (
         <>
-          <div>
-            <Label htmlFor="size">Size</Label>
-            <Input
-              id="size"
-              value={form.size}
-              onChange={(e) => setForm({ ...form, size: e.target.value })}
-              placeholder='mis. 2", 4"'
-              maxLength={50}
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="size">Size</Label>
+              <Input
+                id="size"
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                placeholder='mis. 2", 4"'
+                maxLength={50}
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="rating">Rating</Label>
-            <Input
-              id="rating"
-              value={form.rating}
-              onChange={(e) => setForm({ ...form, rating: e.target.value })}
-              placeholder="mis. ANSI 600"
-              maxLength={50}
-            />
+            <div>
+              <Label htmlFor="rating">Rating</Label>
+              <Input
+                id="rating"
+                value={form.rating}
+                onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                placeholder="mis. ANSI 600"
+                maxLength={50}
+              />
+            </div>
           </div>
 
           <div>

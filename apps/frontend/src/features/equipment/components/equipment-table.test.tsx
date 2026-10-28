@@ -51,3 +51,34 @@ describe('EquipmentTable — baris bisa diklik', () => {
     expect(h.onView).toHaveBeenCalledWith(item);
   });
 });
+
+describe('EquipmentTable — kolom Range / Size untuk valve', () => {
+  function renderValve(instrumentName: { id: string; code: string; name: string }) {
+    const valve = {
+      ...item, id: 'eq-2', tagNumber: 'XV-1', instrumentName, size: '4"', rating: 'ANSI 300', failAction: 'CLOSE',
+    } as unknown as Equipment;
+    render(
+      <EquipmentTable
+        equipment={[valve]}
+        isLoading={false}
+        canEdit
+        selectedIds={new Set()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onView={vi.fn()}
+        onToggleOne={vi.fn()}
+        onToggleAll={vi.fn()}
+      />,
+    );
+  }
+
+  it('valve dengan kode di luar CV/SV/KV/UV tetap menampilkan Size · Rating (deteksi via nama)', () => {
+    renderValve({ id: 'i', code: 'PSV', name: 'Safety Valve' });
+    expect(screen.getByText('4" · ANSI 300')).toBeInTheDocument();
+  });
+
+  it('nama tak dikenali tapi data size terisi → tetap tampil', () => {
+    renderValve({ id: 'i', code: 'ZZ', name: 'Lainnya' });
+    expect(screen.getByText('4" · ANSI 300')).toBeInTheDocument();
+  });
+});

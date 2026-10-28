@@ -12,7 +12,7 @@ import { DocumentsSection } from '@/features/attachments/components/documents-se
 import { useEquipmentById } from '../hooks/use-equipment';
 import { EquipmentForm } from '../components/equipment-form';
 import { usePermission } from '@/store/auth.store';
-import { FAIL_ACTION_LABEL, isValveInstrumentCode } from '../types/equipment.types';
+import { FAIL_ACTION_LABEL, hasValveData, isValveInstrumentName } from '../types/equipment.types';
 
 // Halaman View/Edit Equipment (1 URL, mode toggle) — menggantikan EquipmentDetailDialog +
 // EquipmentFormDialog (mode edit) yang sebelumnya dipakai dari list page. Dipindah ke
@@ -65,9 +65,9 @@ export function EquipmentDetailPage() {
     );
   }
 
-  const isValve = isValveInstrumentCode(equipment.instrumentName.code);
+  const isValve = isValveInstrumentName(equipment.instrumentName) || hasValveData(equipment);
 
-  // Equipment valve (CV/SV/KV/UV) pakai Size/Rating/Fail Action; equipment lain pakai
+  // Equipment valve (CV/SV/KV/UV, atau nama mengandung "valve") pakai Size/Rating/Fail Action; equipment lain pakai
   // LRV/URV/Unit — lihat revisi "Module Equipment valve fields".
   const valveOrRangeFields: DetailField[] = isValve
     ? [

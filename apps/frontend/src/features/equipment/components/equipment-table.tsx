@@ -4,7 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { cn } from '@/lib/utils';
-import { isValveInstrumentCode, type Equipment, type EquipmentStatus } from '../types/equipment.types';
+import { hasValveData, isValveInstrumentName, type Equipment, type EquipmentStatus } from '../types/equipment.types';
 import { dataRowProps } from '@/components/shared/data-row';
 
 // Aksen warna kiri per baris — scan cepat status tanpa harus baca kolom Status
@@ -17,7 +17,7 @@ const STATUS_ROW_ACCENT: Record<EquipmentStatus, string> = {
 
 /** Range (LRV-URV/Unit) untuk equipment ukur, atau Size/Rating untuk equipment valve. */
 function rangeOrSizeCell(item: Equipment): string {
-  if (isValveInstrumentCode(item.instrumentName.code)) {
+  if (isValveInstrumentName(item.instrumentName) || hasValveData(item)) {
     if (!item.size && !item.rating) return '—';
     return [item.size, item.rating].filter(Boolean).join(' · ');
   }
