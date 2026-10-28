@@ -10,8 +10,8 @@ export const FAIL_ACTION_LABEL: Record<FailAction, string> = {
 
 // Kode instrument_names yang merupakan tipe valve — equipment dengan kode ini memakai
 // field Size/Rating/Fail Action, BUKAN LRV/URV/Unit (revisi Module Equipment valve fields):
-// Control Valve (CV), Solenoid Valve (SV), On-Off Valve (KV), On-Off Valve SIS (UV).
-export const VALVE_INSTRUMENT_CODES = ['CV', 'SV', 'KV', 'UV'] as const;
+// Control Valve (CV), Solenoid Valve (SV), On-Off Valve (KV), On-Off Valve SIS (UV), XV.
+export const VALVE_INSTRUMENT_CODES = ['CV', 'SV', 'KV', 'UV', 'XV'] as const;
 
 export function isValveInstrumentCode(code: string | null | undefined): boolean {
   return !!code && (VALVE_INSTRUMENT_CODES as readonly string[]).includes(code.trim().toUpperCase());

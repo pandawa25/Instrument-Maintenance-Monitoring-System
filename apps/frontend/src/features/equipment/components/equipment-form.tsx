@@ -113,7 +113,7 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: Props) {
     const composedTagNumber = `${selectedArea.areaCode}-${tagSuffix}`.trim();
 
     try {
-      // Equipment valve (CV/SV/KV/UV atau nama mengandung "valve") pakai Size/Rating/Fail Action,
+      // Equipment valve (CV/SV/KV/UV/XV atau nama mengandung "valve") pakai Size/Rating/Fail Action,
       // equipment lain pakai LRV/URV/Unit — keduanya saling eksklusif, jadi field yang tidak relevan dikosongkan
       // saat submit supaya tidak ada data basi tersisa kalau instrument type pernah diganti.
       const payload: EquipmentFormValues = {

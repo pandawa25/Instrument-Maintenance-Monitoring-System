@@ -67,7 +67,7 @@ export function EquipmentDetailPage() {
 
   const isValve = isValveInstrumentName(equipment.instrumentName) || hasValveData(equipment);
 
-  // Equipment valve (CV/SV/KV/UV, atau nama mengandung "valve") pakai Size/Rating/Fail Action; equipment lain pakai
+  // Equipment valve (CV/SV/KV/UV/XV, atau nama mengandung "valve") pakai Size/Rating/Fail Action; equipment lain pakai
   // LRV/URV/Unit — lihat revisi "Module Equipment valve fields".
   const valveOrRangeFields: DetailField[] = isValve
     ? [

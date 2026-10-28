@@ -6,6 +6,8 @@ describe('isValveInstrumentName', () => {
     [{ code: 'CV', name: 'Control Valve' }],
     [{ code: 'kv', name: 'x' }],
     [{ code: 'PSV', name: 'Safety Valve' }],
+    [{ code: 'XV', name: 'Apa saja' }],
+    [{ code: 'xv', name: '' }],
     [{ code: 'XV', name: 'Ball valve' }],
     [{ code: 'BDV', name: 'Blowdown Valve (SIS)' }],
   ])('valve: %j', (ref) => expect(isValveInstrumentName(ref)).toBe(true));
