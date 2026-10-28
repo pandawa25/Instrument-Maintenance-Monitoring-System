@@ -4,6 +4,7 @@ import { PermissionModule } from '@prisma/client';
 import { MaintenanceHistoryService } from './maintenance-history.service';
 import { QueryHistoryEquipmentSearchDto } from './dto/query-history-equipment-search.dto';
 import { QueryEquipmentHistoryDto } from './dto/query-equipment-history.dto';
+import { QueryTopEquipmentDto } from './dto/query-top-equipment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -27,6 +28,12 @@ export class MaintenanceHistoryController {
   @ApiOperation({ summary: 'Cari equipment (tag number / service) untuk memilih equipment yang akan dilihat history-nya' })
   searchEquipment(@Query() query: QueryHistoryEquipmentSearchDto) {
     return this.service.searchEquipment(query);
+  }
+
+  @Get('top-equipment')
+  @ApiOperation({ summary: 'Equipment dengan kegiatan maintenance (Corrective + Preventive Completed) terbanyak — default 10' })
+  getTopEquipment(@Query() query: QueryTopEquipmentDto) {
+    return this.service.getTopEquipment(query);
   }
 
   @Get('equipment/:equipmentId')

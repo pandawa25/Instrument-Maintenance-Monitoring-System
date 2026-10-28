@@ -15,6 +15,16 @@ export interface HistoryEquipmentOption {
   instrumentName: { id: string; code: string; name: string };
 }
 
+/** Baris "Top N" halaman awal: equipment dengan kegiatan maintenance (CM + PM Completed) terbanyak. */
+export interface TopMaintenanceEquipment extends HistoryEquipmentOption {
+  rank: number;
+  correctiveCount: number;
+  preventiveCount: number;
+  totalCount: number;
+  /** yyyy-mm-dd; null bila tanggal tidak tercatat. */
+  lastMaintenanceDate: string | null;
+}
+
 export interface HistoryEquipmentHeader extends HistoryEquipmentOption {
   description: string | null;
   serialNumber: string | null;

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchEquipmentHistory, searchHistoryEquipment } from '../api/maintenance-history.api';
+import { fetchEquipmentHistory, fetchTopEquipment, searchHistoryEquipment } from '../api/maintenance-history.api';
 import type { HistoryFilters } from '../types/maintenance-history.types';
 
 const KEY = 'maintenance-history';
@@ -21,5 +21,14 @@ export function useEquipmentHistory(equipmentId: string | null, filters: History
     queryFn: () => fetchEquipmentHistory(equipmentId as string, filters),
     enabled: Boolean(equipmentId),
     placeholderData: (prev) => prev,
+  });
+}
+
+/** 10 equipment dengan maintenance terbanyak — isi awal halaman supaya tidak kosong. */
+export function useTopMaintenanceEquipment(limit = 10) {
+  return useQuery({
+    queryKey: [KEY, 'top', limit],
+    queryFn: () => fetchTopEquipment(limit),
+    staleTime: 60_000,
   });
 }

@@ -1,4 +1,4 @@
-import type { EquipmentHistory, HistoryEquipmentOption } from './types/maintenance-history.types';
+import type { EquipmentHistory, HistoryEquipmentOption, TopMaintenanceEquipment } from './types/maintenance-history.types';
 
 export const OPTION_PT101: HistoryEquipmentOption = {
   id: 'eq-1',
@@ -113,4 +113,22 @@ export const HISTORY_PT101: EquipmentHistory = {
       createdAt: '2026-06-02T08:00:00.000Z',
     },
   ],
+};
+
+export const TOP_PT101: TopMaintenanceEquipment = {
+  ...OPTION_PT101,
+  rank: 1,
+  correctiveCount: 5,
+  preventiveCount: 3,
+  totalCount: 8,
+  lastMaintenanceDate: '2026-09-05',
+};
+
+export const TOP_PT102: TopMaintenanceEquipment = {
+  ...OPTION_PT102,
+  rank: 2,
+  correctiveCount: 2,
+  preventiveCount: 2,
+  totalCount: 4,
+  lastMaintenanceDate: null,
 };

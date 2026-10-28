@@ -1,3 +1,6 @@
+// Service hanya memakai repository (di-mock); stub client Prisma supaya spec tidak butuh `prisma generate`.
+jest.mock('@prisma/client', () => ({ PrismaClient: class {}, Prisma: {} }));
+
 import { NotFoundException } from '@nestjs/common';
 import { MaintenanceHistoryService } from './maintenance-history.service';
 
@@ -48,12 +51,14 @@ function pmRow(id: string, date: string) {
   };
 }
 
-function build(opts: { equipment?: unknown; cm?: unknown[]; pm?: unknown[] } = {}) {
+function build(opts: { equipment?: unknown; cm?: unknown[]; pm?: unknown[]; counts?: any } = {}) {
   const repo = {
     searchEquipment: jest.fn().mockResolvedValue([]),
     findEquipmentHeader: jest.fn().mockResolvedValue('equipment' in opts ? opts.equipment : equipment),
     findCorrective: jest.fn().mockResolvedValue(opts.cm ?? []),
     findPreventive: jest.fn().mockResolvedValue(opts.pm ?? []),
+    countMaintenancePerEquipment: jest.fn().mockResolvedValue(opts.counts ?? { corrective: [], preventive: [] }),
+    findEquipmentByIds: jest.fn().mockImplementation(async (ids: string[]) => ids.map((id) => ({ id, tagNumber: id.toUpperCase() }))),
   };
   return { service: new MaintenanceHistoryService(repo as any), repo };
 }
@@ -107,5 +112,47 @@ describe('MaintenanceHistoryService', () => {
     const res = await service.getEquipmentHistory('eq-1', { type: 'ALL' });
     expect(res.events).toEqual([]);
     expect(res.summary.totalEvents).toBe(0);
+  });
+});
+
+describe('MaintenanceHistoryService.getTopEquipment', () => {
+  const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
+
+  it('menggabungkan CM + PM per equipment, urut total terbanyak, tie-break kegiatan terakhir terbaru', async () => {
+    const { service } = build({
+      counts: {
+        corrective: [
+          { equipmentId: 'a', count: 3, lastDate: d('2026-09-01') },
+          { equipmentId: 'b', count: 1, lastDate: d('2026-10-01') },
+          { equipmentId: 'c', count: 2, lastDate: d('2026-08-01') },
+        ],
+        preventive: [
+          { equipmentId: 'b', count: 2, lastDate: d('2026-10-10') },
+          { equipmentId: 'c', count: 1, lastDate: d('2026-09-20') },
+        ],
+      },
+    });
+    const res = await service.getTopEquipment({ limit: 10 });
+    // a=3, b=1+2=3, c=2+1=3 -> semua 3; tie-break last date: b(10-10) > c(09-20) > a(09-01)
+    expect(res.map((r: any) => r.id)).toEqual(['b', 'c', 'a']);
+    expect(res[0]).toMatchObject({ rank: 1, correctiveCount: 1, preventiveCount: 2, totalCount: 3, lastMaintenanceDate: '2026-10-10' });
+  });
+
+  it('dibatasi limit dan hanya mengambil data equipment untuk yang masuk Top N', async () => {
+    const { service, repo } = build({
+      counts: {
+        corrective: ['a', 'b', 'c', 'd'].map((id, i) => ({ equipmentId: id, count: 10 - i, lastDate: null })),
+        preventive: [],
+      },
+    });
+    const res = await service.getTopEquipment({ limit: 2 });
+    expect(res.map((r: any) => r.id)).toEqual(['a', 'b']);
+    expect(repo.findEquipmentByIds).toHaveBeenCalledWith(['a', 'b']);
+  });
+
+  it('belum ada maintenance sama sekali -> array kosong tanpa query equipment', async () => {
+    const { service, repo } = build();
+    expect(await service.getTopEquipment({ limit: 10 })).toEqual([]);
+    expect(repo.findEquipmentByIds).not.toHaveBeenCalled();
   });
 });

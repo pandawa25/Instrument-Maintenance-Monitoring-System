@@ -8,9 +8,11 @@ import { MaintenanceHistoryPage } from './maintenance-history-page';
 
 const searchMock = vi.fn();
 const historyMock = vi.fn();
+const topMock = vi.fn();
 vi.mock('../api/maintenance-history.api', () => ({
   searchHistoryEquipment: (...args: unknown[]) => searchMock(...args),
   fetchEquipmentHistory: (...args: unknown[]) => historyMock(...args),
+  fetchTopEquipment: (...args: unknown[]) => topMock(...args),
 }));
 
 function renderPage(url = '/maintenance-history') {
@@ -28,6 +30,8 @@ describe('MaintenanceHistoryPage', () => {
   beforeEach(() => {
     searchMock.mockReset();
     historyMock.mockReset();
+    topMock.mockReset();
+    topMock.mockResolvedValue([]);
   });
 
   it('halaman awal = pencarian; history belum diminta', () => {

@@ -68,6 +68,44 @@ export class MaintenanceHistoryRepository {
     });
   }
 
+  /**
+   * Jumlah kegiatan per equipment — sama dengan isi timeline History: Corrective (semua status,
+   * yang belum dihapus) + Preventive yang sudah COMPLETED. Equipment yang sudah dihapus dikeluarkan
+   * di query supaya Top N tidak "bolong". Agregasi di DB (groupBy), bukan menarik baris history.
+   */
+  async countMaintenancePerEquipment() {
+    const [corrective, preventive] = await Promise.all([
+      this.prisma.correctiveMaintenance.groupBy({
+        by: ['equipmentId'],
+        where: { deletedAt: null, equipment: { deletedAt: null } },
+        _count: { _all: true },
+        _max: { maintenanceDate: true },
+      }),
+      this.prisma.pmPeriodExecution.groupBy({
+        by: ['equipmentId'],
+        where: {
+          deletedAt: null,
+          status: 'COMPLETED',
+          equipment: { deletedAt: null },
+          pmPeriod: { deletedAt: null, pmProgram: { deletedAt: null } },
+        },
+        _count: { _all: true },
+        _max: { executionDate: true },
+      }),
+    ]);
+    return {
+      corrective: corrective.map((r: any) => ({ equipmentId: r.equipmentId as string, count: r._count._all as number, lastDate: (r._max.maintenanceDate ?? null) as Date | null })),
+      preventive: preventive.map((r: any) => ({ equipmentId: r.equipmentId as string, count: r._count._all as number, lastDate: (r._max.executionDate ?? null) as Date | null })),
+    };
+  }
+
+  findEquipmentByIds(ids: string[]) {
+    return this.prisma.equipment.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: EQUIPMENT_SEARCH_SELECT,
+    });
+  }
+
   findEquipmentHeader(id: string) {
     return this.prisma.equipment.findFirst({ where: { id, deletedAt: null }, select: EQUIPMENT_HEADER_SELECT });
   }
