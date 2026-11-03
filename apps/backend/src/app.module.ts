@@ -21,6 +21,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenanceHistoryModule } from './modules/maintenance-history/maintenance-history.module';
+import { WorkOrdersModule } from './modules/work-orders/work-orders.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { MaintenanceHistoryModule } from './modules/maintenance-history/maintena
     UsersModule,
     MaintenanceModule,
     MaintenanceHistoryModule,
+    WorkOrdersModule,
     VendorsModule,
     PmActivityTypesModule,
     PmProgramsModule,

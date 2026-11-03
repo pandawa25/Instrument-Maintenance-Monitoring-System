@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Building2,
   ListChecks,
+  ClipboardList,
   PackageSearch,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -67,6 +68,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/maintenance-history', label: 'History Maintenance', icon: History, module: 'CORRECTIVE_MAINTENANCE' },
       { to: '/maintenance', label: 'Corrective Maintenance', icon: Wrench, module: 'CORRECTIVE_MAINTENANCE' },
       { to: '/pm-programs', label: 'Preventive Maintenance', icon: CalendarClock, module: 'PM_PROGRAM' },
+      { to: '/work-orders', label: 'Work Order & Notifikasi', icon: ClipboardList, module: 'WORK_ORDER' },
     ],
   },
   {

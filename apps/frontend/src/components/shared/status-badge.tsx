@@ -29,6 +29,11 @@ const STATUS_STYLES: Record<string, string> = {
   POOR: 'bg-warning/10 text-warning border-warning/30',
   CRITICAL: 'bg-danger/10 text-danger border-danger/30',
   INSUFFICIENT_DATA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
+  // WorkOrderLifecycleStage (modul Notification & Work Order) — diturunkan dari System Status ERP.
+  CREATED: 'bg-text-muted/10 text-text-muted border-text-muted/30',
+  RELEASED: 'bg-secondary/10 text-secondary border-secondary/30',
+  TECHNICALLY_COMPLETED: 'bg-warning/10 text-warning border-warning/30',
+  CLOSED: 'bg-success/10 text-success border-success/30',
 };
 
 // Warna dot sama dengan warna teks badge-nya — dipetakan dari STATUS_STYLES (bukan

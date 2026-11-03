@@ -1,0 +1,85 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  commitWorkOrderImport,
+  fetchWorkOrderById,
+  fetchWorkOrderDropdownByEquipment,
+  fetchWorkOrderImportRows,
+  fetchWorkOrders,
+  fetchWorkOrderStageCounts,
+  previewWorkOrderImport,
+  relinkWorkOrderEquipment,
+} from '../api/work-orders.api';
+import type { ImportRowSeverity, WorkOrderQueryParams } from '../types/work-order.types';
+
+const WORK_ORDER_KEY = 'work-orders';
+
+export function useWorkOrderList(params: WorkOrderQueryParams) {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, params],
+    queryFn: () => fetchWorkOrders(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+// Ikut filter yang sedang aktif (KECUALI lifecycleStage itu sendiri) — sama pola dengan
+// useEquipmentStatusCounts, dipakai ringkasan jumlah per tahap di atas list.
+export function useWorkOrderStageCounts(params: WorkOrderQueryParams) {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, 'stage-counts', params],
+    queryFn: () => fetchWorkOrderStageCounts(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useWorkOrderById(id: string | undefined) {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, id],
+    queryFn: () => fetchWorkOrderById(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+// Dropdown WO milik satu equipment — dipakai field link di form Corrective Maintenance.
+export function useWorkOrderDropdown(equipmentId: string | undefined) {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, 'dropdown', equipmentId],
+    queryFn: () => fetchWorkOrderDropdownByEquipment(equipmentId as string),
+    enabled: Boolean(equipmentId),
+  });
+}
+
+export function useRelinkWorkOrderEquipment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, equipmentId }: { id: string; equipmentId: string | null }) => relinkWorkOrderEquipment(id, equipmentId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
+  });
+}
+
+// Tahap 1 — belum mengubah data, tidak invalidate list.
+export function usePreviewWorkOrderImport() {
+  return useMutation({
+    mutationFn: (file: File) => previewWorkOrderImport(file),
+  });
+}
+
+export function useWorkOrderImportRows(
+  batchId: string | null,
+  params: { severity?: ImportRowSeverity; page: number; limit: number },
+) {
+  return useQuery({
+    queryKey: ['work-order-import-rows', batchId, params],
+    queryFn: () => fetchWorkOrderImportRows(batchId as string, params),
+    enabled: Boolean(batchId),
+    placeholderData: (prev) => prev,
+  });
+}
+
+// Tahap 2 — baru di sini data benar-benar berubah.
+export function useCommitWorkOrderImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => commitWorkOrderImport(batchId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
+  });
+}

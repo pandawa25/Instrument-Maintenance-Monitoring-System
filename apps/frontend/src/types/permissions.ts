@@ -9,7 +9,8 @@ export type PermissionModule =
   | 'PM_ACTIVITY_TYPE'
   | 'PM_PROGRAM'
   | 'PM_EXECUTION'
-  | 'SPARE_PART';
+  | 'SPARE_PART'
+  | 'WORK_ORDER';
 
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
 
@@ -26,4 +27,5 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   PM_PROGRAM: 'Preventive Maintenance (Program)',
   PM_EXECUTION: 'Preventive Maintenance (Eksekusi)',
   SPARE_PART: 'Spare Part / Material',
+  WORK_ORDER: 'Notification & Work Order',
 };

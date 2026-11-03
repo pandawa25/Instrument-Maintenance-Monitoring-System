@@ -20,6 +20,7 @@ import { SparePartListPage } from '@/features/spare-parts/pages/spare-part-list-
 import { StockInPage } from '@/features/spare-parts/pages/stock-in-page';
 import { StockOutPage } from '@/features/spare-parts/pages/stock-out-page';
 import { InventoryDashboardPage } from '@/features/spare-parts/pages/inventory-dashboard-page';
+import { WorkOrderListPage } from '@/features/work-orders/pages/work-order-list-page';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -136,6 +137,15 @@ export const router = createBrowserRouter([
               { path: '/pm-programs', element: <PmProgramListPage /> },
               { path: '/pm-programs/:id', element: <PmProgramDetailPage /> },
             ],
+          },
+        ],
+      },
+      {
+        element: <RequirePermission module="WORK_ORDER" />,
+        children: [
+          {
+            element: <DashboardLayout title="Work Order & Notifikasi" />,
+            children: [{ path: '/work-orders', element: <WorkOrderListPage /> }],
           },
         ],
       },

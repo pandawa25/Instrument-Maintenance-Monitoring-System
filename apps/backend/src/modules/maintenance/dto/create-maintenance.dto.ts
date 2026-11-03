@@ -163,4 +163,15 @@ export class CreateMaintenanceDto {
   @IsString()
   @MaxLength(50)
   workOrderStatus?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'UUID Work Order (modul Notification & Work Order, hasil import ERP) — opsional, dipilih lewat ' +
+      'searchable-select di form yang difilter ke WO milik equipment yang sama. Field notificationNumber/' +
+      'workOrderNumber dkk di atas TETAP independen (fallback kalau WO resmi belum ter-import dari ERP).',
+  })
+  @IsOptional()
+  @IsUUID()
+  workOrderId?: string;
 }

@@ -95,6 +95,16 @@ export class EquipmentService {
     return this.repository.findAllForDropdown();
   }
 
+  /**
+   * Peta tag_number (uppercase) -> Equipment aktif, dipakai modul lain untuk matching bulk
+   * (mis. WorkOrderImportService mencocokkan kolom "Equipment" ERP ke equipmentId) tanpa
+   * query per baris. Sudah ada di EquipmentRepository (dipakai internal oleh
+   * EquipmentBulkUploadService) — method ini cuma expose-nya ke luar modul lewat EquipmentService.
+   */
+  findAllActiveEquipmentByTagUpper() {
+    return this.repository.findAllActiveEquipmentByTagUpper();
+  }
+
   /** Count per status untuk summary card (Total/Active/Standby/Out Of Service). */
   getStatusCounts(query: QueryEquipmentDto) {
     return this.repository.getStatusCounts(query);

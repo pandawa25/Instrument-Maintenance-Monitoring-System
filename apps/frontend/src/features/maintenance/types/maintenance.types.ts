@@ -86,6 +86,9 @@ export interface Maintenance {
   workOrderNumber: string | null;
   workOrderDate: string | null;
   workOrderStatus: string | null;
+  // Link opsional ke modul Notification & Work Order (hasil import ERP) — field manual di
+  // atas TETAP independen, dipakai sebagai fallback kalau WO resmi belum ter-import.
+  workOrder: { id: string; orderNo: string; lifecycleStage: string; notification: { notificationNo: string } | null } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,6 +125,8 @@ export interface MaintenanceFormValues {
   workOrderNumber?: string;
   workOrderDate?: string;
   workOrderStatus?: string;
+  /** Link opsional ke modul Notification & Work Order (hasil import ERP) — lihat Maintenance.workOrder. */
+  workOrderId?: string;
 }
 
 export interface MaintenanceQueryParams {

@@ -20,3 +20,18 @@ export function formatDateID(date: string | Date): string {
 export function normalizeTag(rawTag: string): string {
   return rawTag.trim().replace(/\s+/g, ' ').toUpperCase();
 }
+
+/**
+ * Normalisasi kode "Equipment" dari export ERP (mis. SAP PM) ke bentuk yang bisa dicocokkan
+ * dengan Equipment.tagNumber kita. Kolom ERP selalu membawa suffix "/NN" (mis. "108PV005/00")
+ * — terverifikasi di seluruh sample data WO (lihat docs/design-notification-work-order.md §2):
+ * selalu "/00" di data yang diperiksa, tapi strip generik "/digit(s) di akhir" supaya tetap aman
+ * kalau suatu saat muncul suffix lain. Hasil akhirnya dilewatkan ke normalizeTag() supaya
+ * konsisten dengan bentuk kanonik tag_number di seluruh aplikasi.
+ *
+ * Dipakai di WorkOrderImportService (modul Notification & Work Order) untuk matching
+ * equipmentId saat import — TIDAK dipakai untuk field Equipment.tagNumber manapun.
+ */
+export function normalizeErpEquipmentTag(raw: string): string {
+  return normalizeTag(raw.replace(/\/\d+\s*$/, ''));
+}

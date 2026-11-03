@@ -28,6 +28,18 @@ enum PermissionModule {
   PM_PROGRAM
   PM_EXECUTION
   SPARE_PART
+  WORK_ORDER // Modul Notification & Work Order (link ERP, lihat model Notification/WorkOrder) — 1 modul, mencakup keduanya
+}
+
+// Diturunkan dari TOKEN PERTAMA kolom "System status" ERP (SAP PM) saat import — terverifikasi
+// saling eksklusif di seluruh data sample (lihat docs/design-notification-work-order.md §2):
+// CRTD/REL/TECO/CLSD selalu tepat satu per order, selalu token pertama. Urutan enum = urutan
+// siklus order SAP standar. Dipakai untuk stepper status & filter klik di UI Work Order.
+enum WorkOrderLifecycleStage {
+  CREATED // CRTD
+  RELEASED // REL
+  TECHNICALLY_COMPLETED // TECO
+  CLOSED // CLSD
 }
 
 enum EquipmentStatus {
@@ -285,6 +297,11 @@ model Equipment {
   pmExecutions   PmPeriodExecution[]
   // Baris import yang menargetkan equipment ini untuk di-UPDATE (mode UPDATE_OR_CREATE).
   importTargetRows ImportBatchRow[]
+  // Notification & Work Order dari ERP yang berhasil di-link ke equipment ini (lihat model
+  // Notification/WorkOrder) — nullable di sisi sana karena matching bisa gagal (lihat catatan
+  // equipmentTagRaw di model WorkOrder).
+  notifications  Notification[]
+  workOrders     WorkOrder[]
 
   @@index([areaId])
   @@index([instrumentNameId])
@@ -506,6 +523,10 @@ model CorrectiveMaintenance {
   workOrderNumber    String?           @map("work_order_number") @db.VarChar(50)
   workOrderDate      DateTime?         @map("work_order_date") @db.Date
   workOrderStatus    String?           @map("work_order_status") @db.VarChar(50)
+  // Link OPSIONAL ke WorkOrder hasil import ERP (modul Notification & Work Order) — field
+  // notificationNumber/workOrderNumber dkk di atas TETAP ADA & tidak dikunci, dipakai sebagai
+  // fallback kalau WO resmi belum ter-import dari ERP. Lihat docs/design-notification-work-order.md.
+  workOrderId        String?           @map("work_order_id") @db.Uuid
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
   deletedAt          DateTime?         @map("deleted_at")
@@ -516,6 +537,7 @@ model CorrectiveMaintenance {
   createdBy            User       @relation("CreatedByMaintenance", fields: [createdById], references: [id])
   materials            CorrectiveMaintenanceMaterial[]
   additionalTechnicians CorrectiveMaintenanceTechnician[]
+  workOrder            WorkOrder? @relation(fields: [workOrderId], references: [id])
 
   @@index([maintenanceDate])
   @@index([equipmentId])
@@ -523,6 +545,7 @@ model CorrectiveMaintenance {
   @@index([status])
   @@index([priority])
   @@index([areaId, maintenanceDate])
+  @@index([workOrderId])
   @@map("corrective_maintenance")
 }
 
@@ -624,6 +647,7 @@ model CorrectiveMaintenanceTechnician {
 
 enum ImportEntityType {
   EQUIPMENT
+  WORK_ORDER // Import gabungan Notification + Order dari export SAP PM — lihat model WorkOrder
 }
 
 enum ImportMode {
@@ -696,6 +720,8 @@ model ImportBatch {
   rows      ImportBatchRow[]
   equipment Equipment[]
   bulkOperations EquipmentBulkOperation[]
+  notifications Notification[]
+  workOrders    WorkOrder[]
 
   // Index biasa supaya schema tidak "buta" soal index di kolom ini — uniqueness sebenarnya
   // (partial, hanya WHERE status = 'COMMITTED') ada di migration SQL manual. Kalau nanti
@@ -733,6 +759,107 @@ model ImportBatchRow {
   @@index([batchId, severity])
   @@index([targetEquipmentId])
   @@map("import_batch_rows")
+}
+
+// ================= Notification & Work Order (link ERP, mis. SAP PM) =================
+// Lihat docs/design-notification-work-order.md untuk analisis & keputusan desain lengkap.
+// Sumber data: export Excel ERP (36 kolom), di-import lewat ImportBatch(entityType=WORK_ORDER)
+// — 1 baris Excel = 1 Notification (upsert by notificationNo) + 1 WorkOrder (upsert by orderNo).
+// TIDAK menggantikan field manual notificationNumber/workOrderNumber dkk di CorrectiveMaintenance
+// (lihat field workOrderId di model itu) — keduanya hidup berdampingan, field manual jadi fallback
+// kalau WO resmi belum ter-import dari ERP.
+
+// File sumber TIDAK punya kolom status/deskripsi terpisah untuk Notification (hanya ada di level
+// Order) — model ini sengaja ramping, hanya identitas + link equipment.
+model Notification {
+  id                 String    @id @default(uuid()) @db.Uuid
+  notificationNo     String    @map("notification_no") @db.VarChar(50)
+  equipmentId        String?   @map("equipment_id") @db.Uuid
+  // Nilai mentah kolom "Equipment" ERP (mis. "108PV005/00") — disimpan APA ADANYA walau
+  // equipmentId berhasil di-resolve, supaya baris yang GAGAL match (equipmentId null, termasuk
+  // baris yang di sumbernya memang kosong) tidak kehilangan info untuk direview/di-link manual
+  // lewat "Antrian Belum Terhubung" (lihat WorkOrdersService.findUnmatched()).
+  equipmentTagRaw    String?   @map("equipment_tag_raw") @db.VarChar(50)
+  functionalLocation String?   @map("functional_location") @db.VarChar(100)
+  plant              String?   @db.VarChar(20)
+  createdOnErp       DateTime? @map("created_on_erp") @db.Date
+  // Batch bulk-import yang membuat/meng-upsert baris ini — nullable untuk fleksibilitas skema,
+  // walau di Phase 1 semua Notification berasal dari import (tidak ada create manual).
+  importBatchId      String?   @map("import_batch_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  equipment   Equipment?   @relation(fields: [equipmentId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+  workOrders  WorkOrder[]
+
+  @@index([equipmentId])
+  @@index([importBatchId])
+  // Index biasa supaya schema tidak "buta" soal index di kolom ini — uniqueness sebenarnya
+  // (PARTIAL, case-insensitive, hanya WHERE deleted_at IS NULL) ada di migration SQL manual,
+  // pola sama persis dengan Equipment.tagNumber & SparePart.kimap (lihat catatan di sana).
+  // JANGAN tambahkan @unique di field notificationNo — lihat catatan equipment_tag_number_active_key.
+  @@index([notificationNo])
+  @@map("notifications")
+}
+
+model WorkOrder {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  orderNo            String                   @map("order_no") @db.VarChar(50)
+  notificationId     String?                  @map("notification_id") @db.Uuid
+  equipmentId        String?                  @map("equipment_id") @db.Uuid
+  equipmentTagRaw    String?                  @map("equipment_tag_raw") @db.VarChar(50)
+  orderType          String?                  @map("order_type") @db.VarChar(10)
+  maintActivType     String?                  @map("maint_activ_type") @db.VarChar(10)
+  description        String                   @db.VarChar(255)
+  functionalLocation String?                  @map("functional_location") @db.VarChar(100)
+  plant              String?                  @db.VarChar(20)
+  // Ditampilkan di UI Phase 1:
+  basicStartDate     DateTime?                @map("basic_start_date") @db.Date
+  basicFinDate       DateTime?                @map("basic_fin_date") @db.Date
+  // Status mentah ERP — ditampilkan APA ADANYA di UI (bukan di-mapping ke enum granular,
+  // kombinasi kode SAP terlalu banyak/berubah-ubah). Lihat lifecycleStage di bawah untuk
+  // bagian yang memang terbukti linear (token pertama systemStatus).
+  userStatus         String?                  @map("user_status") @db.VarChar(100)
+  systemStatus       String?                  @map("system_status") @db.VarChar(150)
+  // Diturunkan dari token pertama systemStatus saat import (lihat WorkOrderLifecycleStage) —
+  // dasar stepper 4-tahap & filter klik di list. Default CREATED aman untuk baris yang
+  // systemStatus-nya kosong/tidak dikenali (fallback, bukan tebakan — lihat deriveLifecycleStage()).
+  lifecycleStage     WorkOrderLifecycleStage @default(CREATED) @map("lifecycle_stage")
+  // Disimpan sejak Phase 1 (import tidak kehilangan data) TAPI belum di-expose di DTO/UI —
+  // lihat docs/design-notification-work-order.md §11. Mengaktifkannya = ubah DTO response &
+  // kolom tabel saja, tanpa migrasi ulang.
+  actualRelease      DateTime?                @map("actual_release") @db.Date
+  actualFinish       DateTime?                @map("actual_finish") @db.Date
+  costCenter         String?                  @map("cost_center") @db.VarChar(20)
+  plannerGroup       String?                  @map("planner_group") @db.VarChar(20)
+  mainWorkCenter     String?                  @map("main_work_center") @db.VarChar(20)
+  totalPlannedCost   Decimal?                 @map("total_planned_cost") @db.Decimal(14, 2)
+  totalActualCost    Decimal?                 @map("total_actual_cost") @db.Decimal(14, 2)
+  priority           String?                  @db.VarChar(10)
+  superiorOrderId    String?                  @map("superior_order_id") @db.Uuid
+  importBatchId      String?                  @map("import_batch_id") @db.Uuid
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  deletedAt          DateTime?                @map("deleted_at")
+
+  notification          Notification?           @relation(fields: [notificationId], references: [id])
+  equipment              Equipment?              @relation(fields: [equipmentId], references: [id])
+  importBatch            ImportBatch?            @relation(fields: [importBatchId], references: [id])
+  superiorOrder          WorkOrder?              @relation("WorkOrderHierarchy", fields: [superiorOrderId], references: [id])
+  subOrders              WorkOrder[]             @relation("WorkOrderHierarchy")
+  correctiveMaintenance  CorrectiveMaintenance[]
+
+  @@index([equipmentId])
+  @@index([notificationId])
+  @@index([importBatchId])
+  @@index([lifecycleStage])
+  // Index biasa — uniqueness sebenarnya (PARTIAL, case-insensitive, WHERE deleted_at IS NULL)
+  // ada di migration SQL manual, pola sama dengan Notification.notificationNo. JANGAN tambahkan
+  // @unique di field orderNo.
+  @@index([orderNo])
+  @@map("work_orders")
 }
 
 // Satu "peristiwa" perubahan massal equipment yang bisa di-rollback: baik dari commit

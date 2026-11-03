@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
 import { DocumentsSection } from '@/features/attachments/components/documents-section';
+import { WorkOrderEquipmentSection } from '@/features/work-orders/components/work-order-equipment-section';
 import { useEquipmentById } from '../hooks/use-equipment';
 import { EquipmentForm } from '../components/equipment-form';
 import { usePermission } from '@/store/auth.store';
@@ -26,6 +27,7 @@ export function EquipmentDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const canEdit = usePermission('EQUIPMENT', 'edit');
+  const canViewWorkOrders = usePermission('WORK_ORDER', 'view');
 
   const [mode, setMode] = useState<'view' | 'edit'>(
     (location.state as { mode?: 'view' | 'edit' } | null)?.mode === 'edit' && canEdit ? 'edit' : 'view',
@@ -144,6 +146,11 @@ export function EquipmentDetailPage() {
             <div className="mt-4 border-t border-border/60 pt-4">
               <DocumentsSection entityType="EQUIPMENT" entityId={equipment.id} canEdit={canEdit} />
             </div>
+            {canViewWorkOrders && (
+              <div className="mt-4 border-t border-border/60 pt-4">
+                <WorkOrderEquipmentSection equipmentId={equipment.id} />
+              </div>
+            )}
           </>
         ) : (
           <EquipmentForm equipment={equipment} onSuccess={() => setMode('view')} onCancel={() => setMode('view')} />
