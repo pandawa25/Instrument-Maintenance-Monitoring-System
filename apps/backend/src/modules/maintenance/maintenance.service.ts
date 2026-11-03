@@ -8,6 +8,7 @@ import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
 import { EquipmentService } from '../equipment/equipment.service';
 import { UsersService } from '../users/users.service';
 import { SparePartsService } from '../spare-parts/spare-parts.service';
+import { WorkOrdersService } from '../work-orders/work-orders.service';
 import { MaterialInputDto } from './dto/material-input.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
 import { validateCompletionDateRequirement, validateStatusTransition } from './maintenance-status.util';
@@ -24,6 +25,9 @@ type MaintenanceWithRelations = CorrectiveMaintenance & {
     sparePart: { id: string; kimap: string; name: string; unit: string };
   }[];
   additionalTechnicians: { user: { id: string; fullName: string } }[];
+  // Ringkasan WO hasil link ke modul Notification & Work Order — null kalau belum di-link
+  // (field notificationNumber/workOrderNumber dkk tetap jadi fallback, lihat DTO).
+  workOrder: { id: string; orderNo: string; lifecycleStage: string; notification: { notificationNo: string } | null } | null;
 };
 
 @Injectable()
@@ -33,6 +37,7 @@ export class MaintenanceService {
     private readonly equipmentService: EquipmentService,
     private readonly usersService: UsersService,
     private readonly sparePartsService: SparePartsService,
+    private readonly workOrdersService: WorkOrdersService,
   ) {}
 
   private toListItem(row: MaintenanceWithRelations) {
@@ -68,6 +73,7 @@ export class MaintenanceService {
       workOrderNumber: row.workOrderNumber,
       workOrderDate: row.workOrderDate,
       workOrderStatus: row.workOrderStatus,
+      workOrder: row.workOrder ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -136,6 +142,9 @@ export class MaintenanceService {
     await this.validateTechnician(dto.technicianId);
     await this.validateAdditionalTechnicians(dto.additionalTechnicianIds);
     await this.validateMaterials(dto.materials);
+    if (dto.workOrderId) {
+      await this.workOrdersService.assertExists(dto.workOrderId);
+    }
     const areaId = await this.resolveAreaId(dto.equipmentId);
 
     // Saat create tidak ada "status sebelumnya" untuk divalidasi transisinya —
@@ -155,6 +164,9 @@ export class MaintenanceService {
     }
     await this.validateAdditionalTechnicians(dto.additionalTechnicianIds);
     await this.validateMaterials(dto.materials);
+    if (dto.workOrderId) {
+      await this.workOrdersService.assertExists(dto.workOrderId);
+    }
 
     if (dto.status) {
       validateStatusTransition(current.status, dto.status);

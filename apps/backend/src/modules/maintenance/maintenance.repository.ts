@@ -41,6 +41,9 @@ const LIST_INCLUDE = {
   additionalTechnicians: {
     include: { user: { select: { id: true, fullName: true } } },
   },
+  workOrder: {
+    select: { id: true, orderNo: true, lifecycleStage: true, notification: { select: { notificationNo: true } } },
+  },
 } satisfies Prisma.CorrectiveMaintenanceInclude;
 
 /**

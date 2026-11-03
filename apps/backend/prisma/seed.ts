@@ -14,6 +14,7 @@ const OPERATIONAL_MODULES: PermissionModule[] = [
   PermissionModule.PM_PROGRAM,
   PermissionModule.PM_EXECUTION,
   PermissionModule.SPARE_PART,
+  PermissionModule.WORK_ORDER,
 ];
 
 // Modul yang boleh dilihat (view-only) oleh role View, sesuai permintaan user:

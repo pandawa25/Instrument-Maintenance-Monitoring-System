@@ -16,6 +16,8 @@ import {
 import type { Maintenance, MaintenanceFormValues, MaterialFormItem } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
 import { getSelectableStatuses, MAINTENANCE_STATUS_LABELS } from '../utils/maintenance-status.util';
+import { useWorkOrderDropdown } from '@/features/work-orders/hooks/use-work-orders';
+import { LIFECYCLE_STAGE_LABEL } from '@/features/work-orders/types/work-order.types';
 import { FAILURE_CATEGORY_OPTIONS, FAILURE_MODE_OPTIONS } from '../utils/failure';
 
 const EMPTY_FORM: MaintenanceFormValues = {
@@ -42,6 +44,7 @@ const EMPTY_FORM: MaintenanceFormValues = {
   workOrderNumber: '',
   workOrderDate: '',
   workOrderStatus: '',
+  workOrderId: '',
 };
 
 interface Props {
@@ -60,6 +63,8 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
   const { data: equipmentOptions } = useEquipmentLookup();
   const { data: technicians } = useTechniciansLookup();
   const { data: sparePartOptions } = useSparePartsLookupForMaintenance();
+  // WO dropdown difilter ke equipment yang sedang dipilih — lihat docs/design-notification-work-order.md §9.
+  const { data: workOrderOptions } = useWorkOrderDropdown(form.equipmentId || undefined);
   const isEdit = Boolean(maintenance);
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -109,6 +114,7 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
             workOrderNumber: maintenance.workOrderNumber ?? '',
             workOrderDate: maintenance.workOrderDate?.slice(0, 10) ?? '',
             workOrderStatus: maintenance.workOrderStatus ?? '',
+            workOrderId: maintenance.workOrder?.id ?? '',
           }
         : EMPTY_FORM,
     );
@@ -179,6 +185,7 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
         workOrderNumber: form.workOrderNumber || undefined,
         workOrderDate: form.workOrderDate || undefined,
         workOrderStatus: form.workOrderStatus || undefined,
+        workOrderId: form.workOrderId || undefined,
         materials: form.needsSparePart
           ? form.materials.map((m) => ({
               sparePartId: m.sparePartId,
@@ -492,8 +499,42 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
 
       <div className="col-span-2 rounded-md border border-border p-3">
         <p className="mb-3 text-sm font-medium text-text">Informasi Notifikasi & Work Order (ERP)</p>
+
+        <div className="mb-3">
+          <Label htmlFor="workOrderId">Link ke Work Order (hasil import ERP)</Label>
+          <SearchableSelect
+            id="workOrderId"
+            value={form.workOrderId ?? ''}
+            onChange={(workOrderId) => {
+              const picked = workOrderOptions?.find((wo) => wo.id === workOrderId);
+              setForm((f) => ({
+                ...f,
+                workOrderId,
+                // Autofill field manual di bawah supaya tidak diketik ulang — tetap bisa
+                // diedit manual sesudahnya (fallback kalau data ERP salah/kurang).
+                ...(picked
+                  ? { workOrderNumber: picked.orderNo, notificationNumber: picked.notification?.notificationNo ?? f.notificationNumber }
+                  : {}),
+              }));
+            }}
+            options={(workOrderOptions ?? []).map((wo) => ({
+              value: wo.id,
+              label: wo.orderNo,
+              sublabel: wo.notification ? `${wo.notification.notificationNo} — ${wo.description}` : wo.description,
+            }))}
+            placeholder={form.equipmentId ? 'Pilih Work Order (opsional)...' : 'Pilih Equipment terlebih dahulu'}
+            searchPlaceholder="Cari No. Order / Notification..."
+            disabled={!form.equipmentId}
+          />
+          {maintenance?.workOrder && (
+            <p className="mt-1 text-xs text-text-muted">
+              Tahap siklus ERP saat ini: {LIFECYCLE_STAGE_LABEL[maintenance.workOrder.lifecycleStage as keyof typeof LIFECYCLE_STAGE_LABEL] ?? maintenance.workOrder.lifecycleStage}
+            </p>
+          )}
+        </div>
+
         <p className="mb-3 text-xs text-text-muted">
-          Diisi manual sebagai referensi setelah Notifikasi/WO diterbitkan di sistem ERP (mis. SAP PM). Opsional.
+          Field di bawah diisi manual sebagai referensi (fallback kalau WO di atas belum ter-import dari ERP). Opsional.
         </p>
         <div className="grid grid-cols-3 gap-3">
           <div>

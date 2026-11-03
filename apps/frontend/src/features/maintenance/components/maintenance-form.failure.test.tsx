@@ -14,6 +14,12 @@ vi.mock('../hooks/use-maintenance-lookups', () => ({
   useTechniciansLookup: () => ({ data: [] }),
   useSparePartsLookupForMaintenance: () => ({ data: [] }),
 }));
+// Field link Work Order (modul Notification & Work Order) — dipakai MaintenanceForm, lihat
+// docs/design-notification-work-order.md §9. Di-mock sama seperti lookup lain di atas supaya
+// test ini tidak butuh QueryClientProvider sungguhan.
+vi.mock('@/features/work-orders/hooks/use-work-orders', () => ({
+  useWorkOrderDropdown: () => ({ data: [] }),
+}));
 
 import { MaintenanceForm } from './maintenance-form';
 import type { Maintenance } from '../types/maintenance.types';
