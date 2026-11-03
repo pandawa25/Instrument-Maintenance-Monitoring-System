@@ -63,7 +63,9 @@ export class WorkOrdersController {
   @RequirePermission(PermissionModule.WORK_ORDER, 'view')
   @ApiOperation({ summary: '"Antrian Belum Terhubung" — Work Order yang equipmentId-nya belum ter-link' })
   findUnmatched(@Query() query: QueryWorkOrderDto) {
-    return this.service.findAll({ ...query, unmatchedOnly: true });
+    // `skip` di QueryWorkOrderDto adalah getter (dihitung dari page/limit) — spread object
+    // TIDAK ikut menyalin getter dari prototype, jadi harus disertakan eksplisit di sini.
+    return this.service.findAll({ ...query, unmatchedOnly: true, skip: query.skip });
   }
 
   @Get('dropdown')

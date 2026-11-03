@@ -118,7 +118,8 @@ export class WorkOrdersRepository {
    * lifecycleStage itu sendiri), sama pola dengan EquipmentRepository.getStatusCounts().
    */
   async getStageCounts(query: QueryWorkOrderDto) {
-    const where = this.buildWhere({ ...query, lifecycleStage: undefined });
+    // `skip` adalah getter — sama catatannya seperti di WorkOrdersController.findUnmatched().
+    const where = this.buildWhere({ ...query, lifecycleStage: undefined, skip: query.skip });
     const grouped = await this.prisma.workOrder.groupBy({
       by: ['lifecycleStage'],
       where,
