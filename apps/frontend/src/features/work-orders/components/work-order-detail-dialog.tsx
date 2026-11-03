@@ -74,7 +74,16 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
               <StatusBadge value={wo.lifecycleStage} />
               {wo.equipment ? (
                 <span className="inline-flex items-center gap-1 text-xs text-success">
-                  <LinkIcon className="h-3 w-3" /> Terhubung ke equipment
+                  <LinkIcon className="h-3 w-3" />
+                  Terhubung ke equipment
+                  {wo.equipmentLinkSource === 'MANUAL' && (
+                    <span
+                      className="text-text-muted"
+                      title="Dihubungkan manual — tidak akan ditimpa saat import ERP berikutnya"
+                    >
+                      (manual)
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs text-warning">

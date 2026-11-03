@@ -42,6 +42,12 @@ enum WorkOrderLifecycleStage {
   CLOSED // CLSD
 }
 
+// Lihat catatan di WorkOrder.equipmentLinkSource.
+enum WorkOrderEquipmentLinkSource {
+  IMPORT
+  MANUAL
+}
+
 enum EquipmentStatus {
   ACTIVE
   STANDBY
@@ -810,6 +816,12 @@ model WorkOrder {
   notificationId     String?                  @map("notification_id") @db.Uuid
   equipmentId        String?                  @map("equipment_id") @db.Uuid
   equipmentTagRaw    String?                  @map("equipment_tag_raw") @db.VarChar(50)
+  // IMPORT (default) = equipmentId hasil auto-match saat commit import, BOLEH ditimpa import
+  // berikutnya. MANUAL = pernah dikoreksi lewat WorkOrdersService.relinkEquipment() (termasuk
+  // sengaja dilepas ke null) — import berikutnya TIDAK BOLEH menimpa equipmentId baris ini lagi,
+  // lihat WORK_ORDER_UPSERT_SQL (work-order-bulk-sql.ts). Mencegah koreksi manual hilang setiap
+  // kali export ERP terbaru di-upload ulang.
+  equipmentLinkSource WorkOrderEquipmentLinkSource @default(IMPORT) @map("equipment_link_source")
   orderType          String?                  @map("order_type") @db.VarChar(10)
   maintActivType     String?                  @map("maint_activ_type") @db.VarChar(10)
   description        String                   @db.VarChar(255)

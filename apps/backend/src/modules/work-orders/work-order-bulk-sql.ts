@@ -41,17 +41,20 @@ DO UPDATE SET
 RETURNING id, notification_no
 `;
 
+// "AS w": alias tabel target supaya DO UPDATE SET bisa baca nilai LAMA baris (w.*) berdampingan
+// dengan nilai BARU dari baris sumber (EXCLUDED.*) — dipakai untuk melindungi equipment_id yang
+// sudah dikoreksi manual (lihat komentar equipment_id di bawah).
 export const WORK_ORDER_UPSERT_SQL = `
-INSERT INTO work_orders (
+INSERT INTO work_orders AS w (
   id, order_no, notification_id, equipment_id, equipment_tag_raw, order_type, maint_activ_type,
   description, functional_location, plant, basic_start_date, basic_fin_date, user_status,
-  system_status, lifecycle_stage, import_batch_id, created_at, updated_at
+  system_status, lifecycle_stage, equipment_link_source, import_batch_id, created_at, updated_at
 )
 SELECT
   v.id, v.order_no, v.notification_id, v.equipment_id, v.equipment_tag_raw, v.order_type, v.maint_activ_type,
   v.description, v.functional_location, v.plant, v.basic_start_date, v.basic_fin_date, v.user_status,
-  v.system_status, v.lifecycle_stage::"WorkOrderLifecycleStage", v.import_batch_id,
-  (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+  v.system_status, v.lifecycle_stage::"WorkOrderLifecycleStage", 'IMPORT'::"WorkOrderEquipmentLinkSource",
+  v.import_batch_id, (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
 FROM jsonb_to_recordset($1::jsonb) AS v(
   id uuid, order_no text, notification_id uuid, equipment_id uuid, equipment_tag_raw text,
   order_type text, maint_activ_type text, description text, functional_location text, plant text,
@@ -61,7 +64,12 @@ FROM jsonb_to_recordset($1::jsonb) AS v(
 ON CONFLICT (UPPER(order_no)) WHERE deleted_at IS NULL
 DO UPDATE SET
   notification_id = EXCLUDED.notification_id,
-  equipment_id = EXCLUDED.equipment_id,
+  -- Baris yang equipment_id-nya sudah dikoreksi manual (equipment_link_source = 'MANUAL',
+  -- lihat WorkOrdersService.relinkEquipment) TIDAK ikut ditimpa auto-match import berikutnya —
+  -- supaya koreksi manual tidak hilang tiap kali export ERP terbaru di-upload ulang.
+  -- equipment_link_source SENGAJA tidak ada di SET list ini -> nilai lama w.equipment_link_source
+  -- otomatis dipertahankan apa adanya (Postgres: kolom yang tidak disebut di UPDATE tidak berubah).
+  equipment_id = CASE WHEN w.equipment_link_source = 'MANUAL' THEN w.equipment_id ELSE EXCLUDED.equipment_id END,
   equipment_tag_raw = EXCLUDED.equipment_tag_raw,
   order_type = EXCLUDED.order_type,
   maint_activ_type = EXCLUDED.maint_activ_type,

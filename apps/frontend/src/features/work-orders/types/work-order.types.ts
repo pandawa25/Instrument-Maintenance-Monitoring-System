@@ -17,6 +17,11 @@ export const LIFECYCLE_STAGE_ORDER: WorkOrderLifecycleStage[] = [
 
 export type StageCounts = Record<WorkOrderLifecycleStage, number>;
 
+// IMPORT = equipmentId hasil auto-match saat import (boleh ditimpa import berikutnya).
+// MANUAL = pernah dikoreksi lewat dialog "Hubungkan Equipment" — import berikutnya tidak
+// akan menimpanya lagi. Lihat WorkOrder.equipmentLinkSource di schema.prisma.
+export type WorkOrderEquipmentLinkSource = 'IMPORT' | 'MANUAL';
+
 // 10 field final yang disepakati tampil di UI (lihat docs/design-notification-work-order.md §3) —
 // field lain (biaya, planner, actual date, dsb) sengaja TIDAK ada di tipe ini untuk Phase 1.
 export interface WorkOrder {
@@ -32,6 +37,7 @@ export interface WorkOrder {
   functionalLocation: string | null;
   equipmentId: string | null;
   equipmentTagRaw: string | null;
+  equipmentLinkSource: WorkOrderEquipmentLinkSource;
   notification: { id: string; notificationNo: string } | null;
   equipment: {
     id: string;

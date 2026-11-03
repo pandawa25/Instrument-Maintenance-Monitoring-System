@@ -29,6 +29,7 @@ const LIST_SELECT = {
   functionalLocation: true,
   equipmentId: true,
   equipmentTagRaw: true,
+  equipmentLinkSource: true,
   notification: { select: { id: true, notificationNo: true } },
   equipment: {
     select: { id: true, tagNumber: true, service: true, area: { select: { id: true, areaCode: true, areaName: true } } },
@@ -135,10 +136,13 @@ export class WorkOrdersRepository {
 
   // equipmentTagRaw SENGAJA tidak disentuh (tidak di-null-kan) saat relink manual — tetap jadi
   // jejak audit nilai mentah asli dari ERP, terlepas dari equipmentId sudah dikoreksi manual atau belum.
+  // equipmentLinkSource selalu diset 'MANUAL' di sini (baik menghubungkan MAUPUN sengaja melepas
+  // ke null) — supaya commit import berikutnya tidak menimpa keputusan manual ini lagi
+  // (lihat WORK_ORDER_UPSERT_SQL di work-order-bulk-sql.ts).
   relinkEquipment(id: string, equipmentId: string | null) {
     return this.prisma.workOrder.update({
       where: { id },
-      data: { equipmentId },
+      data: { equipmentId, equipmentLinkSource: 'MANUAL' },
       select: LIST_SELECT,
     });
   }
