@@ -7,6 +7,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ImportBatchRepository, NewImportRow } from '../equipment/import-batch.repository';
 import { EquipmentService } from '../equipment/equipment.service';
 import { SAP_COLUMN_HEADERS, deriveLifecycleStage } from './work-order-matching.util';
+import {
+  NOTIFICATION_UPSERT_SQL,
+  WORK_ORDER_UPSERT_SQL,
+  NotificationUpsertInput,
+  WorkOrderUpsertInput,
+  buildNotificationUpsertParams,
+  buildWorkOrderUpsertParams,
+} from './work-order-bulk-sql';
 import { WoImportPreviewResultDto } from './dto/wo-import-preview-result.dto';
 import { WoImportCommitResultDto } from './dto/wo-import-commit-result.dto';
 import { WoImportBatchRowDto } from './dto/wo-import-batch-row.dto';
@@ -16,11 +24,11 @@ import { buildPaginationMeta, PaginatedResult } from '../../common/dto/paginatio
 // Batas sama dengan Bulk Upload Equipment — file lebih besar harus dipecah user.
 const MAX_ROWS = 1000;
 const BATCH_EXPIRY_HOURS = 24;
-// Commit di-loop per baris (bukan raw-SQL batch seperti equipment-bulk-sql.ts) — sengaja
-// sederhana untuk volume impor Work Order (ratusan baris, dilakukan manual/berkala, bukan
-// ribuan baris rutin). Timeout digenerosi dulu sama seperti pola di EquipmentBulkUploadService;
-// kalau di produksi ternyata timeout (P2028) di volume besar, pola raw-SQL batch upsert di
-// equipment-bulk-sql.ts (lihat roadmap.md Risk #21) adalah referensi perbaikannya.
+// Commit memakai 2 batch SQL (Notification lalu WorkOrder), masing-masing di-chunk 500 baris
+// per statement lewat `INSERT ... FROM jsonb_to_recordset($1) ... ON CONFLICT DO UPDATE`
+// (lihat work-order-bulk-sql.ts) — BUKAN loop create/update per baris. Pola ini sudah
+// terbukti di Bulk Upload Equipment (lihat roadmap.md Risk #21: 997 baris turun dari timeout
+// jadi ≈45ms). Timeout tetap digenerosi sebagai jaring pengaman, bukan jalur utama.
 const COMMIT_TX_OPTIONS = { timeout: 120_000, maxWait: 10_000 };
 
 interface ParsedWoRow {
@@ -271,99 +279,84 @@ export class WorkOrderImportService {
 
     const rows = await this.importBatchRepository.findCommittableRows(batchId);
 
+    // Baris yang punya Notification (sebagian kecil tidak, lihat validateRow()) — dipisah
+    // supaya upsert Notification & WorkOrder jadi 2 batch SQL terpisah (bukan N query per baris,
+    // lihat work-order-bulk-sql.ts). notification_no dijadikan KEY uppercase untuk resolve
+    // notification_id per baris WorkOrder setelah batch Notification selesai.
+    // Di JSON payload, basicStartDate/basicFinDate/createdOn tersimpan sebagai string ISO
+    // (YYYY-MM-DD) — lihat catatan di previewUpload(). Tidak perlu diparse ke Date di sini,
+    // langsung dikirim sebagai string ke jsonb_to_recordset (kolom ::date di SQL yang cast).
+    type StoredWoRowPayload = Omit<ParsedWoRow, 'basicStartDate' | 'basicFinDate' | 'createdOn'> & {
+      basicStartDate?: string;
+      basicFinDate?: string;
+      createdOn?: string;
+      equipmentId?: string;
+      lifecycleStage: string;
+    };
+    const parsedRows = (rows as { payload: any }[]).map((row) => ({
+      id: randomUUID(),
+      data: row.payload as StoredWoRowPayload,
+    }));
+
     try {
       const result = await this.prisma.$transaction(async (tx: any) => {
-        let notificationCount = 0;
+        // 1) Upsert semua Notification (hanya baris yang punya notificationNo), ambil id
+        //    hasilnya langsung dari RETURNING — tidak perlu SELECT tambahan.
+        const notifInputs: NotificationUpsertInput[] = parsedRows
+          .filter((r) => r.data.notificationNo)
+          .map((r) => ({
+            id: randomUUID(),
+            notificationNo: r.data.notificationNo!,
+            equipmentId: r.data.equipmentId,
+            equipmentTagRaw: r.data.equipmentRaw,
+            functionalLocation: r.data.functionalLocation,
+            plant: r.data.plant,
+            createdOnErp: r.data.createdOn,
+            importBatchId: batchId,
+          }));
+
+        const notificationIdByKey = new Map<string, string>();
+        for (const json of buildNotificationUpsertParams(notifInputs)) {
+          const returned = (await tx.$queryRawUnsafe(NOTIFICATION_UPSERT_SQL, json)) as {
+            id: string;
+            notification_no: string;
+          }[];
+          for (const r of returned) notificationIdByKey.set(r.notification_no.toUpperCase(), r.id);
+        }
+
+        // 2) Upsert semua WorkOrder, notification_id di-resolve dari map di atas.
+        const woInputs: WorkOrderUpsertInput[] = parsedRows.map((r) => ({
+          id: r.id,
+          orderNo: r.data.orderNo!,
+          notificationId: r.data.notificationNo
+            ? notificationIdByKey.get(r.data.notificationNo.toUpperCase())
+            : undefined,
+          equipmentId: r.data.equipmentId,
+          equipmentTagRaw: r.data.equipmentRaw,
+          orderType: r.data.orderType,
+          maintActivType: r.data.maintActivType,
+          description: r.data.description!,
+          functionalLocation: r.data.functionalLocation,
+          plant: r.data.plant,
+          basicStartDate: r.data.basicStartDate,
+          basicFinDate: r.data.basicFinDate,
+          userStatus: r.data.userStatus,
+          systemStatus: r.data.systemStatus,
+          lifecycleStage: r.data.lifecycleStage,
+          importBatchId: batchId,
+        }));
+
         let workOrderCount = 0;
         let unmatchedCount = 0;
-
-        for (const row of rows as { payload: any }[]) {
-          // Di JSON payload, basicStartDate/basicFinDate/createdOn tersimpan sebagai string ISO
-          // (YYYY-MM-DD) — lihat catatan di previewUpload(). Diparse balik ke Date di sini.
-          const raw = row.payload as Omit<ParsedWoRow, 'basicStartDate' | 'basicFinDate' | 'createdOn'> & {
-            basicStartDate?: string;
-            basicFinDate?: string;
-            createdOn?: string;
-            equipmentId?: string;
-            lifecycleStage: string;
-          };
-          const data = {
-            ...raw,
-            basicStartDate: raw.basicStartDate ? new Date(raw.basicStartDate) : undefined,
-            basicFinDate: raw.basicFinDate ? new Date(raw.basicFinDate) : undefined,
-            createdOn: raw.createdOn ? new Date(raw.createdOn) : undefined,
-          };
-
-          let notificationId: string | undefined;
-          if (data.notificationNo) {
-            const existingNotif = await tx.notification.findFirst({
-              where: { notificationNo: { equals: data.notificationNo, mode: 'insensitive' }, deletedAt: null },
-            });
-            if (existingNotif) {
-              const updated = await tx.notification.update({
-                where: { id: existingNotif.id },
-                data: {
-                  equipmentId: data.equipmentId ?? null,
-                  equipmentTagRaw: data.equipmentRaw,
-                  functionalLocation: data.functionalLocation,
-                  plant: data.plant,
-                  createdOnErp: data.createdOn,
-                  importBatchId: batchId,
-                },
-              });
-              notificationId = updated.id;
-            } else {
-              const created = await tx.notification.create({
-                data: {
-                  id: randomUUID(),
-                  notificationNo: data.notificationNo,
-                  equipmentId: data.equipmentId ?? null,
-                  equipmentTagRaw: data.equipmentRaw,
-                  functionalLocation: data.functionalLocation,
-                  plant: data.plant,
-                  createdOnErp: data.createdOn,
-                  importBatchId: batchId,
-                },
-              });
-              notificationId = created.id;
-            }
-            notificationCount++;
-          }
-
-          const existingWo = await tx.workOrder.findFirst({
-            where: { orderNo: { equals: data.orderNo, mode: 'insensitive' }, deletedAt: null },
-          });
-
-          const woData = {
-            orderNo: data.orderNo!,
-            notificationId: notificationId ?? null,
-            equipmentId: data.equipmentId ?? null,
-            equipmentTagRaw: data.equipmentRaw,
-            orderType: data.orderType,
-            maintActivType: data.maintActivType,
-            description: data.description!,
-            functionalLocation: data.functionalLocation,
-            plant: data.plant,
-            basicStartDate: data.basicStartDate,
-            basicFinDate: data.basicFinDate,
-            userStatus: data.userStatus,
-            systemStatus: data.systemStatus,
-            lifecycleStage: data.lifecycleStage,
-            importBatchId: batchId,
-          };
-
-          if (existingWo) {
-            await tx.workOrder.update({ where: { id: existingWo.id }, data: woData });
-          } else {
-            await tx.workOrder.create({ data: { id: randomUUID(), ...woData } });
-          }
-          workOrderCount++;
-          if (!data.equipmentId) unmatchedCount++;
+        for (const json of buildWorkOrderUpsertParams(woInputs)) {
+          const returned = (await tx.$queryRawUnsafe(WORK_ORDER_UPSERT_SQL, json)) as { id: string; unmatched: boolean }[];
+          workOrderCount += returned.length;
+          unmatchedCount += returned.filter((r) => r.unmatched).length;
         }
 
         await tx.importBatch.update({ where: { id: batchId }, data: { status: 'COMMITTED', committedAt: new Date() } });
 
-        return { notificationCount, workOrderCount, unmatchedCount };
+        return { notificationCount: notificationIdByKey.size, workOrderCount, unmatchedCount };
       }, COMMIT_TX_OPTIONS);
 
       return {
@@ -377,7 +370,7 @@ export class WorkOrderImportService {
     } catch (err) {
       await this.importBatchRepository.updateStatus(batchId, 'FAILED');
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2028') {
-        throw new ServiceUnavailableException('Commit timeout — coba lagi (lihat Risk #21 roadmap.md untuk perbaikan jangka panjang)');
+        throw new ServiceUnavailableException('Commit timeout — coba lagi dalam beberapa saat');
       }
       throw err;
     }
