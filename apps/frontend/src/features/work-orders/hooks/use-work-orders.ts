@@ -83,3 +83,15 @@ export function useCommitWorkOrderImport() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
   });
 }
+
+// Hitung cepat jumlah "Antrian Belum Terhubung" (limit=1, cuma butuh meta.total) — dipakai
+// kartu alert di Dashboard utama, bukan list rows. `enabled` dikontrol pemanggil (gate
+// permission WORK_ORDER view) supaya tidak fetch untuk role yang tidak punya akses modul ini.
+export function useWorkOrderUnmatchedCount(enabled: boolean) {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, 'unmatched-count'],
+    queryFn: async () => (await fetchWorkOrders({ page: 1, limit: 1, unmatchedOnly: true })).meta.total,
+    enabled,
+    staleTime: 60_000,
+  });
+}
