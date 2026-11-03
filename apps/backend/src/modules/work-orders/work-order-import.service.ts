@@ -83,9 +83,13 @@ export class WorkOrderImportService {
 
     const headerRow = sheet.getRow(1);
     const colIndex = new Map<string, number>();
+    // Beberapa judul kolom MUNCUL DUA KALI di export SAP PM asli — paling penting "Description"
+    // (kolom ke-10: deskripsi Order, selalu terisi; kolom ke-32: deskripsi item material/PR,
+    // selalu kosong di sample yang dianalisis — lihat docs/design-notification-work-order.md §2).
+    // Ambil KEMUNCULAN PERTAMA (bukan terakhir) supaya tidak salah ambil kolom yang kosong itu.
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       const text = cellText(cell.value);
-      if (text) colIndex.set(text, colNumber);
+      if (text && !colIndex.has(text)) colIndex.set(text, colNumber);
     });
 
     const required = [SAP_COLUMN_HEADERS.order, SAP_COLUMN_HEADERS.notification, SAP_COLUMN_HEADERS.description];
