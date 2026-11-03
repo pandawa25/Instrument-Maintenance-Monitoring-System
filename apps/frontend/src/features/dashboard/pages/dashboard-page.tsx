@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Gauge, ShieldCheck, Wrench } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ClipboardList, Gauge, ShieldCheck, Wrench } from 'lucide-react';
 import { Tabs, TabPanel } from '@/components/ui/tabs';
+import { usePermission } from '@/store/auth.store';
 import { useDashboardCharts, useDashboardRecent, useDashboardSummary } from '../hooks/use-dashboard';
 import { SummaryCards } from '../components/summary-cards';
 import {
@@ -16,15 +17,23 @@ import {
 import { LatestMaintenanceTable, UpcomingPmList } from '../components/dashboard-recent';
 import { KpiSection } from '../components/kpi-section';
 import { HealthIndexSection } from '../components/health-index-section';
+import { WorkOrderDashboardPanel } from '@/features/work-orders/components/work-order-dashboard-panel';
 
-const DASHBOARD_TABS = [
+const BASE_TABS = [
   { value: 'equipment', label: 'Sebaran Equipment', icon: Gauge },
   { value: 'maintenance', label: 'Aktivitas Maintenance', icon: Wrench },
   { value: 'reliability', label: 'KPI & Reliability', icon: ShieldCheck },
 ];
 
+const WORK_ORDER_TAB = { value: 'work-orders', label: 'Work Order (ERP)', icon: ClipboardList };
+
 export function DashboardPage() {
-  const [tab, setTab] = useState(DASHBOARD_TABS[0].value);
+  const canViewWorkOrders = usePermission('WORK_ORDER', 'view');
+  const tabs = useMemo(
+    () => (canViewWorkOrders ? [...BASE_TABS, WORK_ORDER_TAB] : BASE_TABS),
+    [canViewWorkOrders],
+  );
+  const [tab, setTab] = useState(BASE_TABS[0].value);
 
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: charts, isLoading: chartsLoading } = useDashboardCharts();
@@ -39,7 +48,7 @@ export function DashboardPage() {
 
       <SummaryCards summary={summary} isLoading={summaryLoading} />
 
-      <Tabs tabs={DASHBOARD_TABS} value={tab} onChange={setTab} />
+      <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
       <TabPanel active={tab === 'equipment'}>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -74,6 +83,12 @@ export function DashboardPage() {
           </div>
         </div>
       </TabPanel>
+
+      {canViewWorkOrders && (
+        <TabPanel active={tab === 'work-orders'}>
+          <WorkOrderDashboardPanel />
+        </TabPanel>
+      )}
     </div>
   );
 }

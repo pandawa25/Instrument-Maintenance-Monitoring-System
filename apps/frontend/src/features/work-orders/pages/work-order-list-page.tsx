@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ClipboardList, RotateCcw, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,10 +28,23 @@ const DEFAULT_PARAMS: WorkOrderQueryParams = {
 // Modul Notification & Work Order (link ERP) — lihat docs/design-notification-work-order.md.
 // Stepper di atas = ringkasan + filter klik (bukan workflow yang bisa diubah manual, lihat
 // LifecycleStepper). Tab "Antrian Belum Terhubung" memakai filter unmatchedOnly yang sama.
+interface NavState {
+  lifecycleStage?: WorkOrderLifecycleStage;
+  tab?: 'all' | 'unmatched';
+}
+
 export function WorkOrderListPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
-  const [params, setParams] = useState<WorkOrderQueryParams>(DEFAULT_PARAMS);
-  const [tab, setTab] = useState<'all' | 'unmatched'>('all');
+  // State navigasi opsional dari halaman lain (mis. kartu/panel Dashboard) — pola sama
+  // dengan EquipmentDetailPage (location.state?.mode) — supaya klik di Dashboard bisa
+  // langsung membawa filter yang relevan ke sini.
+  const location = useLocation();
+  const navState = location.state as NavState | null;
+  const [params, setParams] = useState<WorkOrderQueryParams>({
+    ...DEFAULT_PARAMS,
+    lifecycleStage: navState?.lifecycleStage,
+  });
+  const [tab, setTab] = useState<'all' | 'unmatched'>(navState?.tab ?? 'all');
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
