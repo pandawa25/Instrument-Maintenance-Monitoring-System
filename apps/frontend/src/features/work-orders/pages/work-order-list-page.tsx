@@ -11,7 +11,7 @@ import { LifecycleStepper } from '../components/lifecycle-stepper';
 import { WorkOrderTable } from '../components/work-order-table';
 import { WorkOrderDetailDialog } from '../components/work-order-detail-dialog';
 import { WorkOrderImportDialog } from '../components/work-order-import-dialog';
-import { useAuthStore } from '@/store/auth.store';
+import { usePermission } from '@/store/auth.store';
 import type { WorkOrderLifecycleStage, WorkOrderQueryParams } from '../types/work-order.types';
 
 // Default sort by Basic Start Date (terbaru dulu) — paling relevan untuk tanggal kerja
@@ -34,7 +34,11 @@ interface NavState {
 }
 
 export function WorkOrderListPage() {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
+  // Import ERP butuh permission create pada modul WORK_ORDER (sama dengan yang dicek
+  // backend di POST import/preview & import/:batchId/commit) — BUKAN role Admin secara
+  // khusus, supaya Teknisi (yang di seed default sudah dapat CRUD penuh modul ini) juga
+  // bisa import, konsisten dengan hak akses yang sebenarnya di server.
+  const canImport = usePermission('WORK_ORDER', 'create');
   // State navigasi opsional dari halaman lain (mis. kartu/panel Dashboard) — pola sama
   // dengan EquipmentDetailPage (location.state?.mode) — supaya klik di Dashboard bisa
   // langsung membawa filter yang relevan ke sini.
@@ -65,7 +69,7 @@ export function WorkOrderListPage() {
         title="Work Order & Notifikasi"
         description="Data Notification & Work Order hasil import dari ERP (mis. SAP PM), terhubung ke Equipment lewat Tag Number."
         action={
-          isAdmin && (
+          canImport && (
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <UploadCloud className="h-4 w-4" />
               Import dari ERP
