@@ -13,7 +13,16 @@ import { WorkOrderImportDialog } from '../components/work-order-import-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { WorkOrderLifecycleStage, WorkOrderQueryParams } from '../types/work-order.types';
 
-const DEFAULT_PARAMS: WorkOrderQueryParams = { page: 1, limit: 20, search: '' };
+// Default sort by Basic Start Date (terbaru dulu) — paling relevan untuk tanggal kerja
+// aktual di ERP, bukan urutan insert ke database. Lihat juga SORTABLE_FIELDS di
+// WorkOrdersRepository (backend sudah siap kalau nanti perlu sort kolom lain).
+const DEFAULT_PARAMS: WorkOrderQueryParams = {
+  page: 1,
+  limit: 20,
+  search: '',
+  sortBy: 'basicStartDate',
+  sortOrder: 'desc',
+};
 
 // Modul Notification & Work Order (link ERP) — lihat docs/design-notification-work-order.md.
 // Stepper di atas = ringkasan + filter klik (bukan workflow yang bisa diubah manual, lihat
