@@ -160,4 +160,20 @@ export class WorkOrdersRepository {
   findByIdSimple(id: string) {
     return this.prisma.workOrder.findFirst({ where: { id, deletedAt: null } });
   }
+
+  /**
+   * Daftar nilai distinct `orderType` (non-null) untuk dropdown filter — diurutkan A-Z.
+   * Pola sama dengan EquipmentRepository.getDistinctManufacturers(). orderType adalah kode
+   * mentah dari SAP (mis. PT02/PT03 — lihat docs/design-notification-work-order.md §2), bukan
+   * master data tersendiri, jadi diambil langsung dari data yang sudah ter-import.
+   */
+  async getDistinctOrderTypes(): Promise<string[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: { deletedAt: null, orderType: { not: null } },
+      distinct: ['orderType'],
+      select: { orderType: true },
+      orderBy: { orderType: 'asc' },
+    });
+    return rows.map((r: { orderType: string | null }) => r.orderType as string);
+  }
 }

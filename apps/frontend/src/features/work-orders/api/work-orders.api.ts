@@ -45,6 +45,11 @@ export async function fetchWorkOrderDropdownByEquipment(equipmentId: string) {
   return data.data;
 }
 
+export async function fetchWorkOrderOrderTypes() {
+  const { data } = await api.get<{ data: string[] }>('/work-orders/order-types');
+  return data.data;
+}
+
 export async function relinkWorkOrderEquipment(id: string, equipmentId: string | null) {
   const { data } = await api.patch<{ data: WorkOrder }>(`/work-orders/${id}/equipment-link`, { equipmentId });
   return data.data;

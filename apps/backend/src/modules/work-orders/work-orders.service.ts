@@ -54,6 +54,11 @@ export class WorkOrdersService {
     return this.repository.findDropdownByEquipment(equipmentId);
   }
 
+  /** Daftar nilai distinct orderType untuk dropdown filter (lihat WorkOrdersRepository). */
+  getOrderTypes() {
+    return this.repository.getDistinctOrderTypes();
+  }
+
   /** Dipakai MaintenanceService untuk validasi workOrderId yang dikirim dari form CM. */
   async assertExists(id: string) {
     const row = await this.repository.findByIdSimple(id);

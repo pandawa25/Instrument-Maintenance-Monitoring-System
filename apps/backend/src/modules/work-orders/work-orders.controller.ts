@@ -75,6 +75,13 @@ export class WorkOrdersController {
     return this.service.findDropdownByEquipment(equipmentId);
   }
 
+  @Get('order-types')
+  @RequirePermission(PermissionModule.WORK_ORDER, 'view')
+  @ApiOperation({ summary: 'Daftar distinct Order Type (non-null) dari data yang sudah ter-import, untuk dropdown filter' })
+  getOrderTypes() {
+    return this.service.getOrderTypes();
+  }
+
   // Import bulk: SENGAJA dikunci @Roles('Admin') (statis) DI ATAS permission WORK_ORDER
   // 'create' — pola sama persis dengan Bulk Upload Spare Part (lihat SparePartsController),
   // data yang masuk berdampak ke banyak equipment sekaligus & berasal dari sistem eksternal (ERP).

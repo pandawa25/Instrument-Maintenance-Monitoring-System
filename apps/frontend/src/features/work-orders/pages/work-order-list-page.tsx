@@ -3,10 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { ClipboardList, RotateCcw, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { PageHeader } from '@/components/shared/page-header';
-import { useWorkOrderList, useWorkOrderStageCounts } from '../hooks/use-work-orders';
+import { useWorkOrderList, useWorkOrderOrderTypes, useWorkOrderStageCounts } from '../hooks/use-work-orders';
 import { LifecycleStepper } from '../components/lifecycle-stepper';
 import { WorkOrderTable } from '../components/work-order-table';
 import { WorkOrderDetailDialog } from '../components/work-order-detail-dialog';
@@ -44,6 +45,7 @@ export function WorkOrderListPage() {
   // langsung membawa filter yang relevan ke sini.
   const location = useLocation();
   const navState = location.state as NavState | null;
+  const { data: orderTypes } = useWorkOrderOrderTypes();
   const [params, setParams] = useState<WorkOrderQueryParams>({
     ...DEFAULT_PARAMS,
     lifecycleStage: navState?.lifecycleStage,
@@ -60,7 +62,9 @@ export function WorkOrderListPage() {
     setParams((p) => ({ ...p, lifecycleStage: p.lifecycleStage === stage ? undefined : stage, page: 1 }));
   }
 
-  const hasActiveFilter = Boolean(params.search || params.lifecycleStage || params.dateFrom || params.dateTo);
+  const hasActiveFilter = Boolean(
+    params.search || params.lifecycleStage || params.orderType || params.dateFrom || params.dateTo,
+  );
 
   return (
     <div className="space-y-4">
@@ -106,6 +110,19 @@ export function WorkOrderListPage() {
             onChange={(search) => setParams((p) => ({ ...p, search, page: 1 }))}
             placeholder="Cari No. Notification / Order / Deskripsi..."
           />
+          <Select
+            className="w-44"
+            value={params.orderType ?? ''}
+            onChange={(e) => setParams((p) => ({ ...p, orderType: e.target.value || undefined, page: 1 }))}
+            aria-label="Filter Order Type"
+          >
+            <option value="">Semua Order Type</option>
+            {orderTypes?.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </Select>
           <input
             type="date"
             value={params.dateFrom ?? ''}

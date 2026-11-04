@@ -4,6 +4,7 @@ import {
   fetchWorkOrderById,
   fetchWorkOrderDropdownByEquipment,
   fetchWorkOrderImportRows,
+  fetchWorkOrderOrderTypes,
   fetchWorkOrders,
   fetchWorkOrderStageCounts,
   previewWorkOrderImport,
@@ -36,6 +37,16 @@ export function useWorkOrderById(id: string | undefined) {
     queryKey: [WORK_ORDER_KEY, id],
     queryFn: () => fetchWorkOrderById(id as string),
     enabled: Boolean(id),
+  });
+}
+
+// Daftar distinct Order Type (dari data yang sudah ter-import) — dipakai dropdown filter
+// di list page. staleTime panjang: nilainya cuma bertambah lewat import ERP, jarang berubah.
+export function useWorkOrderOrderTypes() {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, 'order-types'],
+    queryFn: fetchWorkOrderOrderTypes,
+    staleTime: 5 * 60_000,
   });
 }
 
