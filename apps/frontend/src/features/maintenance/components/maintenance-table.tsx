@@ -60,12 +60,12 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-          <SortableTh label="No. e-SPK" field="spkNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <th className="px-4 py-2.5 font-medium">No. e-SPK</th>
           <SortableTh label="Tanggal" field="maintenanceDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5 font-medium">Tag Number</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
-          <SortableTh label="Priority" field="priority" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
-          <SortableTh label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <th className="px-4 py-2.5 font-medium">Priority</th>
+          <th className="px-4 py-2.5 font-medium">Status</th>
           <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5 font-medium">Durasi</th>
           <th className="px-4 py-2.5 font-medium">PIC</th>
