@@ -1,7 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Criticality, MaintenanceStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+
+export const DATE_FIELD_OPTIONS = ['maintenanceDate', 'completionDate'] as const;
+export type MaintenanceDateField = (typeof DATE_FIELD_OPTIONS)[number];
 
 // Filter khusus module Corrective Maintenance sesuai spec MVP: date range, area, instrument, status.
 export class QueryMaintenanceDto extends PaginationQueryDto {
@@ -17,6 +20,15 @@ export class QueryMaintenanceDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
+
+  @ApiPropertyOptional({
+    enum: DATE_FIELD_OPTIONS,
+    default: 'maintenanceDate',
+    description: 'Kolom tanggal yang dipakai untuk dateFrom/dateTo: tanggal mulai atau tanggal selesai',
+  })
+  @IsOptional()
+  @IsIn(DATE_FIELD_OPTIONS)
+  dateField?: MaintenanceDateField;
 
   @ApiPropertyOptional({ description: 'Filter berdasarkan UUID Area' })
   @IsOptional()

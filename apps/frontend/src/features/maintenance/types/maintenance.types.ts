@@ -139,6 +139,8 @@ export interface MaintenanceQueryParams {
   priority?: MaintenancePriority | '';
   dateFrom?: string;
   dateTo?: string;
+  /** Kolom yang dipakai dateFrom/dateTo: tanggal mulai (default) atau tanggal selesai. */
+  dateField?: 'maintenanceDate' | 'completionDate';
 }
 
 export interface MaintenanceKpiSummary {

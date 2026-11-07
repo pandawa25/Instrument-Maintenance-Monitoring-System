@@ -15,6 +15,34 @@ interface Props {
   onView: (item: Maintenance) => void;
 }
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function diffInDays(from: string, to: Date): number {
+  // Hitung selisih hari kalender (bukan jam penuh 24) supaya "hari yang sama" = 0 hari.
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+  to.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((to.getTime() - start.getTime()) / MS_PER_DAY));
+}
+
+/** Durasi penanganan: selesai → hari tetap (maintenanceDate → completionDate); belum → hari berjalan sampai hari ini. */
+function renderDurasi(item: Maintenance) {
+  if (item.status === 'CANCELLED') return <span>-</span>;
+
+  if (item.completionDate) {
+    const days = diffInDays(item.maintenanceDate, new Date(item.completionDate));
+    return <span>{days} hari</span>;
+  }
+
+  const daysRunning = diffInDays(item.maintenanceDate, new Date());
+  const isLong = daysRunning >= 7;
+  return (
+    <span className={isLong ? 'font-medium text-danger' : ''}>
+      {daysRunning} hari {isLong ? '(berjalan!)' : '(berjalan)'}
+    </span>
+  );
+}
+
 export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
   if (isLoading) {
     return <LoadingState />;
@@ -35,6 +63,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
           <th className="px-4 py-2.5 font-medium">Priority</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
           <th className="px-4 py-2.5 font-medium">Tgl Selesai</th>
+          <th className="px-4 py-2.5 font-medium">Durasi</th>
           <th className="px-4 py-2.5 font-medium">PIC</th>
           <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
         </tr>
@@ -66,6 +95,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
             <td className="px-4 py-2.5 text-text-muted">
               {item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '-'}
             </td>
+            <td className="px-4 py-2.5 text-text-muted">{renderDurasi(item)}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
             <td className="px-4 py-2.5">
               <div className="flex justify-end gap-1">

@@ -36,6 +36,7 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
   priority: '',
   dateFrom: '',
   dateTo: '',
+  dateField: 'maintenanceDate',
 };
 
 export function MaintenanceListPage() {
@@ -135,6 +136,24 @@ export function MaintenanceListPage() {
             <option value="MEDIUM">Medium</option>
             <option value="LOW">Low</option>
           </Select>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-muted">Filter Tanggal</label>
+            <Select
+              className="w-36"
+              value={params.dateField ?? 'maintenanceDate'}
+              onChange={(e) =>
+                setParams((p) => ({
+                  ...p,
+                  dateField: e.target.value as MaintenanceQueryParams['dateField'],
+                  page: 1,
+                }))
+              }
+            >
+              <option value="maintenanceDate">Tgl. Mulai</option>
+              <option value="completionDate">Tgl. Selesai</option>
+            </Select>
+          </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-text-muted">Dari Tanggal</label>

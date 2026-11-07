@@ -77,7 +77,10 @@ export class MaintenanceRepository {
     }
 
     if (query.dateFrom || query.dateTo) {
-      where.maintenanceDate = {
+      // dateField menentukan kolom yang difilter: tanggal mulai (default) atau tanggal selesai.
+      // completionDate nullable — otomatis hanya cocok dengan record yang sudah COMPLETED.
+      const field = query.dateField ?? 'maintenanceDate';
+      where[field] = {
         gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
         lte: query.dateTo ? new Date(query.dateTo) : undefined,
       };
