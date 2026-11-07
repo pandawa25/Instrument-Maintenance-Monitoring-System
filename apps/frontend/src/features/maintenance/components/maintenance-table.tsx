@@ -3,13 +3,17 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
-import type { Maintenance } from '../types/maintenance.types';
+import { SortableTh } from '@/components/shared/sortable-th';
+import type { Maintenance, MaintenanceSortableField } from '../types/maintenance.types';
 import { dataRowProps } from '@/components/shared/data-row';
 
 interface Props {
   items: Maintenance[];
   isLoading: boolean;
   canEdit: boolean;
+  sortBy?: MaintenanceSortableField;
+  sortOrder?: 'asc' | 'desc';
+  onSort: (field: MaintenanceSortableField) => void;
   onEdit: (item: Maintenance) => void;
   onDelete: (item: Maintenance) => void;
   onView: (item: Maintenance) => void;
@@ -43,7 +47,7 @@ function renderDurasi(item: Maintenance) {
   );
 }
 
-export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder, onSort, onEdit, onDelete, onView }: Props) {
   if (isLoading) {
     return <LoadingState />;
   }
@@ -56,13 +60,13 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-          <th className="px-4 py-2.5 font-medium">No. e-SPK</th>
-          <th className="px-4 py-2.5 font-medium">Tanggal</th>
+          <SortableTh label="No. e-SPK" field="spkNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <SortableTh label="Tanggal" field="maintenanceDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5 font-medium">Tag Number</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
-          <th className="px-4 py-2.5 font-medium">Priority</th>
-          <th className="px-4 py-2.5 font-medium">Status</th>
-          <th className="px-4 py-2.5 font-medium">Tgl Selesai</th>
+          <SortableTh label="Priority" field="priority" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <SortableTh label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5 font-medium">Durasi</th>
           <th className="px-4 py-2.5 font-medium">PIC</th>
           <th className="px-4 py-2.5 font-medium text-right">Aksi</th>

@@ -141,7 +141,21 @@ export interface MaintenanceQueryParams {
   dateTo?: string;
   /** Kolom yang dipakai dateFrom/dateTo: tanggal mulai (default) atau tanggal selesai. */
   dateField?: 'maintenanceDate' | 'completionDate';
+  /** Kolom sorting tabel — harus ada di whitelist SORTABLE_FIELDS backend (lihat maintenance.repository.ts). */
+  sortBy?: MaintenanceSortableField;
+  sortOrder?: 'asc' | 'desc';
 }
+
+/** Kolom yang boleh dipakai untuk sort — harus sinkron dengan SORTABLE_FIELDS di backend. */
+export type MaintenanceSortableField =
+  | 'spkNumber'
+  | 'maintenanceDate'
+  | 'failureCategory'
+  | 'priority'
+  | 'status'
+  | 'completionDate'
+  | 'createdAt'
+  | 'updatedAt';
 
 export interface MaintenanceKpiSummary {
   openCount: number;

@@ -12,8 +12,10 @@ const item = {
 
 describe('MaintenanceTable — baris bisa diklik', () => {
   it('klik baris membuka detail, klik tombol Edit/Delete tidak', async () => {
-    const onView = vi.fn(), onEdit = vi.fn(), onDelete = vi.fn();
-    render(<MaintenanceTable items={[item]} isLoading={false} canEdit onEdit={onEdit} onDelete={onDelete} onView={onView} />);
+    const onView = vi.fn(), onEdit = vi.fn(), onDelete = vi.fn(), onSort = vi.fn();
+    render(
+      <MaintenanceTable items={[item]} isLoading={false} canEdit onSort={onSort} onEdit={onEdit} onDelete={onDelete} onView={onView} />,
+    );
 
     await userEvent.click(screen.getByText('Control valve macet'));
     expect(onView).toHaveBeenCalledWith(item);

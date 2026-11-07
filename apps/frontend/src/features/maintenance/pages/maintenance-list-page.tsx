@@ -23,7 +23,8 @@ import { MaintenanceFormDialog } from '../components/maintenance-form-dialog';
 import { MaintenanceSummaryCards } from '../components/maintenance-summary-cards';
 import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
 import { usePermission } from '@/store/auth.store';
-import type { Maintenance, MaintenanceQueryParams } from '../types/maintenance.types';
+import { toggleSort } from '@/components/shared/sortable-th';
+import type { Maintenance, MaintenanceQueryParams, MaintenanceSortableField } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: MaintenanceQueryParams = {
@@ -37,6 +38,8 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
   dateFrom: '',
   dateTo: '',
   dateField: 'maintenanceDate',
+  sortBy: 'maintenanceDate',
+  sortOrder: 'desc',
 };
 
 export function MaintenanceListPage() {
@@ -77,6 +80,10 @@ export function MaintenanceListPage() {
     } finally {
       setIsExporting(false);
     }
+  }
+
+  function handleSort(field: MaintenanceSortableField) {
+    setParams((p) => ({ ...p, ...toggleSort(p, field), page: 1 }));
   }
 
   return (
@@ -191,6 +198,9 @@ export function MaintenanceListPage() {
             items={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
+            sortBy={params.sortBy}
+            sortOrder={params.sortOrder}
+            onSort={handleSort}
             onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: { mode: 'edit' } })}
             onDelete={setDeletingItem}
             onView={(item) => navigate(`/maintenance/${item.id}`)}
