@@ -34,6 +34,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
           <th className="px-4 py-2.5 font-medium">Description</th>
           <th className="px-4 py-2.5 font-medium">Priority</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
+          <th className="px-4 py-2.5 font-medium">Tgl Selesai</th>
           <th className="px-4 py-2.5 font-medium">PIC</th>
           <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
         </tr>
@@ -61,6 +62,9 @@ export function MaintenanceTable({ items, isLoading, canEdit, onEdit, onDelete, 
             </td>
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
+            </td>
+            <td className="px-4 py-2.5 text-text-muted">
+              {item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '-'}
             </td>
             <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
             <td className="px-4 py-2.5">
