@@ -62,12 +62,12 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
           <th className="px-4 py-2.5 font-medium">No. e-SPK</th>
           <SortableTh label="Tanggal" field="maintenanceDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
-          <th className="px-4 py-2.5 font-medium">Tag Number</th>
+          <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <th className="px-4 py-2.5 font-medium">Durasi</th>
+          <th className="min-w-[140px] px-4 py-2.5 font-medium">Tag Number</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
           <th className="px-4 py-2.5 font-medium">Priority</th>
           <th className="px-4 py-2.5 font-medium">Status</th>
-          <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
-          <th className="px-4 py-2.5 font-medium">Durasi</th>
           <th className="px-4 py-2.5 font-medium">PIC</th>
           <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
         </tr>
@@ -79,7 +79,11 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}
             </td>
-            <td className="px-4 py-2.5 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
+            <td className="px-4 py-2.5 text-text-muted">
+              {item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '-'}
+            </td>
+            <td className="px-4 py-2.5 text-text-muted">{renderDurasi(item)}</td>
+            <td className="min-w-[140px] px-4 py-2.5 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
             <td className="max-w-xs truncate px-4 py-2.5 text-text-muted" title={item.problemDescription}>
               <span className="inline-flex items-center gap-1.5">
                 {item.needsSparePart && (
@@ -96,10 +100,6 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
             <td className="px-4 py-2.5">
               <StatusBadge value={item.status} />
             </td>
-            <td className="px-4 py-2.5 text-text-muted">
-              {item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '-'}
-            </td>
-            <td className="px-4 py-2.5 text-text-muted">{renderDurasi(item)}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.technician.fullName}</td>
             <td className="px-4 py-2.5">
               <div className="flex justify-end gap-1">
