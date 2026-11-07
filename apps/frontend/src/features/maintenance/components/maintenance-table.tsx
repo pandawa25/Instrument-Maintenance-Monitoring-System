@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Pencil, Trash2, Eye, PackageSearch, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -60,7 +61,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
-          <th className="px-4 py-2.5 font-medium">No. e-SPK</th>
+          <th className="min-w-[140px] px-4 py-2.5 font-medium">No. e-SPK</th>
           <SortableTh label="Tanggal" field="maintenanceDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5 font-medium">Durasi</th>
@@ -75,7 +76,7 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
       <tbody>
         {items.map((item) => (
           <tr key={item.id} {...dataRowProps(() => onView(item))}>
-            <td className="px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber ?? '-'}</td>
+            <td className="min-w-[140px] px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber ?? '-'}</td>
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}
             </td>
@@ -83,7 +84,15 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
               {item.completionDate ? new Date(item.completionDate).toLocaleDateString('id-ID') : '-'}
             </td>
             <td className="px-4 py-2.5 text-text-muted">{renderDurasi(item)}</td>
-            <td className="min-w-[140px] px-4 py-2.5 font-mono text-xs text-text">{item.equipment.tagNumber}</td>
+            <td className="min-w-[140px] px-4 py-2.5 font-mono text-xs">
+              <Link
+                to={`/maintenance-history?equipmentId=${item.equipment.id}`}
+                className="text-text hover:text-primary hover:underline"
+                title={`Lihat history maintenance ${item.equipment.tagNumber}`}
+              >
+                {item.equipment.tagNumber}
+              </Link>
+            </td>
             <td className="max-w-xs truncate px-4 py-2.5 text-text-muted" title={item.problemDescription}>
               <span className="inline-flex items-center gap-1.5">
                 {item.needsSparePart && (
