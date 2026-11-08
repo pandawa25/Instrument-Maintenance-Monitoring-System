@@ -13,8 +13,9 @@ import {
   useWorkOrderOrderTypes,
   useWorkOrderStageCounts,
 } from '../hooks/use-work-orders';
+import { toggleSort } from '@/components/shared/sortable-th';
 import { LifecycleStepper } from '../components/lifecycle-stepper';
-import { WorkOrderTable } from '../components/work-order-table';
+import { WorkOrderTable, type WorkOrderSortableField } from '../components/work-order-table';
 import { WorkOrderDetailDialog } from '../components/work-order-detail-dialog';
 import { WorkOrderImportDialog } from '../components/work-order-import-dialog';
 import { usePermission } from '@/store/auth.store';
@@ -68,15 +69,8 @@ export function WorkOrderListPage() {
     setParams((p) => ({ ...p, lifecycleStage: p.lifecycleStage === stage ? undefined : stage, page: 1 }));
   }
 
-  // Klik kolom yang sedang aktif = toggle asc/desc. Klik kolom lain = mulai dari desc
-  // (data terbaru dulu) — konsisten dengan default sort halaman ini.
-  function handleSortChange(field: 'basicStartDate' | 'basicFinDate') {
-    setParams((p) => ({
-      ...p,
-      sortBy: field,
-      sortOrder: p.sortBy === field && p.sortOrder === 'desc' ? 'asc' : 'desc',
-      page: 1,
-    }));
+  function handleSort(field: WorkOrderSortableField) {
+    setParams((p) => ({ ...p, ...toggleSort(p, field), page: 1 }));
   }
 
   const hasActiveFilter = Boolean(
@@ -190,7 +184,7 @@ export function WorkOrderListPage() {
             onView={(row) => setViewingId(row.id)}
             sortBy={params.sortBy}
             sortOrder={params.sortOrder}
-            onSortChange={handleSortChange}
+            onSort={handleSort}
           />
         </div>
 

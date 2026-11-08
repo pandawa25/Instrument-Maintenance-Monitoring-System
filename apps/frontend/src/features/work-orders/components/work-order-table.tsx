@@ -1,15 +1,16 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, LinkIcon, Unlink } from 'lucide-react';
+import { ClipboardList, LinkIcon, Unlink } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { dataRowProps } from '@/components/shared/data-row';
+import { SortableTh } from '@/components/shared/sortable-th';
 import type { WorkOrder } from '../types/work-order.types';
 
 function fmtDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString('id-ID') : '—';
 }
 
-type DateSortField = 'basicStartDate' | 'basicFinDate';
+export type WorkOrderSortableField = 'basicStartDate' | 'basicFinDate';
 
 interface Props {
   rows: WorkOrder[];
@@ -17,46 +18,14 @@ interface Props {
   onView: (row: WorkOrder) => void;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  onSortChange: (field: DateSortField) => void;
-}
-
-// Header kolom tanggal yang bisa diklik untuk sort asc/desc — dipakai Start Date & Finish
-// Date (satu-satunya kolom yang perlu sort selain default basicStartDate, lihat
-// WorkOrdersRepository.SORTABLE_FIELDS yang sudah mendukung keduanya sejak awal).
-function SortableDateHeader({
-  label,
-  field,
-  sortBy,
-  sortOrder,
-  onSortChange,
-}: {
-  label: string;
-  field: DateSortField;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  onSortChange: (field: DateSortField) => void;
-}) {
-  const active = sortBy === field;
-  const Icon = active ? (sortOrder === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
-  return (
-    <th className="px-4 py-2.5">
-      <button
-        type="button"
-        onClick={() => onSortChange(field)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-text ${active ? 'text-text' : ''}`}
-      >
-        {label}
-        <Icon className={`h-3 w-3 ${active ? 'text-primary' : 'text-text-muted'}`} />
-      </button>
-    </th>
-  );
+  onSort: (field: WorkOrderSortableField) => void;
 }
 
 // Kolom sesuai docs/design-notification-work-order.md §3/§9 (10 field) — Start/Finish Date
 // ditaruh paling kiri (kolom paling sering dipakai untuk menyortir pekerjaan), disusul
 // Notification, lalu identitas & status lainnya. Kolom Equipment menampilkan badge "Belum
 // Terhubung" kalau equipmentId null — baris itu juga ada di tab "Antrian Belum Terhubung".
-export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onSortChange }: Props) {
+export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onSort }: Props) {
   if (isLoading) return <LoadingState />;
   if (rows.length === 0) {
     return <EmptyState icon={ClipboardList} message="Belum ada data Work Order — import dari export ERP terlebih dahulu." />;
@@ -66,8 +35,8 @@ export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onS
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-text-muted">
-          <SortableDateHeader label="Start Date" field="basicStartDate" sortBy={sortBy} sortOrder={sortOrder} onSortChange={onSortChange} />
-          <SortableDateHeader label="Finish Date" field="basicFinDate" sortBy={sortBy} sortOrder={sortOrder} onSortChange={onSortChange} />
+          <SortableTh label="Start Date" field="basicStartDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+          <SortableTh label="Finish Date" field="basicFinDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5">Notification</th>
           <th className="px-4 py-2.5">Order</th>
           <th className="px-4 py-2.5">Deskripsi</th>
