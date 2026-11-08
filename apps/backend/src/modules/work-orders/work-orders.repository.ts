@@ -30,6 +30,7 @@ const LIST_SELECT = {
   equipmentId: true,
   equipmentTagRaw: true,
   equipmentLinkSource: true,
+  remarks: true,
   notification: { select: { id: true, notificationNo: true } },
   equipment: {
     select: { id: true, tagNumber: true, service: true, area: { select: { id: true, areaCode: true, areaName: true } } },
@@ -143,6 +144,15 @@ export class WorkOrdersRepository {
     return this.prisma.workOrder.update({
       where: { id },
       data: { equipmentId, equipmentLinkSource: 'MANUAL' },
+      select: LIST_SELECT,
+    });
+  }
+
+  /** Catatan manual (bukan field ERP) — satu-satunya field teks bebas yang boleh diedit lewat API. */
+  updateRemarks(id: string, remarks: string | null) {
+    return this.prisma.workOrder.update({
+      where: { id },
+      data: { remarks },
       select: LIST_SELECT,
     });
   }

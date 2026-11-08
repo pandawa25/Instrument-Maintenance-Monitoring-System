@@ -9,6 +9,7 @@ import type {
   WorkOrder,
   WorkOrderDetail,
   WorkOrderDropdownItem,
+  WorkOrderLastImportInfo,
   WorkOrderQueryParams,
 } from '../types/work-order.types';
 
@@ -52,6 +53,16 @@ export async function fetchWorkOrderOrderTypes() {
 
 export async function relinkWorkOrderEquipment(id: string, equipmentId: string | null) {
   const { data } = await api.patch<{ data: WorkOrder }>(`/work-orders/${id}/equipment-link`, { equipmentId });
+  return data.data;
+}
+
+export async function fetchWorkOrderLastImport() {
+  const { data } = await api.get<{ data: WorkOrderLastImportInfo }>('/work-orders/last-import');
+  return data.data;
+}
+
+export async function updateWorkOrderRemarks(id: string, remarks: string | null) {
+  const { data } = await api.patch<{ data: WorkOrder }>(`/work-orders/${id}/remarks`, { remarks });
   return data.data;
 }
 

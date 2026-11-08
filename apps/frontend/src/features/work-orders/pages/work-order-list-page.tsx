@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ClipboardList, RotateCcw, UploadCloud } from 'lucide-react';
+import { ClipboardList, History, RotateCcw, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { PageHeader } from '@/components/shared/page-header';
-import { useWorkOrderList, useWorkOrderOrderTypes, useWorkOrderStageCounts } from '../hooks/use-work-orders';
+import {
+  useWorkOrderLastImport,
+  useWorkOrderList,
+  useWorkOrderOrderTypes,
+  useWorkOrderStageCounts,
+} from '../hooks/use-work-orders';
 import { LifecycleStepper } from '../components/lifecycle-stepper';
 import { WorkOrderTable } from '../components/work-order-table';
 import { WorkOrderDetailDialog } from '../components/work-order-detail-dialog';
@@ -46,6 +51,7 @@ export function WorkOrderListPage() {
   const location = useLocation();
   const navState = location.state as NavState | null;
   const { data: orderTypes } = useWorkOrderOrderTypes();
+  const { data: lastImport } = useWorkOrderLastImport();
   const [params, setParams] = useState<WorkOrderQueryParams>({
     ...DEFAULT_PARAMS,
     lifecycleStage: navState?.lifecycleStage,
@@ -60,6 +66,17 @@ export function WorkOrderListPage() {
 
   function toggleStage(stage: WorkOrderLifecycleStage) {
     setParams((p) => ({ ...p, lifecycleStage: p.lifecycleStage === stage ? undefined : stage, page: 1 }));
+  }
+
+  // Klik kolom yang sedang aktif = toggle asc/desc. Klik kolom lain = mulai dari desc
+  // (data terbaru dulu) — konsisten dengan default sort halaman ini.
+  function handleSortChange(field: 'basicStartDate' | 'basicFinDate') {
+    setParams((p) => ({
+      ...p,
+      sortBy: field,
+      sortOrder: p.sortBy === field && p.sortOrder === 'desc' ? 'asc' : 'desc',
+      page: 1,
+    }));
   }
 
   const hasActiveFilter = Boolean(
@@ -81,6 +98,27 @@ export function WorkOrderListPage() {
           )
         }
       />
+
+      <div className="flex items-center gap-1.5 text-xs text-text-muted">
+        <History className="h-3.5 w-3.5" />
+        {lastImport?.committedAt ? (
+          <span>
+            Data terakhir diupdate{' '}
+            <span className="font-medium text-text">
+              {new Date(lastImport.committedAt).toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+            {lastImport.filename && <> — file: {lastImport.filename}</>}
+          </span>
+        ) : (
+          <span>Belum pernah ada import dari ERP</span>
+        )}
+      </div>
 
       <Card className="p-4">
         <LifecycleStepper counts={stageCounts} active={params.lifecycleStage} onToggle={toggleStage} />
@@ -146,7 +184,14 @@ export function WorkOrderListPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <WorkOrderTable rows={data?.data ?? []} isLoading={isLoading} onView={(row) => setViewingId(row.id)} />
+          <WorkOrderTable
+            rows={data?.data ?? []}
+            isLoading={isLoading}
+            onView={(row) => setViewingId(row.id)}
+            sortBy={params.sortBy}
+            sortOrder={params.sortOrder}
+            onSortChange={handleSortChange}
+          />
         </div>
 
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}

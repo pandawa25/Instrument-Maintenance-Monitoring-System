@@ -17,6 +17,7 @@ import {
 } from './work-order-bulk-sql';
 import { WoImportPreviewResultDto } from './dto/wo-import-preview-result.dto';
 import { WoImportCommitResultDto } from './dto/wo-import-commit-result.dto';
+import { WoLastImportInfoDto } from './dto/wo-last-import-info.dto';
 import { WoImportBatchRowDto } from './dto/wo-import-batch-row.dto';
 import { QueryImportRowsDto } from './dto/query-import-rows.dto';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
@@ -243,6 +244,19 @@ export class WorkOrderImportService {
       throw new NotFoundException('Batch import Work Order tidak ditemukan');
     }
     return this.toPreviewResult(batch);
+  }
+
+  /** Info "Data terakhir diupdate ..." di atas list — null kalau belum pernah ada import yang commit. */
+  async getLastImportInfo(): Promise<WoLastImportInfoDto> {
+    const batch = await this.importBatchRepository.findLatestCommitted('WORK_ORDER');
+    return {
+      committedAt: batch?.committedAt ?? null,
+      filename: batch?.filename ?? null,
+      totalRows: batch?.totalRows ?? null,
+      okRows: batch?.okRows ?? null,
+      warningRows: batch?.warningRows ?? null,
+      errorRows: batch?.errorRows ?? null,
+    };
   }
 
   async listRows(batchId: string, query: QueryImportRowsDto): Promise<PaginatedResult<WoImportBatchRowDto>> {

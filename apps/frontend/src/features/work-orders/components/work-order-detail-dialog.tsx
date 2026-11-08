@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ClipboardList, LinkIcon, Unlink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
-import { useWorkOrderById } from '../hooks/use-work-orders';
+import { useUpdateWorkOrderRemarks, useWorkOrderById } from '../hooks/use-work-orders';
 import { usePermission } from '@/store/auth.store';
 import { LinkEquipmentDialog } from './link-equipment-dialog';
+import { getErrorMessage } from '@/lib/axios';
+import type { WorkOrderDetail } from '../types/work-order.types';
 
 interface Props {
   workOrderId: string | null;
@@ -15,6 +18,61 @@ interface Props {
 
 function fmtDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString('id-ID') : null;
+}
+
+// Catatan manual internal (BUKAN field ERP) — satu-satunya field yang bisa diedit di dialog
+// detail ini, makanya dipisah dari DetailFieldsGrid (read-only) lewat slot `children`.
+// Editable untuk role dengan permission WORK_ORDER 'edit' (Admin & Teknisi default di seed.ts),
+// view-only untuk role lain (ditampilkan sebagai teks biasa).
+function RemarksSection({ workOrder, canEdit }: { workOrder: WorkOrderDetail; canEdit: boolean }) {
+  const [value, setValue] = useState(workOrder.remarks ?? '');
+  const updateMutation = useUpdateWorkOrderRemarks();
+
+  // Sinkron ulang kalau WO yang dibuka berganti (atau data terbaru masuk setelah invalidate).
+  useEffect(() => {
+    setValue(workOrder.remarks ?? '');
+  }, [workOrder.id, workOrder.remarks]);
+
+  const isDirty = value !== (workOrder.remarks ?? '');
+
+  async function handleSave() {
+    try {
+      await updateMutation.mutateAsync({ id: workOrder.id, remarks: value.trim() || null });
+      toast.success('Catatan berhasil disimpan');
+    } catch (err: any) {
+      toast.error(getErrorMessage(err, 'Gagal menyimpan catatan'));
+    }
+  }
+
+  return (
+    <div className="border-t border-border pt-4">
+      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-text-muted">Catatan / Remarks</p>
+      {canEdit ? (
+        <div className="space-y-2">
+          <textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            maxLength={1000}
+            rows={3}
+            placeholder="Tulis catatan internal terkait Work Order ini (tidak berasal dari ERP)..."
+            className="w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted/70 focus:border-primary focus:outline-none"
+          />
+          {isDirty && (
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setValue(workOrder.remarks ?? '')}>
+                Batal
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Menyimpan...' : 'Simpan Catatan'}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap text-sm text-text">{workOrder.remarks || '—'}</p>
+      )}
+    </div>
+  );
 }
 
 // Dialog detail read-only (field flat, <10 — pola sama dengan Area/Vendor/Spare Part, lihat
@@ -108,7 +166,9 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
             </div>
           )
         }
-      />
+      >
+        {wo && <RemarksSection workOrder={wo} canEdit={canEdit} />}
+      </DetailDialog>
 
       {wo && <LinkEquipmentDialog open={linkOpen} onOpenChange={setLinkOpen} workOrder={wo} />}
     </>

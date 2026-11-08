@@ -141,4 +141,17 @@ export class ImportBatchRepository {
       data: { status, ...(committedAt ? { committedAt } : {}) },
     });
   }
+
+  /**
+   * Batch COMMITTED paling baru untuk satu entityType — dasar info "Data terakhir diupdate ..."
+   * di halaman list (dipakai Work Order; generik, bisa dipakai modul lain yang pakai ImportBatch
+   * juga). null kalau belum pernah ada commit sama sekali.
+   */
+  findLatestCommitted(entityType: ImportEntityType) {
+    return this.prisma.importBatch.findFirst({
+      where: { entityType, status: 'COMMITTED', deletedAt: null },
+      orderBy: { committedAt: 'desc' },
+      select: { committedAt: true, filename: true, totalRows: true, okRows: true, warningRows: true, errorRows: true },
+    });
+  }
 }

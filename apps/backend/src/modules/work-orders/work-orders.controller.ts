@@ -20,7 +20,9 @@ import { WorkOrdersService } from './work-orders.service';
 import { WorkOrderImportService } from './work-order-import.service';
 import { QueryWorkOrderDto } from './dto/query-work-order.dto';
 import { RelinkEquipmentDto } from './dto/relink-equipment.dto';
+import { UpdateRemarksDto } from './dto/update-remarks.dto';
 import { QueryImportRowsDto } from './dto/query-import-rows.dto';
+import { WoLastImportInfoDto } from './dto/wo-last-import-info.dto';
 import { WoImportPreviewResultDto } from './dto/wo-import-preview-result.dto';
 import { WoImportCommitResultDto } from './dto/wo-import-commit-result.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -80,6 +82,13 @@ export class WorkOrdersController {
   @ApiOperation({ summary: 'Daftar distinct Order Type (non-null) dari data yang sudah ter-import, untuk dropdown filter' })
   getOrderTypes() {
     return this.service.getOrderTypes();
+  }
+
+  @Get('last-import')
+  @RequirePermission(PermissionModule.WORK_ORDER, 'view')
+  @ApiOperation({ summary: 'Info batch import ERP terakhir yang sukses commit — ditampilkan di atas list ("Data terakhir diupdate ...")' })
+  getLastImportInfo(): Promise<WoLastImportInfoDto> {
+    return this.importService.getLastImportInfo();
   }
 
   // Import bulk: SENGAJA dikunci @Roles('Admin') (statis) DI ATAS permission WORK_ORDER
@@ -160,5 +169,17 @@ export class WorkOrdersController {
   })
   relinkEquipment(@Param('id', ParseUuidPipe) id: string, @Body() dto: RelinkEquipmentDto) {
     return this.service.relinkEquipment(id, dto);
+  }
+
+  @Patch(':id/remarks')
+  @RequirePermission(PermissionModule.WORK_ORDER, 'edit')
+  @AuditLog('WorkOrder')
+  @ApiOperation({
+    summary:
+      'Isi/ubah catatan manual internal (bukan field ERP) — tersedia untuk role dengan permission WORK_ORDER ' +
+      "'edit' (Admin & Teknisi default), role lain hanya bisa lihat",
+  })
+  updateRemarks(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateRemarksDto) {
+    return this.service.updateRemarks(id, dto);
   }
 }

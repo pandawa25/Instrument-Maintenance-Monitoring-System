@@ -851,6 +851,12 @@ model WorkOrder {
   totalActualCost    Decimal?                 @map("total_actual_cost") @db.Decimal(14, 2)
   priority           String?                  @db.VarChar(10)
   superiorOrderId    String?                  @map("superior_order_id") @db.Uuid
+  // Catatan manual internal (BUKAN dari ERP) — boleh diisi/diubah lewat PATCH :id/remarks oleh
+  // role yang punya permission WORK_ORDER 'edit' (Admin & Teknisi secara default, lihat seed.ts),
+  // role lain view-only. SENGAJA tidak disertakan di WORK_ORDER_UPSERT_SQL (work-order-bulk-sql.ts)
+  // supaya re-import ERP tidak pernah menimpanya — kolom yang tidak disebut di klausa SET pada
+  // ON CONFLICT DO UPDATE otomatis dipertahankan oleh Postgres.
+  remarks            String?                  @db.VarChar(1000)
   importBatchId      String?                  @map("import_batch_id") @db.Uuid
   createdAt          DateTime                 @default(now()) @map("created_at")
   updatedAt          DateTime                 @updatedAt @map("updated_at")

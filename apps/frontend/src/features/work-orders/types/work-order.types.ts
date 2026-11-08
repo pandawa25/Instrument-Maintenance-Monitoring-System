@@ -38,6 +38,8 @@ export interface WorkOrder {
   equipmentId: string | null;
   equipmentTagRaw: string | null;
   equipmentLinkSource: WorkOrderEquipmentLinkSource;
+  // Catatan manual internal (bukan field ERP) — lihat WorkOrder.remarks di schema.prisma.
+  remarks: string | null;
   notification: { id: string; notificationNo: string } | null;
   equipment: {
     id: string;
@@ -66,6 +68,17 @@ export interface WorkOrderQueryParams {
   dateFrom?: string;
   dateTo?: string;
   unmatchedOnly?: boolean;
+}
+
+// Info batch import ERP COMMITTED paling baru — ditampilkan di atas list ("Data terakhir
+// diupdate ..."). Semua field null kalau belum pernah ada import yang commit sama sekali.
+export interface WorkOrderLastImportInfo {
+  committedAt: string | null;
+  filename: string | null;
+  totalRows: number | null;
+  okRows: number | null;
+  warningRows: number | null;
+  errorRows: number | null;
 }
 
 export interface WorkOrderDropdownItem {

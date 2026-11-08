@@ -4,11 +4,13 @@ import {
   fetchWorkOrderById,
   fetchWorkOrderDropdownByEquipment,
   fetchWorkOrderImportRows,
+  fetchWorkOrderLastImport,
   fetchWorkOrderOrderTypes,
   fetchWorkOrders,
   fetchWorkOrderStageCounts,
   previewWorkOrderImport,
   relinkWorkOrderEquipment,
+  updateWorkOrderRemarks,
 } from '../api/work-orders.api';
 import type { ImportRowSeverity, WorkOrderQueryParams } from '../types/work-order.types';
 
@@ -63,6 +65,23 @@ export function useRelinkWorkOrderEquipment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, equipmentId }: { id: string; equipmentId: string | null }) => relinkWorkOrderEquipment(id, equipmentId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
+  });
+}
+
+// Info batch import ERP COMMITTED terakhir — "Data terakhir diupdate ..." di atas list.
+export function useWorkOrderLastImport() {
+  return useQuery({
+    queryKey: [WORK_ORDER_KEY, 'last-import'],
+    queryFn: fetchWorkOrderLastImport,
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateWorkOrderRemarks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, remarks }: { id: string; remarks: string | null }) => updateWorkOrderRemarks(id, remarks),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
   });
 }

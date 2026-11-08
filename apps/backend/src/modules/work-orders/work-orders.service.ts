@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { WorkOrdersRepository } from './work-orders.repository';
 import { QueryWorkOrderDto } from './dto/query-work-order.dto';
 import { RelinkEquipmentDto } from './dto/relink-equipment.dto';
+import { UpdateRemarksDto } from './dto/update-remarks.dto';
 import { EquipmentService } from '../equipment/equipment.service';
 import { buildPaginationMeta, PaginatedResult } from '../../common/dto/pagination-query.dto';
 
@@ -47,6 +48,15 @@ export class WorkOrdersService {
     }
 
     return this.repository.relinkEquipment(id, dto.equipmentId ?? null);
+  }
+
+  /**
+   * Catatan manual (bukan field ERP) — satu-satunya field teks bebas yang boleh diedit lewat
+   * API, terlepas dari permission 'edit' modul WORK_ORDER (Admin & Teknisi default, lihat seed.ts).
+   */
+  async updateRemarks(id: string, dto: UpdateRemarksDto) {
+    await this.findOne(id);
+    return this.repository.updateRemarks(id, dto.remarks?.trim() || null);
   }
 
   /** Dropdown WO milik satu equipment — dipakai field searchable-select di form Corrective Maintenance. */
