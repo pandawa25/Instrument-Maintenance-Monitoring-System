@@ -147,3 +147,33 @@ export interface DashboardHealthIndex {
   summary: HealthIndexSummary;
   items: HealthIndexItem[];
 }
+
+// Harus persis sama dengan TREND_METRICS di backend
+// (apps/backend/src/modules/dashboard/dto/get-trend-query.dto.ts).
+export const TREND_METRICS = [
+  'maintenance_total',
+  'maintenance_open',
+  'maintenance_in_progress',
+  'maintenance_completed',
+  'equipment_total',
+  'equipment_active',
+  'equipment_standby',
+  'equipment_out_of_service',
+  'kpi_failures',
+  'kpi_downtime_hours',
+  'kpi_pm_completed',
+  'kpi_pm_pending',
+  'wo_total',
+  'wo_created',
+  'wo_released',
+  'wo_technically_completed',
+  'wo_closed',
+  'wo_unmatched',
+] as const;
+
+export type TrendMetric = (typeof TREND_METRICS)[number];
+
+export interface TrendPoint {
+  date: string; // yyyy-mm-dd
+  value: number;
+}
