@@ -21,6 +21,7 @@ import { EquipmentSummaryCards } from '../components/equipment-summary-cards';
 import { usePermission, useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: EquipmentQueryParams = {
   page: 1,
@@ -44,7 +45,7 @@ export function EquipmentListPage() {
   // untuk Admin supaya role lain tidak melihat UI yang request-nya pasti ditolak 403.
   const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
 
-  const [params, setParams] = useState<EquipmentQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<EquipmentQueryParams>(DEFAULT_PARAMS);
   const [showMoreFilter, setShowMoreFilter] = useState(false);
   const criticalityFilterRef = useRef<HTMLSelectElement>(null);
   // Dialog ini sekarang cuma dipakai untuk "Tambah Equipment" (create) — View & Edit

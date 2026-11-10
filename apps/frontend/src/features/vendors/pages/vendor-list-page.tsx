@@ -15,6 +15,7 @@ import { VendorDetailDialog } from '../components/vendor-detail-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { Vendor, VendorQueryParams } from '../types/vendor.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: VendorQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -22,7 +23,7 @@ export function VendorListPage() {
   const canCreate = usePermission('VENDOR', 'create');
   const canEdit = usePermission('VENDOR', 'edit');
 
-  const [params, setParams] = useState<VendorQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<VendorQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Vendor | null>(null);
   const [viewingItem, setViewingItem] = useState<Vendor | null>(null);

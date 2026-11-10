@@ -26,6 +26,7 @@ import { usePermission } from '@/store/auth.store';
 import { toggleSort } from '@/components/shared/sortable-th';
 import type { Maintenance, MaintenanceQueryParams, MaintenanceSortableField } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: MaintenanceQueryParams = {
   page: 1,
@@ -47,7 +48,7 @@ export function MaintenanceListPage() {
   const canCreate = usePermission('CORRECTIVE_MAINTENANCE', 'create');
   const canEdit = usePermission('CORRECTIVE_MAINTENANCE', 'edit');
 
-  const [params, setParams] = useState<MaintenanceQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<MaintenanceQueryParams>(DEFAULT_PARAMS);
   // Dialog ini sekarang cuma dipakai untuk "Buat e-SPK" (create) — View & Edit sudah
   // pindah ke halaman penuh MaintenanceDetailPage (/maintenance/:id).
   const [createDialogOpen, setCreateDialogOpen] = useState(false);

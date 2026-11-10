@@ -17,6 +17,7 @@ import { SparePartBulkUploadDialog } from '../components/spare-part-bulk-upload-
 import { useAuthStore, usePermission } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: SparePartQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -26,7 +27,7 @@ export function SparePartListPage() {
   // Bulk upload khusus Admin (backend mengunci @Roles('Admin') — tombol disembunyikan untuk role lain).
   const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
 
-  const [params, setParams] = useState<SparePartQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<SparePartQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SparePart | null>(null);

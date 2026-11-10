@@ -14,6 +14,7 @@ import { InstrumentNameDetailDialog } from '../components/instrument-name-detail
 import { usePermission } from '@/store/auth.store';
 import type { InstrumentName, InstrumentNameQueryParams } from '../types/instrument-name.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: InstrumentNameQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -21,7 +22,7 @@ export function InstrumentNameListPage() {
   const canCreate = usePermission('INSTRUMENT_NAME', 'create');
   const canEdit = usePermission('INSTRUMENT_NAME', 'edit');
 
-  const [params, setParams] = useState<InstrumentNameQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<InstrumentNameQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InstrumentName | null>(null);
   const [viewingItem, setViewingItem] = useState<InstrumentName | null>(null);

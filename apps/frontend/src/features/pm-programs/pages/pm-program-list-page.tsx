@@ -16,6 +16,7 @@ import { PmProgramFormDialog } from '../components/pm-program-form-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { PmProgramListItem, PmProgramQueryParams } from '../types/pm-program.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: PmProgramQueryParams = { page: 1, limit: 20, search: '', status: '', vendorId: '' };
 
@@ -26,7 +27,7 @@ export function PmProgramListPage() {
   const canCreate = usePermission('PM_PROGRAM', 'create');
   const canEdit = usePermission('PM_PROGRAM', 'edit');
 
-  const [params, setParams] = useState<PmProgramQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<PmProgramQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<PmProgramListItem | null>(null);

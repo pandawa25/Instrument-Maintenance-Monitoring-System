@@ -14,6 +14,7 @@ import { PmActivityTypeDetailDialog } from '../components/pm-activity-type-detai
 import { usePermission } from '@/store/auth.store';
 import type { PmActivityType, PmActivityTypeQueryParams } from '../types/pm-activity-type.types';
 import { getErrorMessage } from '@/lib/axios';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 
 const DEFAULT_PARAMS: PmActivityTypeQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -21,7 +22,7 @@ export function PmActivityTypeListPage() {
   const canCreate = usePermission('PM_ACTIVITY_TYPE', 'create');
   const canEdit = usePermission('PM_ACTIVITY_TYPE', 'edit');
 
-  const [params, setParams] = useState<PmActivityTypeQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<PmActivityTypeQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PmActivityType | null>(null);
   const [viewingItem, setViewingItem] = useState<PmActivityType | null>(null);

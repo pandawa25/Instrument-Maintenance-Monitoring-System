@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MapPinned, Plus } from 'lucide-react';
+import { useQueryParamsState } from '@/lib/use-query-params-state';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,7 +23,7 @@ export function AreaListPage() {
   const canCreate = usePermission('AREA', 'create');
   const canEdit = usePermission('AREA', 'edit');
 
-  const [params, setParams] = useState<AreaQueryParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useQueryParamsState<AreaQueryParams>(DEFAULT_PARAMS);
   const [formOpen, setFormOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [viewingArea, setViewingArea] = useState<Area | null>(null);
