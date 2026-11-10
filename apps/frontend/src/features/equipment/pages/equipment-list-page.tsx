@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Download, Gauge, History, ListChecks, Plus, RotateCcw, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { usePermission, useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
 import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: EquipmentQueryParams = {
   page: 1,
@@ -36,6 +37,7 @@ const DEFAULT_PARAMS: EquipmentQueryParams = {
 
 export function EquipmentListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const canCreate = usePermission('EQUIPMENT', 'create');
   const canEdit = usePermission('EQUIPMENT', 'edit');
   // Export hanya untuk role yang punya hak tulis (create/edit) — role read-only (mis. "View")
@@ -277,9 +279,9 @@ export function EquipmentListPage() {
             equipment={equipmentList}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={(item) => navigate(`/equipment/${item.id}`, { state: { mode: 'edit' } })}
+            onEdit={(item) => navigate(`/equipment/${item.id}`, { state: withBackState(location, { mode: 'edit' }) })}
             onDelete={setDeletingItem}
-            onView={(item) => navigate(`/equipment/${item.id}`)}
+            onView={(item) => navigate(`/equipment/${item.id}`, { state: withBackState(location) })}
             selectedIds={selectedIds}
             onToggleOne={toggleSelectOne}
             onToggleAll={toggleSelectAll}

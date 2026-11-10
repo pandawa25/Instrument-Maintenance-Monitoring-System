@@ -13,6 +13,7 @@ import { useMaintenanceById } from '../hooks/use-maintenance';
 import { MaintenanceForm } from '../components/maintenance-form';
 import { usePermission } from '@/store/auth.store';
 import { failureCategoryLabel, failureModeLabel } from '../utils/failure';
+import { resolveBackTo } from '@/lib/list-nav-state';
 
 // Halaman View/Edit Corrective Maintenance (1 URL, mode toggle) — menggantikan
 // MaintenanceDetailDialog + MaintenanceFormDialog (mode edit) yang sebelumnya dipakai
@@ -34,7 +35,7 @@ export function MaintenanceDetailPage() {
   const { data: maintenance, isLoading } = useMaintenanceById(id);
 
   function backToList() {
-    navigate('/maintenance');
+    navigate(resolveBackTo(location, '/maintenance'));
   }
 
   if (isLoading) {

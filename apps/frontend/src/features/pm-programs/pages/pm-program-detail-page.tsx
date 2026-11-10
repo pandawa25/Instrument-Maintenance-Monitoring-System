@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarClock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { PmPeriodList } from '../components/pm-period-list';
 import { PmPeriodFormDialog } from '../components/pm-period-form-dialog';
 import { PmExecutionFormDialog } from '../components/pm-execution-form-dialog';
 import { addFrequencyInterval, toDateInputValue } from '../utils/frequency';
+import { resolveBackTo } from '@/lib/list-nav-state';
 
 const FREQUENCY_UNIT_LABEL: Record<string, string> = {
   DAY: 'Hari',
@@ -25,6 +26,7 @@ const FREQUENCY_UNIT_LABEL: Record<string, string> = {
 export function PmProgramDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   // Dipisah sesuai desain matriks role: PM_PROGRAM = metadata & jadwal periode
   // (Admin/Teknisi only — edit metadata program sendiri dilakukan dari halaman
   // list lewat PmProgramFormDialog), PM_EXECUTION = isi hasil checklist per
@@ -59,7 +61,7 @@ export function PmProgramDetailPage() {
   return (
     <div className="space-y-5">
       <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/pm-programs')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(resolveBackTo(location, '/pm-programs'))}>
           <ArrowLeft className="h-4 w-4" />
           Kembali ke daftar PM Program
         </Button>

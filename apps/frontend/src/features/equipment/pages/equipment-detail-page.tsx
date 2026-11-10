@@ -14,6 +14,7 @@ import { useEquipmentById } from '../hooks/use-equipment';
 import { EquipmentForm } from '../components/equipment-form';
 import { usePermission } from '@/store/auth.store';
 import { FAIL_ACTION_LABEL, hasValveData, isValveInstrumentName } from '../types/equipment.types';
+import { resolveBackTo } from '@/lib/list-nav-state';
 
 // Halaman View/Edit Equipment (1 URL, mode toggle) — menggantikan EquipmentDetailDialog +
 // EquipmentFormDialog (mode edit) yang sebelumnya dipakai dari list page. Dipindah ke
@@ -36,7 +37,7 @@ export function EquipmentDetailPage() {
   const { data: equipment, isLoading } = useEquipmentById(id);
 
   function backToList() {
-    navigate('/equipment');
+    navigate(resolveBackTo(location, '/equipment'));
   }
 
   if (isLoading) {

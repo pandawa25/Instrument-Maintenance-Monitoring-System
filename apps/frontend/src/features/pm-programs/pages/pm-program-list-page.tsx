@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarClock, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,13 @@ import { usePermission } from '@/store/auth.store';
 import type { PmProgramListItem, PmProgramQueryParams } from '../types/pm-program.types';
 import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: PmProgramQueryParams = { page: 1, limit: 20, search: '', status: '', vendorId: '' };
 
 export function PmProgramListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   // Modul PM_PROGRAM = metadata program (judul/vendor/frekuensi/jadwal). Vendor
   // hanya punya PM_PROGRAM 'view' (untuk navigasi ke periode), tidak create/edit/delete.
   const canCreate = usePermission('PM_PROGRAM', 'create');
@@ -47,7 +49,7 @@ export function PmProgramListPage() {
   }
 
   function openDetail(item: PmProgramListItem) {
-    navigate(`/pm-programs/${item.id}`);
+    navigate(`/pm-programs/${item.id}`, { state: withBackState(location) });
   }
 
   async function confirmDelete() {

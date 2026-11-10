@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { toggleSort } from '@/components/shared/sortable-th';
 import type { Maintenance, MaintenanceQueryParams, MaintenanceSortableField } from '../types/maintenance.types';
 import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: MaintenanceQueryParams = {
   page: 1,
@@ -45,6 +46,7 @@ const DEFAULT_PARAMS: MaintenanceQueryParams = {
 
 export function MaintenanceListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const canCreate = usePermission('CORRECTIVE_MAINTENANCE', 'create');
   const canEdit = usePermission('CORRECTIVE_MAINTENANCE', 'edit');
 
@@ -202,9 +204,9 @@ export function MaintenanceListPage() {
             sortBy={params.sortBy}
             sortOrder={params.sortOrder}
             onSort={handleSort}
-            onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: { mode: 'edit' } })}
+            onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location, { mode: 'edit' }) })}
             onDelete={setDeletingItem}
-            onView={(item) => navigate(`/maintenance/${item.id}`)}
+            onView={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location) })}
           />
         </div>
 
