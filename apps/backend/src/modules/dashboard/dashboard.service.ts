@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DashboardRepository } from './dashboard.repository';
+import type { TrendMetric } from './dto/get-trend-query.dto';
 
 const TREND_MONTHS = 12;
 const LATEST_MAINTENANCE_TAKE = 10;
@@ -126,6 +127,28 @@ function derivePeriodStatus(plannedDate: Date, total: number, completed: number)
 
 function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Dipakai khusus getTrend() — key harian (bukan bulanan seperti monthKey di atas).
+// Pakai komponen tanggal LOKAL (getFullYear/getMonth/getDate), bukan toISOString(),
+// supaya konsisten dengan kolom @db.Date di Postgres (disimpan tanpa timezone, dibaca
+// Prisma sebagai Date jam 00:00 — toISOString() bisa geser 1 hari kalau server run
+// di timezone dengan offset negatif dari UTC).
+function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Daftar semua tanggal dari `from` s.d. `to` (inklusif keduanya), dipakai untuk zero-fill
+// supaya hari tanpa data tetap muncul di grafik (titik bernilai 0), bukan "loncat".
+function enumerateDayKeys(from: Date, to: Date): string[] {
+  const keys: string[] = [];
+  const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const last = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  while (cursor.getTime() <= last.getTime()) {
+    keys.push(dayKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
 }
 
 const STATUS_ORDER = ['ACTIVE', 'STANDBY', 'OUT_OF_SERVICE'] as const;
@@ -419,6 +442,95 @@ export class DashboardService {
       summary,
       items: allItems,
     };
+  }
+
+  // Time series harian untuk 1 metric — dipakai saat kotak summary clickable di tab
+  // Dashboard diklik (ganti metric yang digambar di "Grafik Performa"). `to` diperlakukan
+  // inklusif oleh controller (sudah dimajukan ke akhir hari, lihat DashboardController.getTrend).
+  async getTrend(metric: TrendMetric, from: Date, to: Date) {
+    const dayKeys = enumerateDayKeys(from, to);
+    const buckets = new Map<string, number>(dayKeys.map((k) => [k, 0]));
+    const bump = (date: Date, amount = 1) => {
+      const key = dayKey(date);
+      if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + amount);
+    };
+
+    switch (metric) {
+      case 'maintenance_total':
+      case 'maintenance_open':
+      case 'maintenance_in_progress':
+      case 'maintenance_completed': {
+        const statusByMetric = {
+          maintenance_total: undefined,
+          maintenance_open: 'OPEN' as const,
+          maintenance_in_progress: 'IN_PROGRESS' as const,
+          maintenance_completed: 'COMPLETED' as const,
+        };
+        const rows = await this.repository.getMaintenanceDatesInRange(from, to, statusByMetric[metric]);
+        rows.forEach((r) => bump(r.maintenanceDate));
+        break;
+      }
+
+      case 'equipment_total':
+      case 'equipment_active':
+      case 'equipment_standby':
+      case 'equipment_out_of_service': {
+        const statusByMetric = {
+          equipment_total: undefined,
+          equipment_active: 'ACTIVE' as const,
+          equipment_standby: 'STANDBY' as const,
+          equipment_out_of_service: 'OUT_OF_SERVICE' as const,
+        };
+        const rows = await this.repository.getEquipmentCreatedDatesInRange(from, to, statusByMetric[metric]);
+        rows.forEach((r) => bump(r.createdAt));
+        break;
+      }
+
+      case 'kpi_failures': {
+        const rows = await this.repository.getCompletedMaintenanceDatesInRange(from, to);
+        rows.forEach((r) => bump(r.maintenanceDate));
+        break;
+      }
+
+      case 'kpi_downtime_hours': {
+        const rows = await this.repository.getCompletedMaintenanceDatesInRange(from, to);
+        rows.forEach((r) => bump(r.maintenanceDate, r.downtimeHours !== null ? Number(r.downtimeHours) : 0));
+        break;
+      }
+
+      case 'kpi_pm_completed':
+      case 'kpi_pm_pending': {
+        const status = metric === 'kpi_pm_completed' ? 'COMPLETED' : 'PENDING';
+        const rows = await this.repository.getPmExecutionDatesInRange(from, to, status);
+        rows.forEach((r) => bump(r.pmPeriod.plannedDate));
+        break;
+      }
+
+      case 'wo_total':
+      case 'wo_created':
+      case 'wo_released':
+      case 'wo_technically_completed':
+      case 'wo_closed': {
+        const stageByMetric = {
+          wo_total: undefined,
+          wo_created: 'CREATED' as const,
+          wo_released: 'RELEASED' as const,
+          wo_technically_completed: 'TECHNICALLY_COMPLETED' as const,
+          wo_closed: 'CLOSED' as const,
+        };
+        const rows = await this.repository.getWorkOrderDatesInRange(from, to, { stage: stageByMetric[metric] });
+        rows.forEach((r) => r.basicStartDate && bump(r.basicStartDate));
+        break;
+      }
+
+      case 'wo_unmatched': {
+        const rows = await this.repository.getWorkOrderDatesInRange(from, to, { unmatchedOnly: true });
+        rows.forEach((r) => r.basicStartDate && bump(r.basicStartDate));
+        break;
+      }
+    }
+
+    return dayKeys.map((date) => ({ date, value: round1(buckets.get(date) ?? 0) ?? 0 }));
   }
 
   async getRecent() {

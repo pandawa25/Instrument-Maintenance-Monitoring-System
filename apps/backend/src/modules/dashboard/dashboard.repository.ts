@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EquipmentStatus, MaintenanceStatus, PmExecutionStatus, WorkOrderLifecycleStage } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -206,6 +207,52 @@ export class DashboardRepository {
   async getAreaLookup() {
     const areas = await this.prisma.area.findMany({ where: { deletedAt: null }, select: { id: true, areaCode: true, areaName: true } });
     return new Map(areas.map((a) => [a.id, a]));
+  }
+
+  // --- Dashboard Trend (GET /dashboard/trend) ---
+  // Dipakai saat 1 kotak summary di tab Dashboard diklik — masing-masing cuma ambil kolom
+  // tanggal (+downtimeHours khusus kpi_downtime_hours) dalam rentang [from, to), lalu
+  // di-bucket per hari di service (bukan di sini) — pola yang sama dengan
+  // getMaintenanceDatesLastMonths di atas, cuma granularitasnya harian & rentangnya custom.
+
+  async getMaintenanceDatesInRange(from: Date, to: Date, status?: MaintenanceStatus) {
+    return this.prisma.correctiveMaintenance.findMany({
+      where: { deletedAt: null, maintenanceDate: { gte: from, lt: to }, ...(status ? { status } : {}) },
+      select: { maintenanceDate: true },
+    });
+  }
+
+  async getCompletedMaintenanceDatesInRange(from: Date, to: Date) {
+    return this.prisma.correctiveMaintenance.findMany({
+      where: { deletedAt: null, status: 'COMPLETED', maintenanceDate: { gte: from, lt: to } },
+      select: { maintenanceDate: true, downtimeHours: true },
+    });
+  }
+
+  async getEquipmentCreatedDatesInRange(from: Date, to: Date, status?: EquipmentStatus) {
+    return this.prisma.equipment.findMany({
+      where: { deletedAt: null, createdAt: { gte: from, lt: to }, ...(status ? { status } : {}) },
+      select: { createdAt: true },
+    });
+  }
+
+  async getPmExecutionDatesInRange(from: Date, to: Date, status: PmExecutionStatus) {
+    return this.prisma.pmPeriodExecution.findMany({
+      where: { deletedAt: null, status, pmPeriod: { plannedDate: { gte: from, lt: to } } },
+      select: { pmPeriod: { select: { plannedDate: true } } },
+    });
+  }
+
+  async getWorkOrderDatesInRange(from: Date, to: Date, opts: { stage?: WorkOrderLifecycleStage; unmatchedOnly?: boolean } = {}) {
+    return this.prisma.workOrder.findMany({
+      where: {
+        deletedAt: null,
+        basicStartDate: { gte: from, lt: to },
+        ...(opts.stage ? { lifecycleStage: opts.stage } : {}),
+        ...(opts.unmatchedOnly ? { equipmentId: null } : {}),
+      },
+      select: { basicStartDate: true },
+    });
   }
 
   // Periode PM yang masih punya eksekusi PENDING — urut yang paling mendesak (plannedDate terdekat) dulu.

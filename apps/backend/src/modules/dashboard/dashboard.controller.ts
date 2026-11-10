@@ -2,6 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PermissionModule } from '@prisma/client';
 import { DashboardService } from './dashboard.service';
+import { GetTrendQueryDto } from './dto/get-trend-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -37,6 +38,20 @@ export class DashboardController {
   @ApiQuery({ name: 'months', required: false, description: 'Rentang trailing bulan (default 12)', example: 12 })
   getKpi(@Query('months') months?: string) {
     return this.dashboardService.getKpi(months ? Number(months) : undefined);
+  }
+
+  @Get('trend')
+  @ApiOperation({
+    summary:
+      'Time series harian 1 metric dalam rentang tanggal tertentu — dipakai saat kotak summary ' +
+      'clickable di tab Dashboard diklik (ganti isi "Grafik Performa")',
+  })
+  getTrend(@Query() query: GetTrendQueryDto) {
+    const from = new Date(`${query.from}T00:00:00`);
+    // `to` inklusif di level hari — majukan ke akhir hari itu supaya baris dengan jam apa pun
+    // di tanggal `to` tetap ikut terhitung.
+    const to = new Date(`${query.to}T23:59:59.999`);
+    return this.dashboardService.getTrend(query.metric, from, to);
   }
 
   @Get('health-index')
