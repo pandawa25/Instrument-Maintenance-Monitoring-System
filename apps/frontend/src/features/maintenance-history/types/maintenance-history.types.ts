@@ -15,14 +15,21 @@ export interface HistoryEquipmentOption {
   instrumentName: { id: string; code: string; name: string };
 }
 
-/** Baris "Top N" halaman awal: equipment dengan kegiatan maintenance (CM + PM Completed) terbanyak. */
+/**
+ * Baris "Top N" halaman awal. Corrective dan Preventive dirangking TERPISAH (dua list
+ * berbeda) — `count` adalah jumlah kegiatan pada kategori list itu sendiri, bukan total
+ * gabungan CM+PM.
+ */
 export interface TopMaintenanceEquipment extends HistoryEquipmentOption {
   rank: number;
-  correctiveCount: number;
-  preventiveCount: number;
-  totalCount: number;
+  count: number;
   /** yyyy-mm-dd; null bila tanggal tidak tercatat. */
   lastMaintenanceDate: string | null;
+}
+
+export interface TopMaintenanceEquipmentResult {
+  corrective: TopMaintenanceEquipment[];
+  preventive: TopMaintenanceEquipment[];
 }
 
 export interface HistoryEquipmentHeader extends HistoryEquipmentOption {

@@ -1,5 +1,10 @@
 import { api } from '@/lib/axios';
-import type { EquipmentHistory, HistoryEquipmentOption, HistoryFilters, TopMaintenanceEquipment } from '../types/maintenance-history.types';
+import type {
+  EquipmentHistory,
+  HistoryEquipmentOption,
+  HistoryFilters,
+  TopMaintenanceEquipmentResult,
+} from '../types/maintenance-history.types';
 
 export async function searchHistoryEquipment(search: string, limit = 20) {
   const { data } = await api.get<{ data: HistoryEquipmentOption[] }>('/maintenance-history/equipment-search', {
@@ -19,9 +24,9 @@ export async function fetchEquipmentHistory(equipmentId: string, filters: Histor
   return data.data;
 }
 
-export async function fetchTopEquipment(limit = 10) {
-  const { data } = await api.get<{ data: TopMaintenanceEquipment[] }>('/maintenance-history/top-equipment', {
-    params: { limit },
+export async function fetchTopEquipment(limit = 10, months = 6) {
+  const { data } = await api.get<{ data: TopMaintenanceEquipmentResult }>('/maintenance-history/top-equipment', {
+    params: { limit, months },
   });
   return data.data;
 }

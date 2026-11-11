@@ -31,7 +31,7 @@ describe('MaintenanceHistoryPage', () => {
     searchMock.mockReset();
     historyMock.mockReset();
     topMock.mockReset();
-    topMock.mockResolvedValue([]);
+    topMock.mockResolvedValue({ corrective: [], preventive: [] });
   });
 
   it('halaman awal = pencarian; history belum diminta', () => {

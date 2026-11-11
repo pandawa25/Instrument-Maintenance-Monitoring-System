@@ -118,17 +118,13 @@ export const HISTORY_PT101: EquipmentHistory = {
 export const TOP_PT101: TopMaintenanceEquipment = {
   ...OPTION_PT101,
   rank: 1,
-  correctiveCount: 5,
-  preventiveCount: 3,
-  totalCount: 8,
+  count: 5,
   lastMaintenanceDate: '2026-09-05',
 };
 
 export const TOP_PT102: TopMaintenanceEquipment = {
   ...OPTION_PT102,
   rank: 2,
-  correctiveCount: 2,
-  preventiveCount: 2,
-  totalCount: 4,
+  count: 2,
   lastMaintenanceDate: null,
 };

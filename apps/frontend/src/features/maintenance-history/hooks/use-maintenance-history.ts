@@ -24,11 +24,14 @@ export function useEquipmentHistory(equipmentId: string | null, filters: History
   });
 }
 
-/** 10 equipment dengan maintenance terbanyak — isi awal halaman supaya tidak kosong. */
-export function useTopMaintenanceEquipment(limit = 10) {
+/**
+ * 10 equipment dengan maintenance terbanyak (Corrective dan Preventive dirangking terpisah) —
+ * isi awal halaman supaya tidak kosong. Default rentang data: 6 bulan terakhir.
+ */
+export function useTopMaintenanceEquipment(limit = 10, months = 6) {
   return useQuery({
-    queryKey: [KEY, 'top', limit],
-    queryFn: () => fetchTopEquipment(limit),
+    queryKey: [KEY, 'top', limit, months],
+    queryFn: () => fetchTopEquipment(limit, months),
     staleTime: 60_000,
   });
 }

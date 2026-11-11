@@ -30,34 +30,33 @@ describe('EquipmentSearchPanel', () => {
   beforeEach(() => {
     searchMock.mockReset();
     topMock.mockReset();
-    topMock.mockResolvedValue([]);
+    topMock.mockResolvedValue({ corrective: [], preventive: [] });
   });
 
-  it('halaman awal: belum ada pencarian, tombol Tampilkan History nonaktif', async () => {
+  it('halaman awal: belum ada pencarian, kedua panel (Corrective & PM) kosong, tombol Tampilkan History nonaktif', async () => {
     renderPanel();
-    expect(await screen.findByText(/belum ada data maintenance/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/belum ada data dalam 6 bulan terakhir/i)).toHaveLength(2);
     expect(screen.getByRole('button', { name: /tampilkan history/i })).toBeDisabled();
     expect(searchMock).not.toHaveBeenCalled();
   });
 
-  it('halaman awal menampilkan Top 10 (peringkat, jumlah CM/PM) dan klik baris langsung membuka history', async () => {
-    topMock.mockResolvedValue([TOP_PT101, TOP_PT102]);
+  it('halaman awal menampilkan Top 10 Corrective dan Top 10 PM secara terpisah; klik baris langsung membuka history', async () => {
+    topMock.mockResolvedValue({ corrective: [TOP_PT101], preventive: [TOP_PT102] });
     const user = userEvent.setup();
     const { onShow } = renderPanel();
 
-    expect(topMock).toHaveBeenCalledWith(10);
+    expect(topMock).toHaveBeenCalledWith(10, 6);
     const first = await screen.findByRole('button', { name: /buka history PT-101/i });
-    expect(first).toHaveTextContent('8');
-    expect(first).toHaveTextContent('CM 5 · PM 3');
+    expect(first).toHaveTextContent('5');
     expect(first).toHaveTextContent(/terakhir 5 Sep 2026/);
-    expect(screen.getByRole('button', { name: /buka history PT-102/i })).toHaveTextContent('CM 2 · PM 2');
+    expect(screen.getByRole('button', { name: /buka history PT-102/i })).toHaveTextContent('2');
 
     await user.click(first);
     expect(onShow).toHaveBeenCalledWith('eq-1');
   });
 
-  it('mengetik menggantikan Top 10 dengan hasil pencarian; dikosongkan kembali ke Top 10', async () => {
-    topMock.mockResolvedValue([TOP_PT101]);
+  it('mengetik menggantikan kedua panel Top dengan hasil pencarian; dikosongkan kembali ke Top', async () => {
+    topMock.mockResolvedValue({ corrective: [TOP_PT101], preventive: [] });
     searchMock.mockResolvedValue([OPTION_PT102]);
     const user = userEvent.setup();
     renderPanel();
@@ -72,14 +71,14 @@ describe('EquipmentSearchPanel', () => {
     expect(await screen.findByRole('button', { name: /buka history PT-101/i })).toBeInTheDocument();
   });
 
-  it('gagal memuat Top 10: pesan error + coba lagi, pencarian tetap bisa dipakai', async () => {
-    topMock.mockRejectedValueOnce(new Error('x')).mockResolvedValue([TOP_PT101]);
+  it('gagal memuat Top: pesan error di kedua panel + coba lagi, pencarian tetap bisa dipakai', async () => {
+    topMock.mockRejectedValueOnce(new Error('x')).mockResolvedValue({ corrective: [TOP_PT101], preventive: [] });
     const user = userEvent.setup();
     renderPanel();
 
-    expect(await screen.findByText(/gagal memuat daftar equipment teratas/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/gagal memuat daftar equipment teratas/i)).toHaveLength(2);
     expect(screen.getByLabelText(/cari tag number/i)).toBeEnabled();
-    await user.click(screen.getByRole('button', { name: /coba lagi/i }));
+    await user.click(screen.getAllByRole('button', { name: /coba lagi/i })[0]);
     expect(await screen.findByRole('button', { name: /buka history PT-101/i })).toBeInTheDocument();
   });
 
