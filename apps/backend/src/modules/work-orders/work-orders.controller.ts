@@ -27,9 +27,7 @@ import { WoImportPreviewResultDto } from './dto/wo-import-preview-result.dto';
 import { WoImportCommitResultDto } from './dto/wo-import-commit-result.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -91,13 +89,12 @@ export class WorkOrdersController {
     return this.importService.getLastImportInfo();
   }
 
-  // Import bulk: SENGAJA dikunci @Roles('Admin') (statis) DI ATAS permission WORK_ORDER
-  // 'create' — pola sama persis dengan Bulk Upload Spare Part (lihat SparePartsController),
-  // data yang masuk berdampak ke banyak equipment sekaligus & berasal dari sistem eksternal (ERP).
+  // Import bulk: otorisasi murni lewat permission WORK_ORDER 'create' (RolePermission),
+  // bukan lagi dikunci statis ke role Admin — Teknisi diberi permission create WORK_ORDER
+  // secara default (lihat seed.ts OPERATIONAL_MODULES + migrasi grant_teknisi_work_order)
+  // sehingga bisa melakukan import file ERP sendiri.
 
   @Post('import/preview')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
   @RequirePermission(PermissionModule.WORK_ORDER, 'create')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
@@ -117,8 +114,6 @@ export class WorkOrdersController {
   }
 
   @Get('import/:batchId')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
   @RequirePermission(PermissionModule.WORK_ORDER, 'create')
   @ApiOperation({ summary: 'Ringkasan satu batch import (status, jumlah OK/warning/error)' })
   getImportBatch(@Param('batchId', ParseUuidPipe) batchId: string) {
@@ -126,8 +121,6 @@ export class WorkOrdersController {
   }
 
   @Get('import/:batchId/rows')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
   @RequirePermission(PermissionModule.WORK_ORDER, 'create')
   @ApiOperation({ summary: 'Daftar baris satu batch import, bisa difilter per severity' })
   listImportRows(@Param('batchId', ParseUuidPipe) batchId: string, @Query() query: QueryImportRowsDto) {
@@ -135,8 +128,6 @@ export class WorkOrdersController {
   }
 
   @Post('import/:batchId/commit')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
   @RequirePermission(PermissionModule.WORK_ORDER, 'create')
   @AuditLog('WorkOrder')
   @HttpCode(HttpStatus.OK)

@@ -23,8 +23,9 @@ const SEVERITY_ICON: Record<ImportRowSeverity, React.ReactNode> = {
 };
 
 // Import export SAP PM (36 kolom, deteksi header otomatis) — lihat
-// docs/design-notification-work-order.md §7. Admin only (dicek di backend). Berbeda dari
-// Bulk Upload Equipment: tidak ada pilihan mode, selalu upsert by Order No/Notification No.
+// docs/design-notification-work-order.md §7. Dicek via permission WORK_ORDER 'create' di backend
+// (Admin & Teknisi secara default, lihat seed.ts). Berbeda dari Bulk Upload Equipment: tidak ada
+// pilihan mode, selalu upsert by Order No/Notification No.
 export function WorkOrderImportDialog({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
