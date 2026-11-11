@@ -24,55 +24,46 @@ export class MaintenanceHistoryService {
   }
 
   /**
-   * Equipment dengan kegiatan maintenance (Corrective + Preventive Completed) terbanyak —
-   * isi awal halaman History supaya tidak kosong. Urutan: total terbanyak, lalu kegiatan terakhir
-   * paling baru, lalu tag number.
+   * Equipment dengan kegiatan maintenance terbanyak — isi awal halaman History supaya tidak
+   * kosong. Dua ranking TERPISAH (Corrective vs Preventive Completed), masing-masing dibatasi ke
+   * `query.months` bulan terakhir (default 6). Urutan tiap list: jumlah terbanyak, lalu kegiatan
+   * terakhir paling baru.
    */
   async getTopEquipment(query: QueryTopEquipmentDto) {
-    const { corrective, preventive } = await this.repository.countMaintenancePerEquipment();
+    const from = new Date();
+    from.setMonth(from.getMonth() - query.months);
 
-    const agg = new Map<string, { corrective: number; preventive: number; last: Date | null }>();
-    const entry = (id: string) => {
-      let e = agg.get(id);
-      if (!e) agg.set(id, (e = { corrective: 0, preventive: 0, last: null }));
-      return e;
-    };
-    const bumpLast = (e: { last: Date | null }, d: Date | null) => {
-      if (d && (!e.last || d > e.last)) e.last = d;
-    };
-    for (const r of corrective) {
-      const e = entry(r.equipmentId);
-      e.corrective += r.count;
-      bumpLast(e, r.lastDate);
-    }
-    for (const r of preventive) {
-      const e = entry(r.equipmentId);
-      e.preventive += r.count;
-      bumpLast(e, r.lastDate);
-    }
+    const { corrective, preventive } = await this.repository.countMaintenancePerEquipment(from);
 
-    const ranked = [...agg.entries()]
-      .sort(([, a], [, b]) => {
-        const diff = b.corrective + b.preventive - (a.corrective + a.preventive);
-        if (diff !== 0) return diff;
-        return (b.last?.getTime() ?? 0) - (a.last?.getTime() ?? 0);
-      })
-      .slice(0, query.limit);
-    if (ranked.length === 0) return [];
+    const rank = (rows: { equipmentId: string; count: number; lastDate: Date | null }[]) =>
+      [...rows]
+        .sort((a, b) => {
+          const diff = b.count - a.count;
+          if (diff !== 0) return diff;
+          return (b.lastDate?.getTime() ?? 0) - (a.lastDate?.getTime() ?? 0);
+        })
+        .slice(0, query.limit);
 
-    const equipments = await this.repository.findEquipmentByIds(ranked.map(([id]) => id));
+    const topCorrective = rank(corrective);
+    const topPreventive = rank(preventive);
+
+    const ids = [...new Set([...topCorrective, ...topPreventive].map((r) => r.equipmentId))];
+    if (ids.length === 0) return { corrective: [], preventive: [] };
+
+    const equipments = await this.repository.findEquipmentByIds(ids);
     const byId = new Map(equipments.map((e: any) => [e.id, e]));
 
-    return ranked
-      .filter(([id]) => byId.has(id))
-      .map(([id, e], index) => ({
-        ...(byId.get(id) as object),
-        rank: index + 1,
-        correctiveCount: e.corrective,
-        preventiveCount: e.preventive,
-        totalCount: e.corrective + e.preventive,
-        lastMaintenanceDate: e.last ? toDateOnly(e.last) : null,
-      }));
+    const toItems = (rows: typeof topCorrective) =>
+      rows
+        .filter((r) => byId.has(r.equipmentId))
+        .map((r, index) => ({
+          ...(byId.get(r.equipmentId) as object),
+          rank: index + 1,
+          count: r.count,
+          lastMaintenanceDate: r.lastDate ? toDateOnly(r.lastDate) : null,
+        }));
+
+    return { corrective: toItems(topCorrective), preventive: toItems(topPreventive) };
   }
 
   async getEquipmentHistory(equipmentId: string, query: QueryEquipmentHistoryDto) {

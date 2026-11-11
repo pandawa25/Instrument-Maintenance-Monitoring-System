@@ -118,7 +118,7 @@ describe('MaintenanceHistoryService', () => {
 describe('MaintenanceHistoryService.getTopEquipment', () => {
   const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
 
-  it('menggabungkan CM + PM per equipment, urut total terbanyak, tie-break kegiatan terakhir terbaru', async () => {
+  it('Corrective dan Preventive dirangking TERPISAH, masing-masing urut jumlah terbanyak lalu kegiatan terakhir terbaru', async () => {
     const { service } = build({
       counts: {
         corrective: [
@@ -132,27 +132,37 @@ describe('MaintenanceHistoryService.getTopEquipment', () => {
         ],
       },
     });
-    const res = await service.getTopEquipment({ limit: 10 });
-    // a=3, b=1+2=3, c=2+1=3 -> semua 3; tie-break last date: b(10-10) > c(09-20) > a(09-01)
-    expect(res.map((r: any) => r.id)).toEqual(['b', 'c', 'a']);
-    expect(res[0]).toMatchObject({ rank: 1, correctiveCount: 1, preventiveCount: 2, totalCount: 3, lastMaintenanceDate: '2026-10-10' });
+    const res = await service.getTopEquipment({ limit: 10, months: 6 });
+    // Corrective: a(3) > c(2) > b(1)
+    expect(res.corrective.map((r: any) => r.id)).toEqual(['a', 'c', 'b']);
+    expect(res.corrective[0]).toMatchObject({ rank: 1, count: 3, lastMaintenanceDate: '2026-09-01' });
+    // Preventive: b(2) > c(1) -- equipment 'a' tidak punya PM sama sekali, tidak masuk list ini
+    expect(res.preventive.map((r: any) => r.id)).toEqual(['b', 'c']);
+    expect(res.preventive[0]).toMatchObject({ rank: 1, count: 2, lastMaintenanceDate: '2026-10-10' });
   });
 
-  it('dibatasi limit dan hanya mengambil data equipment untuk yang masuk Top N', async () => {
+  it('dibatasi limit per kategori dan hanya mengambil data equipment yang masuk Top N gabungan', async () => {
     const { service, repo } = build({
       counts: {
         corrective: ['a', 'b', 'c', 'd'].map((id, i) => ({ equipmentId: id, count: 10 - i, lastDate: null })),
         preventive: [],
       },
     });
-    const res = await service.getTopEquipment({ limit: 2 });
-    expect(res.map((r: any) => r.id)).toEqual(['a', 'b']);
+    const res = await service.getTopEquipment({ limit: 2, months: 6 });
+    expect(res.corrective.map((r: any) => r.id)).toEqual(['a', 'b']);
+    expect(res.preventive).toEqual([]);
     expect(repo.findEquipmentByIds).toHaveBeenCalledWith(['a', 'b']);
   });
 
-  it('belum ada maintenance sama sekali -> array kosong tanpa query equipment', async () => {
+  it('meneruskan tanggal batas N bulan terakhir ke repository', async () => {
     const { service, repo } = build();
-    expect(await service.getTopEquipment({ limit: 10 })).toEqual([]);
+    await service.getTopEquipment({ limit: 10, months: 6 });
+    expect(repo.countMaintenancePerEquipment).toHaveBeenCalledWith(expect.any(Date));
+  });
+
+  it('belum ada maintenance sama sekali -> kedua list kosong tanpa query equipment', async () => {
+    const { service, repo } = build();
+    expect(await service.getTopEquipment({ limit: 10, months: 6 })).toEqual({ corrective: [], preventive: [] });
     expect(repo.findEquipmentByIds).not.toHaveBeenCalled();
   });
 });

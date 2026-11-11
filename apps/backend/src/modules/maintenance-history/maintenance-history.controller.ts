@@ -31,7 +31,10 @@ export class MaintenanceHistoryController {
   }
 
   @Get('top-equipment')
-  @ApiOperation({ summary: 'Equipment dengan kegiatan maintenance (Corrective + Preventive Completed) terbanyak — default 10' })
+  @ApiOperation({
+    summary:
+      'Equipment dengan kegiatan maintenance terbanyak, Corrective dan Preventive Completed dipisah — default top 10, 6 bulan terakhir',
+  })
   getTopEquipment(@Query() query: QueryTopEquipmentDto) {
     return this.service.getTopEquipment(query);
   }

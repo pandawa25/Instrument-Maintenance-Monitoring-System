@@ -73,11 +73,17 @@ export class MaintenanceHistoryRepository {
    * yang belum dihapus) + Preventive yang sudah COMPLETED. Equipment yang sudah dihapus dikeluarkan
    * di query supaya Top N tidak "bolong". Agregasi di DB (groupBy), bukan menarik baris history.
    */
-  async countMaintenancePerEquipment() {
+  // `from` opsional — dipakai Top Equipment untuk membatasi hitungan ke N bulan terakhir
+  // (bukan filter equipment, jadi diterapkan ke maintenanceDate/executionDate, bukan where equipment).
+  async countMaintenancePerEquipment(from?: Date) {
     const [corrective, preventive] = await Promise.all([
       this.prisma.correctiveMaintenance.groupBy({
         by: ['equipmentId'],
-        where: { deletedAt: null, equipment: { deletedAt: null } },
+        where: {
+          deletedAt: null,
+          equipment: { deletedAt: null },
+          ...(from ? { maintenanceDate: { gte: from } } : {}),
+        },
         _count: { _all: true },
         _max: { maintenanceDate: true },
       }),
@@ -88,6 +94,7 @@ export class MaintenanceHistoryRepository {
           status: 'COMPLETED',
           equipment: { deletedAt: null },
           pmPeriod: { deletedAt: null, pmProgram: { deletedAt: null } },
+          ...(from ? { executionDate: { gte: from } } : {}),
         },
         _count: { _all: true },
         _max: { executionDate: true },
