@@ -12,9 +12,24 @@ interface Props {
   onEdit: (item: PmActivityType) => void;
   onDelete: (item: PmActivityType) => void;
   onView: (item: PmActivityType) => void;
+  selectedIds?: Set<string>;
+  onToggleOne?: (id: string) => void;
+  onToggleAll?: () => void;
 }
 
-export function PmActivityTypeTable({ items, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function PmActivityTypeTable({
+  items,
+  isLoading,
+  canEdit,
+  onEdit,
+  onDelete,
+  onView,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
+  const selectable = canEdit && Boolean(selectedIds && onToggleOne && onToggleAll);
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -27,6 +42,17 @@ export function PmActivityTypeTable({ items, isLoading, canEdit, onEdit, onDelet
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+          {selectable && (
+            <th className="w-8 px-4 py-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={selectedIds!.size > 0 && selectedIds!.size === items.length}
+                onChange={onToggleAll}
+                aria-label="Pilih semua activity type di halaman ini"
+              />
+            </th>
+          )}
           <th className="px-4 py-2.5 font-medium">Code</th>
           <th className="px-4 py-2.5 font-medium">Name</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
@@ -37,6 +63,17 @@ export function PmActivityTypeTable({ items, isLoading, canEdit, onEdit, onDelet
       <tbody>
         {items.map((item) => (
           <tr key={item.id} {...dataRowProps(() => onView(item))}>
+            {selectable && (
+              <td className="px-4 py-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={selectedIds!.has(item.id)}
+                  onChange={() => onToggleOne!(item.id)}
+                  aria-label={`Pilih activity type ${item.name}`}
+                />
+              </td>
+            )}
             <td className="px-4 py-2.5 font-mono text-xs text-text">{item.code}</td>
             <td className="px-4 py-2.5 text-text">{item.name}</td>
             <td className="px-4 py-2.5 text-text-muted">{item.description || '—'}</td>

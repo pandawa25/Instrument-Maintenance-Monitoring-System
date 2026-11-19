@@ -13,9 +13,24 @@ interface Props {
   onEdit: (area: Area) => void;
   onDelete: (area: Area) => void;
   onView: (area: Area) => void;
+  selectedIds?: Set<string>;
+  onToggleOne?: (id: string) => void;
+  onToggleAll?: () => void;
 }
 
-export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function AreaTable({
+  areas,
+  isLoading,
+  canEdit,
+  onEdit,
+  onDelete,
+  onView,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
+  const selectable = canEdit && Boolean(selectedIds && onToggleOne && onToggleAll);
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -28,6 +43,17 @@ export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView 
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+          {selectable && (
+            <th className="w-8 px-4 py-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={selectedIds!.size > 0 && selectedIds!.size === areas.length}
+                onChange={onToggleAll}
+                aria-label="Pilih semua area di halaman ini"
+              />
+            </th>
+          )}
           <th className="px-4 py-2.5 font-medium">Area Code</th>
           <th className="px-4 py-2.5 font-medium">Area Name</th>
           <th className="px-4 py-2.5 font-medium">Description</th>
@@ -40,6 +66,17 @@ export function AreaTable({ areas, isLoading, canEdit, onEdit, onDelete, onView 
       <tbody>
         {areas.map((area) => (
           <tr key={area.id} {...dataRowProps(() => onView(area))}>
+            {selectable && (
+              <td className="px-4 py-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={selectedIds!.has(area.id)}
+                  onChange={() => onToggleOne!(area.id)}
+                  aria-label={`Pilih area ${area.areaName}`}
+                />
+              </td>
+            )}
             <td className="px-4 py-2.5 font-mono text-xs text-text">{area.areaCode}</td>
             <td className="px-4 py-2.5 text-text">{area.areaName}</td>
             <td className="px-4 py-2.5 text-text-muted">{area.description || '—'}</td>

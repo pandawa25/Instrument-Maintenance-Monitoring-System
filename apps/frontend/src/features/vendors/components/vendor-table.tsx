@@ -13,9 +13,24 @@ interface Props {
   onEdit: (vendor: Vendor) => void;
   onDelete: (vendor: Vendor) => void;
   onView: (vendor: Vendor) => void;
+  selectedIds?: Set<string>;
+  onToggleOne?: (id: string) => void;
+  onToggleAll?: () => void;
 }
 
-export function VendorTable({ vendors, isLoading, canEdit, onEdit, onDelete, onView }: Props) {
+export function VendorTable({
+  vendors,
+  isLoading,
+  canEdit,
+  onEdit,
+  onDelete,
+  onView,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
+  const selectable = canEdit && Boolean(selectedIds && onToggleOne && onToggleAll);
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -28,6 +43,17 @@ export function VendorTable({ vendors, isLoading, canEdit, onEdit, onDelete, onV
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+          {selectable && (
+            <th className="w-8 px-4 py-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={selectedIds!.size > 0 && selectedIds!.size === vendors.length}
+                onChange={onToggleAll}
+                aria-label="Pilih semua vendor di halaman ini"
+              />
+            </th>
+          )}
           <th className="px-4 py-2.5 font-medium">Nama Vendor</th>
           <th className="px-4 py-2.5 font-medium">Contact Person</th>
           <th className="px-4 py-2.5 font-medium">Phone</th>
@@ -39,6 +65,17 @@ export function VendorTable({ vendors, isLoading, canEdit, onEdit, onDelete, onV
       <tbody>
         {vendors.map((vendor) => (
           <tr key={vendor.id} {...dataRowProps(() => onView(vendor))}>
+            {selectable && (
+              <td className="px-4 py-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={selectedIds!.has(vendor.id)}
+                  onChange={() => onToggleOne!(vendor.id)}
+                  aria-label={`Pilih vendor ${vendor.name}`}
+                />
+              </td>
+            )}
             <td className="px-4 py-2.5 text-text">{vendor.name}</td>
             <td className="px-4 py-2.5 text-text-muted">{vendor.contactPerson || '—'}</td>
             <td className="px-4 py-2.5 text-text-muted">{vendor.phone || '—'}</td>
