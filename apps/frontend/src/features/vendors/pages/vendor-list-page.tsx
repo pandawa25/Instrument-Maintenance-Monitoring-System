@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { Building2, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -14,8 +12,8 @@ import { VendorFormDialog } from '../components/vendor-form-dialog';
 import { VendorDetailDialog } from '../components/vendor-detail-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { Vendor, VendorQueryParams } from '../types/vendor.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 
 const DEFAULT_PARAMS: VendorQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -24,34 +22,16 @@ export function VendorListPage() {
   const canEdit = usePermission('VENDOR', 'edit');
 
   const [params, setParams] = useQueryParamsState<VendorQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Vendor | null>(null);
-  const [viewingItem, setViewingItem] = useState<Vendor | null>(null);
-  const [deletingItem, setDeletingItem] = useState<Vendor | null>(null);
+  const dialog = useCrudDialogState<Vendor>();
 
   const { data, isLoading } = useVendors(params);
   const deleteMutation = useDeleteVendor();
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: Vendor) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Vendor "${deletingItem.name}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus vendor'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Vendor>({
+    deleteMutation,
+    getId: (vendor) => vendor.id,
+    successMessage: (vendor) => `Vendor "${vendor.name}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus vendor',
+  });
 
   return (
     <div className="space-y-4">
@@ -61,7 +41,7 @@ export function VendorListPage() {
         description="Kelola vendor pelaksana Preventive Maintenance."
         action={
           canCreate && (
-            <Button onClick={openCreate}>
+            <Button onClick={dialog.openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Vendor
             </Button>
@@ -92,18 +72,18 @@ export function VendorListPage() {
             vendors={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={dialog.openView}
           />
         </div>
 
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}
       </Card>
 
-      <VendorFormDialog open={formOpen} onOpenChange={setFormOpen} vendor={editingItem} />
+      <VendorFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} vendor={dialog.editingItem} />
 
-      <VendorDetailDialog open={Boolean(viewingItem)} onOpenChange={(open) => !open && setViewingItem(null)} vendor={viewingItem} />
+      <VendorDetailDialog open={Boolean(dialog.viewingItem)} onOpenChange={(open) => !open && dialog.closeView()} vendor={dialog.viewingItem} />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

@@ -128,8 +128,8 @@ export async function bootstrapAuth(): Promise<void> {
  * memprioritaskan `errors` (daftar pesan per-field) kalau ada, baru fallback ke `message`
  * biasa, baru ke fallback yang dikasih si pemanggil.
  */
-export function getErrorMessage(err: any, fallback: string): string {
-  const data = err?.response?.data;
+export function getErrorMessage(err: unknown, fallback: string): string {
+  const data = (err as { response?: { data?: { errors?: unknown; message?: unknown } } })?.response?.data;
   if (Array.isArray(data?.errors) && data.errors.length > 0) {
     return data.errors.join('; ');
   }

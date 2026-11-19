@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { ListChecks, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -13,8 +11,8 @@ import { PmActivityTypeFormDialog } from '../components/pm-activity-type-form-di
 import { PmActivityTypeDetailDialog } from '../components/pm-activity-type-detail-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { PmActivityType, PmActivityTypeQueryParams } from '../types/pm-activity-type.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 
 const DEFAULT_PARAMS: PmActivityTypeQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -23,34 +21,16 @@ export function PmActivityTypeListPage() {
   const canEdit = usePermission('PM_ACTIVITY_TYPE', 'edit');
 
   const [params, setParams] = useQueryParamsState<PmActivityTypeQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<PmActivityType | null>(null);
-  const [viewingItem, setViewingItem] = useState<PmActivityType | null>(null);
-  const [deletingItem, setDeletingItem] = useState<PmActivityType | null>(null);
+  const dialog = useCrudDialogState<PmActivityType>();
 
   const { data, isLoading } = usePmActivityTypeList(params);
   const deleteMutation = useDeletePmActivityType();
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: PmActivityType) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Activity type "${deletingItem.name}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus activity type'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<PmActivityType>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `Activity type "${item.name}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus activity type',
+  });
 
   return (
     <div className="space-y-4">
@@ -60,7 +40,7 @@ export function PmActivityTypeListPage() {
         description="Kelola jenis aktifitas PM (Cleaning, Calibration, dst) untuk checklist PM Program."
         action={
           canCreate && (
-            <Button onClick={openCreate}>
+            <Button onClick={dialog.openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Activity Type
             </Button>
@@ -82,21 +62,21 @@ export function PmActivityTypeListPage() {
             items={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={dialog.openView}
           />
         </div>
 
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}
       </Card>
 
-      <PmActivityTypeFormDialog open={formOpen} onOpenChange={setFormOpen} activityType={editingItem} />
+      <PmActivityTypeFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} activityType={dialog.editingItem} />
 
       <PmActivityTypeDetailDialog
-        open={Boolean(viewingItem)}
-        onOpenChange={(open) => !open && setViewingItem(null)}
-        activityType={viewingItem}
+        open={Boolean(dialog.viewingItem)}
+        onOpenChange={(open) => !open && dialog.closeView()}
+        activityType={dialog.viewingItem}
       />
 
       <ConfirmDialog

@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateArea, useUpdateArea } from '../hooks/use-areas';
 import type { Area, AreaFormValues } from '../types/area.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudForm } from '@/lib/use-crud-form';
 
 const EMPTY_FORM: AreaFormValues = { areaCode: '', areaName: '', description: '', status: 'ACTIVE' };
 
@@ -18,42 +16,18 @@ interface Props {
 }
 
 export function AreaFormDialog({ open, onOpenChange, area }: Props) {
-  const [form, setForm] = useState<AreaFormValues>(EMPTY_FORM);
-  const createMutation = useCreateArea();
-  const updateMutation = useUpdateArea();
-  const isEdit = Boolean(area);
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setForm(
-        area
-          ? {
-              areaCode: area.areaCode,
-              areaName: area.areaName,
-              description: area.description ?? '',
-              status: area.status,
-            }
-          : EMPTY_FORM,
-      );
-    }
-  }, [open, area]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      if (isEdit && area) {
-        await updateMutation.mutateAsync({ id: area.id, payload: form });
-        toast.success('Area berhasil diperbarui');
-      } else {
-        await createMutation.mutateAsync(form);
-        toast.success('Area berhasil ditambahkan');
-      }
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan area'));
-    }
-  }
+  const { form, setForm, isEdit, isSaving, handleSubmit } = useCrudForm<Area, AreaFormValues>({
+    open,
+    entity: area,
+    emptyForm: EMPTY_FORM,
+    mapToForm: (a) => ({ areaCode: a.areaCode, areaName: a.areaName, description: a.description ?? '', status: a.status }),
+    createMutation: useCreateArea(),
+    updateMutation: useUpdateArea(),
+    getId: (a) => a.id,
+    onSuccess: () => onOpenChange(false),
+    successMessage: { create: 'Area berhasil ditambahkan', update: 'Area berhasil diperbarui' },
+    errorMessage: 'Gagal menyimpan area',
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

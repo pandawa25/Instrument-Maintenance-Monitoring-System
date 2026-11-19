@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateInstrumentName, useUpdateInstrumentName } from '../hooks/use-instrument-names';
 import type { InstrumentName, InstrumentNameFormValues } from '../types/instrument-name.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudForm } from '@/lib/use-crud-form';
 
 const EMPTY_FORM: InstrumentNameFormValues = { code: '', name: '', description: '' };
 
@@ -17,42 +15,19 @@ interface Props {
 }
 
 export function InstrumentNameFormDialog({ open, onOpenChange, instrumentName }: Props) {
-  const [form, setForm] = useState<InstrumentNameFormValues>(EMPTY_FORM);
-  const createMutation = useCreateInstrumentName();
-  const updateMutation = useUpdateInstrumentName();
-  const isEdit = Boolean(instrumentName);
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setForm(
-        instrumentName
-          ? {
-              code: instrumentName.code,
-              name: instrumentName.name,
-              description: instrumentName.description ?? '',
-            }
-          : EMPTY_FORM,
-      );
-    }
-  }, [open, instrumentName]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      const payload: InstrumentNameFormValues = { ...form, description: form.description || undefined };
-      if (isEdit && instrumentName) {
-        await updateMutation.mutateAsync({ id: instrumentName.id, payload });
-        toast.success('Instrument name berhasil diperbarui');
-      } else {
-        await createMutation.mutateAsync(payload);
-        toast.success('Instrument name berhasil ditambahkan');
-      }
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan instrument name'));
-    }
-  }
+  const { form, setForm, isEdit, isSaving, handleSubmit } = useCrudForm<InstrumentName, InstrumentNameFormValues>({
+    open,
+    entity: instrumentName,
+    emptyForm: EMPTY_FORM,
+    mapToForm: (i) => ({ code: i.code, name: i.name, description: i.description ?? '' }),
+    createMutation: useCreateInstrumentName(),
+    updateMutation: useUpdateInstrumentName(),
+    getId: (i) => i.id,
+    onSuccess: () => onOpenChange(false),
+    successMessage: { create: 'Instrument name berhasil ditambahkan', update: 'Instrument name berhasil diperbarui' },
+    errorMessage: 'Gagal menyimpan instrument name',
+    mapToPayload: (f) => ({ ...f, description: f.description || undefined }),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

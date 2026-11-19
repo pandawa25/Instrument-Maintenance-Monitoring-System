@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { Plus, Tag } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SearchInput } from '@/components/shared/search-input';
@@ -13,8 +11,8 @@ import { InstrumentNameFormDialog } from '../components/instrument-name-form-dia
 import { InstrumentNameDetailDialog } from '../components/instrument-name-detail-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { InstrumentName, InstrumentNameQueryParams } from '../types/instrument-name.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 
 const DEFAULT_PARAMS: InstrumentNameQueryParams = { page: 1, limit: 20, search: '' };
 
@@ -23,34 +21,16 @@ export function InstrumentNameListPage() {
   const canEdit = usePermission('INSTRUMENT_NAME', 'edit');
 
   const [params, setParams] = useQueryParamsState<InstrumentNameQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<InstrumentName | null>(null);
-  const [viewingItem, setViewingItem] = useState<InstrumentName | null>(null);
-  const [deletingItem, setDeletingItem] = useState<InstrumentName | null>(null);
+  const dialog = useCrudDialogState<InstrumentName>();
 
   const { data, isLoading } = useInstrumentNameList(params);
   const deleteMutation = useDeleteInstrumentName();
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: InstrumentName) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Instrument name "${deletingItem.name}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus instrument name'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<InstrumentName>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `Instrument name "${item.name}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus instrument name',
+  });
 
   return (
     <div className="space-y-4">
@@ -60,7 +40,7 @@ export function InstrumentNameListPage() {
         description="Kelola master data jenis instrument (dipakai di form Equipment)."
         action={
           canCreate && (
-            <Button onClick={openCreate}>
+            <Button onClick={dialog.openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Instrument Name
             </Button>
@@ -82,9 +62,9 @@ export function InstrumentNameListPage() {
             items={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={dialog.openView}
           />
         </div>
 
@@ -93,12 +73,12 @@ export function InstrumentNameListPage() {
         )}
       </Card>
 
-      <InstrumentNameFormDialog open={formOpen} onOpenChange={setFormOpen} instrumentName={editingItem} />
+      <InstrumentNameFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} instrumentName={dialog.editingItem} />
 
       <InstrumentNameDetailDialog
-        open={Boolean(viewingItem)}
-        onOpenChange={(open) => !open && setViewingItem(null)}
-        instrumentName={viewingItem}
+        open={Boolean(dialog.viewingItem)}
+        onOpenChange={(open) => !open && dialog.closeView()}
+        instrumentName={dialog.viewingItem}
       />
 
       <ConfirmDialog

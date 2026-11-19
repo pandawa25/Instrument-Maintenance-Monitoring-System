@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useCreateVendor, useUpdateVendor } from '../hooks/use-vendors';
 import type { Vendor, VendorFormValues } from '../types/vendor.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudForm } from '@/lib/use-crud-form';
 
 const EMPTY_FORM: VendorFormValues = {
   name: '',
@@ -26,45 +24,26 @@ interface Props {
 }
 
 export function VendorFormDialog({ open, onOpenChange, vendor }: Props) {
-  const [form, setForm] = useState<VendorFormValues>(EMPTY_FORM);
-  const createMutation = useCreateVendor();
-  const updateMutation = useUpdateVendor();
-  const isEdit = Boolean(vendor);
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setForm(
-        vendor
-          ? {
-              name: vendor.name,
-              contactPerson: vendor.contactPerson ?? '',
-              phone: vendor.phone ?? '',
-              email: vendor.email ?? '',
-              address: vendor.address ?? '',
-              status: vendor.status,
-              remarks: vendor.remarks ?? '',
-            }
-          : EMPTY_FORM,
-      );
-    }
-  }, [open, vendor]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      if (isEdit && vendor) {
-        await updateMutation.mutateAsync({ id: vendor.id, payload: form });
-        toast.success('Vendor berhasil diperbarui');
-      } else {
-        await createMutation.mutateAsync(form);
-        toast.success('Vendor berhasil ditambahkan');
-      }
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan vendor'));
-    }
-  }
+  const { form, setForm, isEdit, isSaving, handleSubmit } = useCrudForm<Vendor, VendorFormValues>({
+    open,
+    entity: vendor,
+    emptyForm: EMPTY_FORM,
+    mapToForm: (v) => ({
+      name: v.name,
+      contactPerson: v.contactPerson ?? '',
+      phone: v.phone ?? '',
+      email: v.email ?? '',
+      address: v.address ?? '',
+      status: v.status,
+      remarks: v.remarks ?? '',
+    }),
+    createMutation: useCreateVendor(),
+    updateMutation: useUpdateVendor(),
+    getId: (v) => v.id,
+    onSuccess: () => onOpenChange(false),
+    successMessage: { create: 'Vendor berhasil ditambahkan', update: 'Vendor berhasil diperbarui' },
+    errorMessage: 'Gagal menyimpan vendor',
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

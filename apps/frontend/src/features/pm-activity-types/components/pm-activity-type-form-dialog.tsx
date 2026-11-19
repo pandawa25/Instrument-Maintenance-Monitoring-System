@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreatePmActivityType, useUpdatePmActivityType } from '../hooks/use-pm-activity-types';
 import type { PmActivityType, PmActivityTypeFormValues } from '../types/pm-activity-type.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudForm } from '@/lib/use-crud-form';
 
 const EMPTY_FORM: PmActivityTypeFormValues = { code: '', name: '', description: '' };
 
@@ -17,38 +15,19 @@ interface Props {
 }
 
 export function PmActivityTypeFormDialog({ open, onOpenChange, activityType }: Props) {
-  const [form, setForm] = useState<PmActivityTypeFormValues>(EMPTY_FORM);
-  const createMutation = useCreatePmActivityType();
-  const updateMutation = useUpdatePmActivityType();
-  const isEdit = Boolean(activityType);
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setForm(
-        activityType
-          ? { code: activityType.code, name: activityType.name, description: activityType.description ?? '' }
-          : EMPTY_FORM,
-      );
-    }
-  }, [open, activityType]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      const payload: PmActivityTypeFormValues = { ...form, description: form.description || undefined };
-      if (isEdit && activityType) {
-        await updateMutation.mutateAsync({ id: activityType.id, payload });
-        toast.success('Activity type berhasil diperbarui');
-      } else {
-        await createMutation.mutateAsync(payload);
-        toast.success('Activity type berhasil ditambahkan');
-      }
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan activity type'));
-    }
-  }
+  const { form, setForm, isEdit, isSaving, handleSubmit } = useCrudForm<PmActivityType, PmActivityTypeFormValues>({
+    open,
+    entity: activityType,
+    emptyForm: EMPTY_FORM,
+    mapToForm: (a) => ({ code: a.code, name: a.name, description: a.description ?? '' }),
+    createMutation: useCreatePmActivityType(),
+    updateMutation: useUpdatePmActivityType(),
+    getId: (a) => a.id,
+    onSuccess: () => onOpenChange(false),
+    successMessage: { create: 'Activity type berhasil ditambahkan', update: 'Activity type berhasil diperbarui' },
+    errorMessage: 'Gagal menyimpan activity type',
+    mapToPayload: (f) => ({ ...f, description: f.description || undefined }),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

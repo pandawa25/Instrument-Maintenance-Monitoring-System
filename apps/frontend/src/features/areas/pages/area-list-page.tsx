@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { MapPinned, Plus } from 'lucide-react';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
-import { toast } from 'sonner';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -15,7 +14,6 @@ import { AreaFormDialog } from '../components/area-form-dialog';
 import { AreaDetailDialog } from '../components/area-detail-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { Area, AreaQueryParams } from '../types/area.types';
-import { getErrorMessage } from '@/lib/axios';
 
 const DEFAULT_PARAMS: AreaQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -24,34 +22,16 @@ export function AreaListPage() {
   const canEdit = usePermission('AREA', 'edit');
 
   const [params, setParams] = useQueryParamsState<AreaQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [viewingArea, setViewingArea] = useState<Area | null>(null);
-  const [deletingArea, setDeletingArea] = useState<Area | null>(null);
+  const dialog = useCrudDialogState<Area>();
 
   const { data, isLoading } = useAreas(params);
   const deleteMutation = useDeleteArea();
-
-  function openCreate() {
-    setEditingArea(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(area: Area) {
-    setEditingArea(area);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingArea) return;
-    try {
-      await deleteMutation.mutateAsync(deletingArea.id);
-      toast.success(`Area "${deletingArea.areaName}" berhasil dihapus`);
-      setDeletingArea(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus area'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Area>({
+    deleteMutation,
+    getId: (area) => area.id,
+    successMessage: (area) => `Area "${area.areaName}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus area',
+  });
 
   return (
     <div className="space-y-4">
@@ -61,7 +41,7 @@ export function AreaListPage() {
         description="Kelola area/unit proses pada fasilitas."
         action={
           canCreate && (
-            <Button onClick={openCreate}>
+            <Button onClick={dialog.openCreate}>
               <Plus className="h-4 w-4" />
               Tambah Area
             </Button>
@@ -92,9 +72,9 @@ export function AreaListPage() {
             areas={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
-            onDelete={setDeletingArea}
-            onView={setViewingArea}
+            onEdit={dialog.openEdit}
+            onDelete={setDeletingItem}
+            onView={dialog.openView}
           />
         </div>
 
@@ -103,15 +83,15 @@ export function AreaListPage() {
         )}
       </Card>
 
-      <AreaFormDialog open={formOpen} onOpenChange={setFormOpen} area={editingArea} />
+      <AreaFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} area={dialog.editingItem} />
 
-      <AreaDetailDialog open={Boolean(viewingArea)} onOpenChange={(open) => !open && setViewingArea(null)} area={viewingArea} />
+      <AreaDetailDialog open={Boolean(dialog.viewingItem)} onOpenChange={(open) => !open && dialog.closeView()} area={dialog.viewingItem} />
 
       <ConfirmDialog
-        open={Boolean(deletingArea)}
-        onOpenChange={(open) => !open && setDeletingArea(null)}
+        open={Boolean(deletingItem)}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Hapus Area"
-        description={`Area "${deletingArea?.areaName}" akan dihapus. Aksi ini ditolak jika area masih memiliki equipment aktif.`}
+        description={`Area "${deletingItem?.areaName}" akan dihapus. Aksi ini ditolak jika area masih memiliki equipment aktif.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
       />
