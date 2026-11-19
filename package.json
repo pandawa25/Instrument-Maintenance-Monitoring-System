@@ -19,9 +19,14 @@
     "prisma:generate": "npm run prisma:generate --workspace=apps/backend",
     "prisma:migrate": "npm run prisma:migrate --workspace=apps/backend",
     "prisma:seed": "npm run prisma:seed --workspace=apps/backend",
-    "lint": "npm run lint --workspace=apps/backend && npm run lint --workspace=apps/frontend"
+    "lint": "npm run lint --workspace=apps/backend && npm run lint --workspace=apps/frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
   }
 }

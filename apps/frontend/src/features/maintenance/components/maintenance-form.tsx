@@ -118,7 +118,6 @@ export function MaintenanceForm({ maintenance, onSuccess, onCancel }: Props) {
           }
         : EMPTY_FORM,
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maintenance]);
 
   function addMaterialRow() {

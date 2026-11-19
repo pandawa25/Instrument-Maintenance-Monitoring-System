@@ -23,6 +23,7 @@ jobs:
       - run: npm install --workspace=apps/backend --workspace=packages/shared-utils --workspace=packages/shared-types
       - run: npm run build --workspace=packages/shared-utils
       - run: npm run prisma:generate --workspace=apps/backend
+      - run: npm run lint --workspace=apps/backend
       - run: npm run build --workspace=apps/backend
       - run: npm test --workspace=apps/backend
 
@@ -35,5 +36,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install --workspace=apps/frontend
+      - run: npm run lint --workspace=apps/frontend
       - run: npm test --workspace=apps/frontend
       - run: npm run build --workspace=apps/frontend

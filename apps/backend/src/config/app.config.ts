@@ -22,7 +22,6 @@ function resolveJwtSecret(): string {
     );
   }
 
-  // eslint-disable-next-line no-console
   console.warn(
     `[app.config] PERINGATAN: JWT_SECRET tidak di-set atau kurang dari ${MIN_JWT_SECRET_LENGTH} karakter — ` +
       'memakai secret development bawaan. JANGAN deploy kondisi ini ke production.',

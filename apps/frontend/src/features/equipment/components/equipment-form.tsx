@@ -95,7 +95,6 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: Props) {
       setForm(EMPTY_FORM);
       setTagSuffix('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [equipment]);
 
   function handleAreaChange(areaId: string) {
