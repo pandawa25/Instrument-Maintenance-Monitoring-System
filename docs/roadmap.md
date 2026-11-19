@@ -1,6 +1,9 @@
 # Roadmap Pengembangan — Instrument Maintenance Monitoring System
 
-**Status:** Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar; Mini Tools di halaman login, revisi: gas per jam/hari, Pressure ↔ Flow √DP, badge di bawah logo). Update 28 Oktober 2026 (3): form Corrective Maintenance disederhanakan — Failure Category tidak lagi terisi default (wajib dipilih) + teks bantuan per kategori + 3 nilai baru (Control System, Utility Supply, Other/Unknown; hanya menambah, data lama aman); 1 field opsional baru *Failure Mode* (9 gejala: no output, erratic, drift, stuck, bocor, tersumbat, alarm/trip palsu, komunikasi putus, lainnya) di form, detail, History, dan export Excel. Migrasi `20261028080000_failure_category_more_and_failure_mode` (belum dijalankan/diverifikasi di PostgreSQL — Railway menjalankan `migrate deploy` saat start). Rencana lanjutan (belum dikerjakan, sengaja ditunda agar form tidak panjang): Failure Cause, Action Type, Detection Method, Operational Impact, grafik Pareto Failure Mode. Update 28 Oktober 2026 (2): halaman History Maintenance tidak lagi kosong — kolom pencarian tetap di atas, di bawahnya 10 equipment dengan maintenance terbanyak (Corrective + Preventive Completed, semua waktu; endpoint `GET /maintenance-history/top-equipment`, agregasi `groupBy` di DB), klik baris langsung membuka history; mengetik menggantikannya dengan hasil pencarian. Update 28 Oktober 2026: Equipment valve — Size/Rating/Fail Action tampil di form (input & edit), detail, dan tabel untuk semua tipe valve (deteksi kode CV/SV/KV/UV ATAU nama mengandung "valve" selain Valve Positioner, plus fallback bila data size/rating sudah terisi). Update 24 Oktober 2026: koreksi Stok Awal di Edit Spare Part (mengikuti hak edit Spare Part — Admin & Teknisi). Update 20 Oktober 2026: tampilan baris tabel seragam (zebra biru muda) + baris klik ke detail di semua modul; dokumen Equipment (foto/datasheet) + baris tabel Equipment bisa diklik. Update 19 Oktober 2026: Bulk Upload Spare Part (Admin only). Update 13 Oktober 2026: History Maintenance; export Equipment hanya untuk role dengan hak create/edit; perbaikan auth setelah pindah domain (trust proxy, CORS multi-origin).
+**Status:** Update 20 Nov 2026 — konfirmasi eksplisit sistem sudah melewati MVP (lihat
+bagian A di bawah, direvisi lengkap), Phase 5 (Hardening Lanjutan) praktis selesai
+kecuali Risk #6 & #11 (lihat tabel Phase 5), README.md disinkronkan.
+Revisi 6 Oktober 2026 (tambahan Risk #20 — tag kembar di Bulk Upload; Risk #21 — timeout commit batch besar; Mini Tools di halaman login, revisi: gas per jam/hari, Pressure ↔ Flow √DP, badge di bawah logo). Update 28 Oktober 2026 (3): form Corrective Maintenance disederhanakan — Failure Category tidak lagi terisi default (wajib dipilih) + teks bantuan per kategori + 3 nilai baru (Control System, Utility Supply, Other/Unknown; hanya menambah, data lama aman); 1 field opsional baru *Failure Mode* (9 gejala: no output, erratic, drift, stuck, bocor, tersumbat, alarm/trip palsu, komunikasi putus, lainnya) di form, detail, History, dan export Excel. Migrasi `20261028080000_failure_category_more_and_failure_mode` (belum dijalankan/diverifikasi di PostgreSQL — Railway menjalankan `migrate deploy` saat start). Rencana lanjutan (belum dikerjakan, sengaja ditunda agar form tidak panjang): Failure Cause, Action Type, Detection Method, Operational Impact, grafik Pareto Failure Mode. Update 28 Oktober 2026 (2): halaman History Maintenance tidak lagi kosong — kolom pencarian tetap di atas, di bawahnya 10 equipment dengan maintenance terbanyak (Corrective + Preventive Completed, semua waktu; endpoint `GET /maintenance-history/top-equipment`, agregasi `groupBy` di DB), klik baris langsung membuka history; mengetik menggantikannya dengan hasil pencarian. Update 28 Oktober 2026: Equipment valve — Size/Rating/Fail Action tampil di form (input & edit), detail, dan tabel untuk semua tipe valve (deteksi kode CV/SV/KV/UV ATAU nama mengandung "valve" selain Valve Positioner, plus fallback bila data size/rating sudah terisi). Update 24 Oktober 2026: koreksi Stok Awal di Edit Spare Part (mengikuti hak edit Spare Part — Admin & Teknisi). Update 20 Oktober 2026: tampilan baris tabel seragam (zebra biru muda) + baris klik ke detail di semua modul; dokumen Equipment (foto/datasheet) + baris tabel Equipment bisa diklik. Update 19 Oktober 2026: Bulk Upload Spare Part (Admin only). Update 13 Oktober 2026: History Maintenance; export Equipment hanya untuk role dengan hak create/edit; perbaikan auth setelah pindah domain (trust proxy, CORS multi-origin).
 Revisi sebelumnya 3 Oktober 2026, menggantikan revisi yang ditulis saat sistem masih 3
 modul/6 tabel — sudah usang karena sebagian besar isi "Phase 2"-nya di revisi lama sudah
 selesai dikerjakan (dengan penomoran phase berbeda, lihat README `Status Pengembangan`).
@@ -12,16 +15,22 @@ masih terbuka, **(C)** roadmap fitur Phase 5 ke atas, **(D)** rekomendasi urutan
 
 ## A. Kondisi Sistem Saat Ini
 
-Sistem sudah melewati tahap MVP murni — pertumbuhannya:
+Sistem sudah melewati tahap MVP murni sejak lama — ini bukan lagi istilah yang akurat
+untuk menggambarkan kondisi sekarang (dikonfirmasi ulang 20 Nov 2026 setelah Opsi A-D
+post-MVP selesai, lihat Risk #22-#26). Pertumbuhannya:
 
-| | MVP awal (project brief) | Kondisi sekarang |
+| | MVP awal (project brief) | Kondisi sekarang (20 Nov 2026) |
 |---|---|---|
-| Modul operasional | 3 (Area, Instrument, Corrective Maintenance) | 9+ (+ PM Program/Period/Execution, Spare Part + Stock Ledger, Vendor, Manage User, Attachment/Evidence, Audit Log, KPI & Health Index Dashboard) |
-| Model database (Prisma) | 6 | 23 |
-| Auth | JWT access token saja | Refresh token rotation + reuse detection, rate limiting login, login history, access token memory-only (bukan localStorage) |
-| Observability | — | Audit log terpusat (siapa/apa/kapan, redaksi otomatis field sensitif) |
+| Modul operasional | 3 (Area, Instrument, Corrective Maintenance) | 18 modul backend — + PM Program/Period/Execution, Spare Part + Stock Ledger, Vendor, Manage User + Role/Permission matrix (4 role: Admin/Teknisi/View/Vendor), Attachment/Evidence, Audit Log, KPI & Health Index Dashboard, **Work Order & Notification** (import & tracking data ERP — lihat catatan di bawah, bukan Phase 6 formal) |
+| Model database (Prisma) | 6 | 38 |
+| Migration formal | 0 (`db push`) | 27 (`prisma migrate deploy`, terapply otomatis saat start container) |
+| Auth & RBAC | JWT access token saja, 2 role hardcode | Refresh token rotation + reuse detection, rate limiting login, login history, access token memory-only (bukan localStorage); **matriks permission dinamis** 4 role × modul, diatur Admin tanpa deploy ulang (Risk #17) |
+| Bulk operations | — | Bulk Upload/Upsert + Bulk Edit + Rollback (Equipment, Risk #18), Bulk Upload (Spare Part), Bulk-actions hapus/ubah-status massal (Area/Vendor/Instrument Name/PM Activity Type, Risk #25), import & matching Work Order dari Excel ERP |
+| Observability | — | Audit log terpusat (siapa/apa/kapan, redaksi otomatis field sensitif) + structured logging JSON (Pino, Risk #10) + `/api/health` endpoint |
 | Analytics | Dashboard ringkas (4 summary card + 3 chart) | + KPI (MTTR/MTBF/PM Compliance Rate, 3 level agregasi) + Instrument Health Index (skor komposit percentile-based) |
-| Testing | — | Jest unit test backend (6 suite, 45 test — auth, RBAC, stock ledger, audit log, dashboard KPI) + CI (build+test otomatis tiap PR) |
+| Testing | — | Backend: Jest, **25 suite, 242 test**. Frontend: Vitest + RTL, **26 file, 184 test**. CI (lint + build + test otomatis tiap PR) |
+| Accessibility | — | Audit WCAG 2.1 AA terukur matematis (kontras, keyboard nav, touch target) — Risk #24 |
+| Performance | Tidak ada perhatian khusus | Route-based code splitting — bundle awal turun 1,306 KB → 484 KB (gzip -56%, Risk #26) |
 | Security hardening | — | 10/10 temuan audit (security, correctness, UX, DevOps) selesai — lihat `docs/system-audit-2026-10-03.md` |
 | Utilitas lapangan | — | **Mini Tools** di halaman login (8 Okt 2026): badge di bawah logo (desktop & mobile) → tab **Unit** (pressure/flow/signal sejenis; flow gas dalam satuan per jam & per hari: Nm³/Sm³/scf/Mscf/MMscf per h/d dengan koreksi suhu/tekanan gas ideal), **Pressure ↔ Signal** (range LRV–URV) dan **Pressure ↔ Flow** (DP transmitter, flow ∝ √DP, dua arah, plus output sinyal linear vs akar kuadrat). Murni client-side, logika di `features/mini-tools/utils/conversion.ts` + 37 test. Batasan: gas ↔ volume aktual/massa tidak didukung (butuh P, T, Z/densitas); DP→flow mengasumsikan densitas, koefisien discharge, dan ekspansi konstan; kondisi standar Nm³ 0 °C, Sm³ 15 °C, SCF 60 °F/14,696 psia |
 | History Maintenance | — | **History Maintenance** (13 Okt 2026): menu di atas Corrective Maintenance (`/maintenance-history`). Halaman awal = pencarian tag number → pilih equipment → tombol *Tampilkan History*. Hasil: header equipment, ringkasan (total kegiatan, corrective/preventive, downtime, kegiatan terakhir), rekap pemakaian material, dan **tree ringkas** gabungan Corrective + Preventive (COMPLETED) — Tahun → Bulan → satu baris per kegiatan (tanggal, judul = tautan ke halaman detail, status, downtime, jumlah material); hanya bulan terbaru & bulan yang masih punya kegiatan belum selesai yang terbuka default, panah di baris membuka ringkasan lengkap di tempat, ada *Buka semua/Tutup semua* (dipilih tree, bukan mindmap, karena riwayat kronologis yang terus bertambah lebih mudah dipindai, diurutkan, dan dipakai di HP/keyboard); filter jenis & rentang tanggal tetap. Material per tiket ditandai *Terpakai* (CM Completed — stok benar-benar terpotong) atau *Kebutuhan* (belum selesai). Backend `GET /maintenance-history/equipment-search` & `/equipment/:id`; hak akses memakai `CORRECTIVE_MAINTENANCE` view (tanpa entri baru di matriks/enum). Batasan: PM belum mencatat material, jadi material hanya dari Corrective; maks 1000 baris per sumber per equipment |
@@ -29,12 +38,22 @@ Sistem sudah melewati tahap MVP murni — pertumbuhannya:
 | Dokumen Equipment | — | **Foto & Dokumen Equipment** (20 Okt 2026) di halaman detail `/equipment/:id`: foto tampil sebagai thumbnail, PDF (datasheet/manual) sebagai daftar dengan unduh/hapus; pilih banyak file sekaligus, JPG/PNG/WEBP/PDF maks 10 MB, maks 20 file per equipment. Memakai ulang modul Attachment (`AttachmentEntityType.EQUIPMENT`, migrasi `20261020030000` hanya `ADD VALUE` enum — tabel & data lama tidak berubah). **Hak akses mengikuti matriks Equipment**: lihat/unduh = `EQUIPMENT view`, upload/hapus = `EQUIPMENT edit` (Admin selalu bisa); evidence Corrective/PM **tetap Admin only** seperti sebelumnya (dicek di `AttachmentsService.assertAccess`, bukan lagi `@Roles('Admin')` di controller). File yang ditolak setelah ditulis multer (tanpa hak / entity tak ada / melebihi batas) kini dibuang dari disk. Baris tabel Equipment bisa diklik (juga lewat keyboard pada Tag Number) untuk membuka detail; checkbox & tombol aksi tidak ikut memicu klik baris. Batasan: hanya JPG/PNG/WEBP/PDF (belum Word/Excel/ZIP); file fisik tetap di Volume saat soft delete |
 | Tabel Data (Zebra & Row Klik) | — | **Styling baris tabel seragam** (20 Okt 2026): kelas `.data-row` di `index.css` (garis pemisah, zebra baris genap biru muda `--row-alt`, hover `--row-hover`, varian dark mode) dipakai lewat helper `dataRowProps(onOpen?)` (`components/shared/data-row.ts`) di 15 tabel — Area, Equipment, Instrument Name, Vendor, PM Activity Type, Spare Part, Corrective Maintenance, PM Program, User, Permission Matrix, Stock In/Out, Low Stock, PM Period, KPI, Dashboard. **Baris klik membuka detail** (sama seperti perilaku tombol View): Area/Vendor/Instrument Name/PM Activity Type/Spare Part → dialog detail, Equipment → `/equipment/:id`, Corrective Maintenance → `/maintenance/:id`, PM Program → `/pm-programs/:id`, Dashboard (maintenance terbaru) → `/maintenance/:id`, Health Index → `/equipment/:id`. Klik pada checkbox/tombol/tautan di dalam baris tidak ikut membuka detail. Tabel tanpa halaman detail (User, Stock In/Out, Low Stock, PM Period, KPI, Permission Matrix) hanya mendapat zebra. Batasan: pembukaan lewat keyboard tetap lewat tombol View/Tag Number (baris sendiri tidak fokus-able) |
 
+**Catatan tentang modul "Work Order & Notification"**: modul ini (controller
+`work-orders`, menu "Work Order & Notifikasi") **sudah dibangun** — tapi sifatnya
+import & tracking data Notification/WO yang **sudah diterbitkan di ERP eksternal**
+(upload Excel, matching otomatis ke Equipment, kolom remarks/status) — bukan sistem
+Work Order internal dengan approval workflow/assignment yang dibayangkan di Phase 6
+di bawah. Read-only terhadap data intinya (tidak ada create/edit/delete WO dari
+aplikasi ini — lihat Risk #5), jadi Phase 6 (approval workflow formal) **masih**
+belum dikerjakan, bukan sudah selesai.
+
 **Yang BELUM dikerjakan (bukan oversight, sengaja di luar scope sampai sekarang):**
-- Work Order formal (approval workflow, assignment) — saat ini cuma field referensi manual ke ERP eksternal, sesuai keputusan desain di README.
+- Work Order formal dengan approval workflow & assignment (Phase 6) — lihat catatan di atas.
+- Row locking stock movement (Risk #6) & endpoint bulk-update tunggal PM Execution (Risk #11) — 2 item Phase 5 yang masih terbuka, sisanya di Phase 5 sudah selesai (lihat tabel Risk Register di bawah).
 - Hierarki Plant (multi-site) — `areas` masih flat, asumsi 1 plant.
 - Kalibrasi instrumentasi (calibration due tracking) — belum ada field/entity.
-- Test frontend (Vitest/RTL) — 0 test, seluruhnya manual QA.
 - Notifikasi proaktif (PM overdue, low stock) — info hanya terlihat kalau dashboard dibuka manual.
+- E2E test & test database sungguhan — testing masih di level unit test dengan mock (lihat tabel Testing di atas).
 
 ---
 
@@ -87,18 +106,23 @@ direncanakan detail.
 Asset Lifecycle) di atas fondasi yang masih punya celah. Tidak ada fitur baru yang terlihat
 user.*
 
-| Item | Deskripsi | Terkait Risk # |
-|---|---|---|
-| Migrasi `SparePart.stock` ke `Decimal` | Ubah tipe kolom + semua kalkulasi terkait (stock movement, dashboard inventory) — breaking change schema, butuh migration terencana | #1 |
-| Migrasi ke `prisma migrate deploy` formal | Generate migration awal dari schema saat ini, commit ke `prisma/migrations/`, ubah Dockerfile CMD | #2 |
-| Test frontend baseline (Vitest + Testing Library) | Mulai dari logic kritis: validasi form (state-machine maintenance status), komponen shared (`SearchableSelect` keyboard nav, `SearchInput` debounce) | #3 |
-| Perluas test backend | Equipment, PM Program (transaction replace-all), Maintenance state-machine (baru ditambah 3 Okt) | #4 |
-| `useCrudFormDialog()` — hook generik form-dialog | Refactor 10+ form-dialog ke 1 pola bersama | #5 |
-| Row locking stock movement | `SELECT ... FOR UPDATE` atau optimistic locking (`version` column) | #6 |
-| `GET /health` endpoint + `HEALTHCHECK` Dockerfile | Cek koneksi DB via `$queryRaw` | #9 |
-| Structured logging (Pino) | Ganti `console.log` di `main.ts` | #10 |
-| Endpoint bulk-update tunggal untuk PM Execution | 1 request untuk N equipment, bukan N request paralel | #11 |
-| Code-splitting route (`React.lazy` + `Suspense`) | Minimal untuk Dashboard, Maintenance, PM Programs (halaman terberat) | #8 |
+**Status per 20 Nov 2026: 8 dari 10 item selesai.** Sisa 2 item — #6 (row locking stock
+movement, masih Open) dan #11 (endpoint bulk-update tunggal PM Execution, baru sebagian) —
+dibiarkan terbuka karena belum ada sinyal nyata yang membuatnya mendesak (lihat alasan
+masing-masing di tabel Risk Register di atas).
+
+| Item | Deskripsi | Terkait Risk # | Status |
+|---|---|---|---|
+| Migrasi `SparePart.stock` ke `Decimal` | Ubah tipe kolom + semua kalkulasi terkait (stock movement, dashboard inventory) — breaking change schema, butuh migration terencana | #1 | ✅ Fixed |
+| Migrasi ke `prisma migrate deploy` formal | Generate migration awal dari schema saat ini, commit ke `prisma/migrations/`, ubah Dockerfile CMD | #2 | ✅ Fixed |
+| Test frontend baseline (Vitest + Testing Library) | Mulai dari logic kritis: validasi form (state-machine maintenance status), komponen shared (`SearchableSelect` keyboard nav, `SearchInput` debounce) | #3 | ✅ Fixed — 184 test |
+| Perluas test backend | Equipment, PM Program (transaction replace-all), Maintenance state-machine (baru ditambah 3 Okt) | #4 | ✅ Fixed — 242 test |
+| `useCrudFormDialog()` — hook generik form-dialog | Refactor 10+ form-dialog ke 1 pola bersama | #5 | ✅ Fixed (dengan pengecualian desain) |
+| Row locking stock movement | `SELECT ... FOR UPDATE` atau optimistic locking (`version` column) | #6 | ⬜ Open — belum ada sinyal concurrent user bertambah |
+| `GET /health` endpoint + `HEALTHCHECK` Dockerfile | Cek koneksi DB via `$queryRaw` | #9 | ✅ Fixed |
+| Structured logging (Pino) | Ganti `console.log` di `main.ts` | #10 | ✅ Fixed |
+| Endpoint bulk-update tunggal untuk PM Execution | 1 request untuk N equipment, bukan N request paralel | #11 | ◐ Sebagian — reliability (`Promise.allSettled`) sudah, endpoint tunggal belum |
+| Code-splitting route (`React.lazy` + `Suspense`) | Minimal untuk Dashboard, Maintenance, PM Programs (halaman terberat) | #8 | ✅ Fixed — diterapkan ke seluruh 19 halaman, bukan cuma 3 terberat |
 
 ### Phase 6 — Work Order System
 
@@ -151,16 +175,24 @@ data/user bertambah signifikan — bukan sebelumnya (hindari over-engineering).*
 
 ## D. Rekomendasi Urutan Eksekusi
 
-1. **Phase 5 dulu** — terutama migrasi `stock` ke `Decimal` (#1) dan `prisma migrate deploy`
-   (#2). Keduanya makin mahal diperbaiki semakin lama ditunda (data production bertambah,
-   migrasi jadi makin berisiko). Test baseline frontend (#3) juga strategis dikerjakan
-   sebelum Phase 6/7/8 menambah kompleksitas UI lebih jauh.
-2. **Phase 6 dan 7 bisa dipilih sesuai kebutuhan bisnis mendesak** — Work Order kalau
-   organisasi butuh approval formal, Reliability Analytics lanjutan kalau fokusnya
-   pelaporan ke manajemen/kalibrasi compliance.
-3. **Phase 8 dan 9 ditunda sampai ada sinyal nyata kebutuhannya** (multi-plant, atau
-   volume data/user mulai terasa lambat) — konsisten dengan prinsip MVP: jangan
-   over-engineering untuk kebutuhan yang belum terjadi.
+**(Diperbarui 20 Nov 2026 — Phase 5 praktis selesai, lihat tabel status di atas.)**
+
+1. ~~Phase 5 dulu~~ — **selesai** (8/10 item, 20 Nov 2026). 2 item sisa (#6 row locking,
+   #11 endpoint bulk-update PM Execution) sengaja dibiarkan terbuka — keduanya "Open,
+   dipantau" di Risk Register, belum ada sinyal nyata (concurrent user/volume data) yang
+   membuatnya mendesak dikerjakan sekarang. Kerjakan kalau sinyal itu muncul, jangan
+   diantisipasi lebih dulu.
+2. **Pilihan berikutnya — salah satu dari Phase 6 atau Phase 7**, sesuai kebutuhan bisnis
+   mendesak (sama seperti rekomendasi sebelumnya, belum berubah):
+   - **Phase 6 (Work Order formal)** kalau organisasi butuh approval workflow/assignment
+     sungguhan di dalam aplikasi — modul "Work Order & Notification" yang sudah ada
+     sekarang baru sebatas import/tracking data ERP (lihat catatan di bagian A), **bukan**
+     pengganti Phase 6.
+   - **Phase 7 (Reliability Analytics lanjutan)** kalau fokusnya pelaporan ke manajemen
+     (export PDF/Excel terjadwal) atau kalibrasi compliance.
+3. **Phase 8 dan 9 tetap ditunda** sampai ada sinyal nyata kebutuhannya (multi-plant, atau
+   volume data/user mulai terasa lambat) — konsisten dengan prinsip arsitektur sejak awal:
+   jangan over-engineering untuk kebutuhan yang belum terjadi.
 
 ---
 

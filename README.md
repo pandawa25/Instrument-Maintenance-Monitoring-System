@@ -2,7 +2,14 @@
 
 Aplikasi web untuk monitoring dan pengelolaan maintenance peralatan instrumentasi pada fasilitas industri (refinery, terminal BBM, depot, plant process, fasilitas energi).
 
-MVP mencakup 3 modul: **Master Area**, **Master Instrument**, **Corrective Maintenance**, plus dashboard ringkas. Desain lengkap (ERD, rationale, wireframe) ada di `docs/`.
+Dimulai sebagai MVP 3 modul (Master Area, Master Instrument, Corrective Maintenance), tapi
+sejak lama sudah melewati tahap itu — kondisi sekarang (20 Nov 2026): **18 modul backend**,
+RBAC 4 role dengan matriks permission dinamis, bulk operations (upload/edit/rollback) di
+beberapa modul master, KPI & Instrument Health Index Dashboard, audit log terpusat,
+structured logging, accessibility audit (WCAG 2.1 AA), dan route-based code splitting.
+Status detail & perbandingan lengkap MVP-vs-sekarang ada di `docs/roadmap.md` (bagian A) —
+dokumen itu yang hidup dan diupdate tiap ada perubahan signifikan; README ini cukup untuk
+menjalankan & memahami struktur repo. Desain awal (ERD, rationale, wireframe) ada di `docs/`.
 
 ## Tech Stack
 
@@ -50,7 +57,7 @@ docker compose -f docker/docker-compose.yml up -d db
 
 ### 3. Migration & Seed
 
-File migration formal ada di `apps/backend/prisma/migrations/` (14 migration, mulai
+File migration formal ada di `apps/backend/prisma/migrations/` (27 migration, mulai
 `20260928000000_init` sampai perubahan terbaru) dan production di-deploy lewat
 `prisma migrate deploy` (lihat `docker/Dockerfile.backend` CMD) — bukan lagi `db push`.
 Untuk setup lokal:
@@ -170,13 +177,21 @@ chore: update dependency
 - [x] Refresh Token & Session Hardening (Phase 2) — access token 15m, refresh token opaque via httpOnly cookie dengan rotation + reuse detection, login history
 - [x] Automated Testing Baseline (Phase 2) — Jest unit test untuk logika kritis (auth, RBAC, stock ledger), dijalankan otomatis di CI
 - [x] Audit Log Terpusat (Phase 2) — jejak siapa/apa/kapan untuk semua mutasi create/update/delete di seluruh modul CRUD
-- [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance
+- [x] Referensi Notifikasi/Work Order ERP & Multi-Technician (Phase 3a) — field referensi manual dari ERP di Corrective Maintenance & PM Period Execution, plus technician tambahan di Corrective Maintenance (lihat juga baris Work Order & Notification di bawah — modul impor/tracking terpisah yang dibangun setelah fitur ini)
 - [x] KPI Dashboard (Phase 3b) — MTTR, MTBF, PM Compliance Rate: overall, per Area, per Instrument, dengan filter rentang bulan
 - [x] Instrument Health Index (Phase 3c) — skor komposit 0-100 per instrument dari MTTR/MTBF/failure frequency (percentile relatif antar instrument) + penyesuaian criticality
 - [x] UI/UX Refresh — Foundation (Phase 4a) — design token CSS-variable + dark mode, sidebar collapsible, avatar dropdown menu, toast notification, redesign halaman Login
 - [x] UI/UX Refresh — Rollout ke seluruh modul (Phase 4b) — PageHeader/EmptyState/LoadingState konsisten + toast notification di semua form, diterapkan ke 9 modul (Area, Equipment, Instrument Name, Vendor, PM Activity Type, Spare Part, Corrective Maintenance, PM Programs, User Management)
 - [x] History Maintenance — riwayat kegiatan maintenance (corrective + preventive) beserta pemakaian material per equipment; dicari lewat tag number. Memakai hak akses Corrective Maintenance (view)
-- [ ] Deployment ke Railway (production — trial deploy sudah berjalan end-to-end)
+- [x] Deployment ke Railway (production — berjalan end-to-end)
+- [x] RBAC 4 role (Admin/Teknisi/View/Vendor) — matriks permission dinamis per modul, diatur Admin lewat `/settings/roles` tanpa deploy ulang; menutup gap endpoint GET yang sebelumnya tidak terproteksi (detail: `docs/roadmap.md` Risk #17)
+- [x] Bulk Upload/Upsert, Bulk Edit, & Rollback Equipment — preview→commit, snapshot untuk rollback Admin-only (Risk #18)
+- [x] Work Order & Notification — import & tracking data Notification/WO yang **sudah diterbitkan di ERP eksternal** (Excel, matching otomatis ke Equipment); **bukan** sistem Work Order internal dengan approval workflow (itu masih Phase 6, belum dikerjakan — lihat `docs/roadmap.md`)
+- [x] ESLint + Prettier — konfigurasi aktif di kedua app + CI (sebelumnya dideklarasikan di `package.json` tapi tidak pernah benar-benar jalan, Risk #22)
+- [x] Structured logging (Pino) — JSON di production, pretty-print di dev, redaksi header sensitif, request-id correlation (Risk #10)
+- [x] Accessibility audit (WCAG 2.1 AA) — kontras warna StatusBadge/tombol terukur matematis (bukan visual), keyboard focus baris tabel, touch-target 44×44px (Risk #24)
+- [x] Bulk-actions tabel master — checkbox pilih banyak baris, hapus/ubah status massal di Area/Vendor/Instrument Name/PM Activity Type (Risk #25)
+- [x] Route-based code splitting — bundle awal turun 1,306 KB → 484 KB (gzip -56%), tiap halaman jadi chunk terpisah (Risk #26)
 
 ### Refresh Token & Session Hardening
 
@@ -221,6 +236,7 @@ chore: update dependency
 
 ### Referensi Notifikasi/Work Order ERP & Multi-Technician
 
+- **Catatan (update)**: fitur di bagian ini adalah implementasi awal (Phase 3a) berupa field referensi free-text di CM/PM Execution, dan **masih berlaku** — tidak digantikan. Setelahnya dibangun modul terpisah **Work Order & Notification** (`apps/backend/src/modules/work-orders`) yang mengimpor & melacak data Notification/WO dari Excel ekspor ERP secara otomatis (matching ke Equipment, update remarks/status). Kedua hal ini melengkapi satu sama lain: field di bawah tetap untuk pencatatan manual per-record di CM/PM Execution, sedangkan modul Work Order untuk tracking massal dari ekspor ERP. Baik field manual maupun modul impor ini **sama-sama bukan** sistem Work Order internal dengan approval workflow (Draft→Submitted→Approved→Closed) — itu rencana Phase 6 yang belum dikerjakan, lihat `docs/roadmap.md`.
 - **Keputusan desain (penting)**: ini **bukan** sistem Work Order internal (tidak ada entity `WorkOrder`, tidak ada workflow approval/assignment di dalam aplikasi). Work Order di lapangan diterbitkan dari sistem ERP eksternal (mis. SAP PM, dengan alur Notification → Work Order) — aplikasi ini hanya menyediakan field referensi yang **diisi manual** setelah Notifikasi/WO diterbitkan di ERP, sebagai jejak dokumentasi.
 - Field baru di **Corrective Maintenance**: `notificationNumber`, `notificationDate`, `notificationStatus`, `workOrderNumber`, `workOrderDate`, `workOrderStatus` — semua opsional & free-text (bukan enum/dropdown), karena vocabulary status ERP bervariasi antar implementasi dan Notifikasi/WO mungkin belum ada saat CM pertama kali dicatat.
 - Field baru di **PM Period Execution**: `workOrderNumber`, `workOrderDate`, `workOrderStatus` saja (tidak ada Notification — PM terjadwal, bukan by-exception seperti CM).
