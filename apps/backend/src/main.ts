@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from 'nestjs-pino';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -12,7 +13,12 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // bufferLogs: true — tahan semua log yang terjadi SEBELUM app.useLogger()
+  // di bawah (termasuk log startup modul, dan Logger.warn() di
+  // config/app.config.ts) supaya ikut terformat lewat Pino, bukan hilang
+  // atau jatuh ke console default Nest (lihat Risk #10).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
   const config = app.get(ConfigService);
 
   // Tanpa URI versioning untuk MVP — semua route ada langsung di /api/*
@@ -68,7 +74,7 @@ async function bootstrap() {
 
   const port = config.get<number>('port') ?? 3000;
   await app.listen(port);
-  console.log(`IMMS backend running on :${port} — Swagger at /api/docs`);
+  app.get(Logger).log(`IMMS backend running on :${port} — Swagger at /api/docs`, 'Bootstrap');
 }
 
 bootstrap();

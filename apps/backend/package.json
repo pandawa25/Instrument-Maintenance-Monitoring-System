@@ -62,8 +62,10 @@
     "cookie-parser": "^1.4.7",
     "decimal.js": "^10.4.3",
     "exceljs": "^4.4.0",
+    "nestjs-pino": "^4.6.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pino-http": "^10.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -84,6 +86,7 @@
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.5.2",
+    "pino-pretty": "^11.3.0",
     "prettier": "^3.10.1",
     "prisma": "^5.20.0",
     "supertest": "^7.3.0",

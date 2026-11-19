@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { appConfig } from './config/app.config';
+import { buildPinoHttpOptions } from './config/logger.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AreasModule } from './modules/areas/areas.module';
@@ -26,6 +28,20 @@ import { WorkOrdersModule } from './modules/work-orders/work-orders.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
+    // Structured logging (Risk #10, docs/roadmap.md) — menggantikan Nest
+    // Logger bawaan (console polos, tidak bisa di-query) dengan Pino. Semua
+    // `new Logger(context)`/`this.logger.*` yang sudah ada di codebase
+    // (global-exception.filter, audit-log.interceptor, bulk-upload services)
+    // TIDAK perlu diubah — begitu main.ts memanggil `app.useLogger()`, Nest
+    // merutekan seluruh log internal lewat Pino secara transparan. Dipasang
+    // lewat forRootAsync (bukan forRoot) supaya baca NODE_ENV dari
+    // ConfigService yang sama dengan modul lain, bukan `process.env` langsung.
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        pinoHttp: buildPinoHttpOptions(config.get<string>('nodeEnv') ?? 'development'),
+      }),
+    }),
     // Rate limit global default — proteksi dasar di semua endpoint. Endpoint
     // login punya limit lebih ketat sendiri lewat @Throttle() di AuthController
     // (lihat catatan di sana) karena brute-force password jauh lebih murah

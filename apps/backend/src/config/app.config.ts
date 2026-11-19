@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { parseCorsOrigins } from './cors.util';
 
 const MIN_JWT_SECRET_LENGTH = 32;
@@ -22,9 +23,14 @@ function resolveJwtSecret(): string {
     );
   }
 
-  console.warn(
-    `[app.config] PERINGATAN: JWT_SECRET tidak di-set atau kurang dari ${MIN_JWT_SECRET_LENGTH} karakter — ` +
+  // Nest's static Logger — bukan console.warn — supaya ikut ter-buffer
+  // (bootstrap() pakai bufferLogs:true) dan muncul sebagai log JSON
+  // terstruktur lewat Pino begitu app.useLogger() dipanggil, sama seperti
+  // log lain, bukan baris polos yang terpisah dari log aggregator.
+  Logger.warn(
+    `JWT_SECRET tidak di-set atau kurang dari ${MIN_JWT_SECRET_LENGTH} karakter — ` +
       'memakai secret development bawaan. JANGAN deploy kondisi ini ke production.',
+    'AppConfig',
   );
   return 'dev_secret_change_me__please_set_JWT_SECRET_env_var';
 }
