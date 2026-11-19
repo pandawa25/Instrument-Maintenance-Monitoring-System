@@ -1,39 +1,47 @@
 import { cn } from '@/lib/utils';
 
+// Warna TEKS badge pakai token *-badge-text (bukan text-success/text-warning/dst
+// langsung) — lihat catatan panjang di index.css. Ringkasnya: warna teks di sini
+// diukur kontrasnya terhadap tint badge-nya sendiri (bg-*/10, nyaris putih di mode
+// terang), bukan terhadap surface/background biasa seperti pemakaian warna yang
+// sama di tempat lain (ikon, dot, border) — jadi butuh lightness lebih gelap
+// (mode terang) supaya lolos WCAG AA 4.5:1 (Risk #24, docs/roadmap.md). Background
+// tint (bg-*/10) & border (border-*/30) TETAP pakai token asli — tidak ada masalah
+// kontras di situ (bukan teks).
 const STATUS_STYLES: Record<string, string> = {
-  ACTIVE: 'bg-success/10 text-success border-success/30',
+  ACTIVE: 'bg-success/10 text-success-badge-text border-success/30',
   INACTIVE: 'bg-text-muted/10 text-text-muted border-text-muted/30',
-  STANDBY: 'bg-warning/10 text-warning border-warning/30',
-  OUT_OF_SERVICE: 'bg-danger/10 text-danger border-danger/30',
-  HIGH: 'bg-danger/10 text-danger border-danger/30',
-  MEDIUM: 'bg-warning/10 text-warning border-warning/30',
-  LOW: 'bg-success/10 text-success border-success/30',
-  OPEN: 'bg-danger/10 text-danger border-danger/30',
-  IN_PROGRESS: 'bg-secondary/10 text-secondary border-secondary/30',
-  WAITING_MATERIAL: 'bg-warning/10 text-warning border-warning/30',
-  COMPLETED: 'bg-success/10 text-success border-success/30',
+  STANDBY: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  OUT_OF_SERVICE: 'bg-danger/10 text-danger-badge-text border-danger/30',
+  HIGH: 'bg-danger/10 text-danger-badge-text border-danger/30',
+  MEDIUM: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  LOW: 'bg-success/10 text-success-badge-text border-success/30',
+  OPEN: 'bg-danger/10 text-danger-badge-text border-danger/30',
+  IN_PROGRESS: 'bg-secondary/10 text-secondary-badge-text border-secondary/30',
+  WAITING_MATERIAL: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  COMPLETED: 'bg-success/10 text-success-badge-text border-success/30',
   CANCELLED: 'bg-text-muted/10 text-text-muted border-text-muted/30',
-  SCHEDULED: 'bg-secondary/10 text-secondary border-secondary/30',
-  OVERDUE: 'bg-danger/10 text-danger border-danger/30',
+  SCHEDULED: 'bg-secondary/10 text-secondary-badge-text border-secondary/30',
+  OVERDUE: 'bg-danger/10 text-danger-badge-text border-danger/30',
   PENDING: 'bg-text-muted/10 text-text-muted border-text-muted/30',
-  OK: 'bg-success/10 text-success border-success/30',
-  NOT_OK: 'bg-danger/10 text-danger border-danger/30',
+  OK: 'bg-success/10 text-success-badge-text border-success/30',
+  NOT_OK: 'bg-danger/10 text-danger-badge-text border-danger/30',
   NA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
-  MAINTENANCE_USAGE: 'bg-danger/10 text-danger border-danger/30',
-  MAINTENANCE_RETURN: 'bg-success/10 text-success border-success/30',
-  RESTOCK: 'bg-success/10 text-success border-success/30',
-  STOCK_OUT: 'bg-danger/10 text-danger border-danger/30',
-  ADJUSTMENT: 'bg-warning/10 text-warning border-warning/30',
-  GOOD: 'bg-success/10 text-success border-success/30',
-  FAIR: 'bg-secondary/10 text-secondary border-secondary/30',
-  POOR: 'bg-warning/10 text-warning border-warning/30',
-  CRITICAL: 'bg-danger/10 text-danger border-danger/30',
+  MAINTENANCE_USAGE: 'bg-danger/10 text-danger-badge-text border-danger/30',
+  MAINTENANCE_RETURN: 'bg-success/10 text-success-badge-text border-success/30',
+  RESTOCK: 'bg-success/10 text-success-badge-text border-success/30',
+  STOCK_OUT: 'bg-danger/10 text-danger-badge-text border-danger/30',
+  ADJUSTMENT: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  GOOD: 'bg-success/10 text-success-badge-text border-success/30',
+  FAIR: 'bg-secondary/10 text-secondary-badge-text border-secondary/30',
+  POOR: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  CRITICAL: 'bg-danger/10 text-danger-badge-text border-danger/30',
   INSUFFICIENT_DATA: 'bg-text-muted/10 text-text-muted border-text-muted/30',
   // WorkOrderLifecycleStage (modul Notification & Work Order) — diturunkan dari System Status ERP.
   CREATED: 'bg-text-muted/10 text-text-muted border-text-muted/30',
-  RELEASED: 'bg-secondary/10 text-secondary border-secondary/30',
-  TECHNICALLY_COMPLETED: 'bg-warning/10 text-warning border-warning/30',
-  CLOSED: 'bg-success/10 text-success border-success/30',
+  RELEASED: 'bg-secondary/10 text-secondary-badge-text border-secondary/30',
+  TECHNICALLY_COMPLETED: 'bg-warning/10 text-warning-badge-text border-warning/30',
+  CLOSED: 'bg-success/10 text-success-badge-text border-success/30',
 };
 
 // Warna dot sama dengan warna teks badge-nya — dipetakan dari STATUS_STYLES (bukan

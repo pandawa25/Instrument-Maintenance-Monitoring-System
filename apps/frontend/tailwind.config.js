@@ -13,11 +13,25 @@ export default {
           DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
           dim: 'hsl(var(--primary-dim) / <alpha-value>)',
           tint: 'hsl(var(--primary-tint) / <alpha-value>)',
+          // Background tombol solid (bg-primary-btn, teks putih) — token terpisah
+          // dari primary/primary-dim di atas, lihat catatan panjang di index.css.
+          btn: 'hsl(var(--primary-btn) / <alpha-value>)',
+          'btn-dim': 'hsl(var(--primary-btn-dim) / <alpha-value>)',
         },
         secondary: 'hsl(var(--secondary) / <alpha-value>)',
         success: 'hsl(var(--success) / <alpha-value>)',
         warning: 'hsl(var(--warning) / <alpha-value>)',
-        danger: 'hsl(var(--danger) / <alpha-value>)',
+        danger: {
+          DEFAULT: 'hsl(var(--danger) / <alpha-value>)',
+          btn: 'hsl(var(--danger-btn) / <alpha-value>)',
+        },
+        // Teks di dalam StatusBadge — token terpisah dari warna di atas, lihat
+        // catatan panjang di index.css (kontras diukur terhadap tint badge, bukan
+        // surface/background biasa).
+        'warning-badge-text': 'hsl(var(--warning-badge-text) / <alpha-value>)',
+        'success-badge-text': 'hsl(var(--success-badge-text) / <alpha-value>)',
+        'danger-badge-text': 'hsl(var(--danger-badge-text) / <alpha-value>)',
+        'secondary-badge-text': 'hsl(var(--secondary-badge-text) / <alpha-value>)',
         border: 'hsl(var(--border) / <alpha-value>)',
         ring: 'hsl(var(--ring) / <alpha-value>)',
         surface: 'hsl(var(--surface) / <alpha-value>)',

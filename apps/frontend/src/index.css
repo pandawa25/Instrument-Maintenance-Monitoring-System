@@ -29,6 +29,35 @@
     /* Zebra tabel: baris genap biru sangat muda, ganjil putih (surface). Hover sedikit lebih pekat. */
     --row-alt: 208 100% 95.5%;
     --row-hover: 208 85% 90%;
+
+    /* Teks badge status (StatusBadge) — SENGAJA token terpisah dari --warning/--success/
+       --danger/--secondary di atas, bukan alias. Token di atas dipakai juga sebagai
+       warna ikon/dot/border di banyak tempat lain yang kontrasnya diukur terhadap
+       surface/background biasa (sudah bagus). Teks badge diukur terhadap tint badge
+       sendiri (mis. bg-warning/10) yang nyaris putih — pada lightness aslinya 4 dari 5
+       warna gagal WCAG AA 4.5:1 (warning 1.98:1, secondary 2.26:1, success 3.0:1,
+       danger 4.11:1 — diukur manual, lihat docs/roadmap.md Risk #24). Hue & saturasi
+       sama, hanya lightness diturunkan (mode terang) supaya warna lain yang memang
+       sudah lolos kontras di tempat lain tidak ikut berubah. Semua nilai di bawah
+       diverifikasi >=4.5:1 terhadap tint badge-nya sendiri (margin ke 4.72–5.21:1).
+       Mode gelap: warning/success/secondary SUDAH lolos pakai token asli (tidak
+       diubah); hanya danger yang gagal (3.88:1) sehingga dinaikkan lightness-nya. */
+    --warning-badge-text: 38 92% 30%;
+    --success-badge-text: 142 76% 26%;
+    --danger-badge-text: 0 72% 45%;
+    --secondary-badge-text: 196 100% 30%;
+
+    /* Background tombol solid (variant default/danger di button.tsx) dengan teks putih
+       di atasnya — token TERPISAH dari --primary/--danger karena 2 token itu juga
+       dipakai sebagai warna teks (link, ikon aktif) di atas surface/background biasa,
+       yang butuh lightness TINGGI untuk kontras di mode gelap. Kalau 1 token dipakai
+       untuk 2 kebutuhan yang arahnya berlawanan (teks di atas gelap butuh terang,
+       background solid dengan teks putih di atasnya butuh gelap), salah satu pasti
+       gagal kontras — lihat Risk #24. Mode terang: sama dengan --primary/--danger
+       (sudah lolos 6.66:1 / 4.80:1, tidak perlu token beda). */
+    --primary-btn: 208 100% 34%;
+    --primary-btn-dim: 208 88% 28%;
+    --danger-btn: 0 72% 51%;
   }
 
   .dark {
@@ -53,6 +82,17 @@
 
     --row-alt: 210 30% 19%;
     --row-hover: 208 38% 25%;
+
+    /* Lihat catatan panjang di :root — warning/success/secondary SUDAH lolos kontras
+       di mode gelap pakai token asli, cuma danger yang gagal (3.88:1) jadi dinaikkan. */
+    --warning-badge-text: 38 92% 58%;
+    --success-badge-text: 142 55% 45%;
+    --danger-badge-text: 0 72% 68%;
+    --secondary-badge-text: 196 90% 60%;
+
+    --primary-btn: 208 90% 44%;
+    --primary-btn-dim: 208 90% 34%;
+    --danger-btn: 0 72% 53%;
   }
 
   html,
@@ -112,5 +152,11 @@
   }
   .data-row-click {
     cursor: pointer;
+  }
+  /* Baris fokus lewat keyboard (Tab) — tanpa ini, tabIndex=0 di dataRowProps()
+     cuma bisa di-Tab tapi tidak kelihatan sedang fokus di mana (Risk #24). */
+  .data-row-click:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: -2px;
   }
 }
