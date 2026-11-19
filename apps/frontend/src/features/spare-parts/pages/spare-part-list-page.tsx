@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { PackageSearch, Plus, Upload } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -16,8 +15,8 @@ import { StockMovementDialog } from '../components/stock-movement-dialog';
 import { SparePartBulkUploadDialog } from '../components/spare-part-bulk-upload-dialog';
 import { useAuthStore, usePermission } from '@/store/auth.store';
 import type { SparePart, SparePartQueryParams } from '../types/spare-part.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 
 const DEFAULT_PARAMS: SparePartQueryParams = { page: 1, limit: 20, search: '', status: '' };
 
@@ -28,36 +27,18 @@ export function SparePartListPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === 'Admin');
 
   const [params, setParams] = useQueryParamsState<SparePartQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
+  const dialog = useCrudDialogState<SparePart>();
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<SparePart | null>(null);
-  const [viewingItem, setViewingItem] = useState<SparePart | null>(null);
-  const [deletingItem, setDeletingItem] = useState<SparePart | null>(null);
   const [stockItem, setStockItem] = useState<SparePart | null>(null);
 
   const { data, isLoading } = useSpareParts(params);
   const deleteMutation = useDeleteSparePart();
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: SparePart) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Spare part "${deletingItem.name}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus spare part / material'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<SparePart>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `Spare part "${item.name}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus spare part / material',
+  });
 
   return (
     <div className="space-y-4">
@@ -75,7 +56,7 @@ export function SparePartListPage() {
                 </Button>
               )}
               {canCreate && (
-                <Button onClick={openCreate}>
+                <Button onClick={dialog.openCreate}>
                   <Plus className="h-4 w-4" />
                   Tambah Spare Part
                 </Button>
@@ -108,9 +89,9 @@ export function SparePartListPage() {
             items={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onDelete={setDeletingItem}
-            onView={setViewingItem}
+            onView={dialog.openView}
             onStockMovement={setStockItem}
           />
         </div>
@@ -120,9 +101,9 @@ export function SparePartListPage() {
 
       {isAdmin && <SparePartBulkUploadDialog open={bulkOpen} onOpenChange={setBulkOpen} />}
 
-      <SparePartFormDialog open={formOpen} onOpenChange={setFormOpen} sparePart={editingItem} />
+      <SparePartFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} sparePart={dialog.editingItem} />
 
-      <SparePartDetailDialog open={Boolean(viewingItem)} onOpenChange={(open) => !open && setViewingItem(null)} sparePart={viewingItem} />
+      <SparePartDetailDialog open={Boolean(dialog.viewingItem)} onOpenChange={(open) => !open && dialog.closeView()} sparePart={dialog.viewingItem} />
 
       <StockMovementDialog
         open={Boolean(stockItem)}

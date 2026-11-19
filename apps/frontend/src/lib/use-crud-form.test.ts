@@ -167,6 +167,47 @@ describe('useCrudForm', () => {
     expect(createMutation.mutateAsync).toHaveBeenCalledWith({ name: 'default' });
   });
 
+  it('omitOnUpdate menghapus field dari payload HANYA saat update, bukan saat create', async () => {
+    interface UserForm {
+      name: string;
+      password: string;
+    }
+    const entity: Entity = { id: '1', name: 'Budi' };
+    const createMutation = makeMutation();
+    const updateMutation = makeMutation();
+
+    const { result, rerender } = renderHook(
+      ({ entity }) =>
+        useCrudForm<Entity, UserForm>({
+          open: true,
+          entity,
+          emptyForm: { name: '', password: '' },
+          mapToForm: (e) => ({ name: e.name, password: '' }),
+          createMutation,
+          updateMutation,
+          getId: (e) => e.id,
+          onSuccess: vi.fn(),
+          successMessage: { create: 'dibuat', update: 'diupdate' },
+          omitOnUpdate: ['password'],
+        }),
+      { initialProps: { entity: null as Entity | null } },
+    );
+
+    // Mode create: password tetap terkirim.
+    act(() => result.current.setForm({ name: 'Budi', password: 'rahasia' }));
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault: vi.fn() } as any);
+    });
+    expect(createMutation.mutateAsync).toHaveBeenCalledWith({ name: 'Budi', password: 'rahasia' });
+
+    // Mode edit: password TIDAK ikut dikirim ke update.
+    rerender({ entity });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault: vi.fn() } as any);
+    });
+    expect(updateMutation.mutateAsync).toHaveBeenCalledWith({ id: '1', payload: { name: 'Budi' } });
+  });
+
   it('isSaving true kalau salah satu mutation isPending', () => {
     const { result } = renderHook(() =>
       useCrudForm<Entity, FormValues>({

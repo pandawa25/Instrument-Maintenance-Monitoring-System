@@ -25,8 +25,8 @@ import { MaintenanceStatusTabs } from '../components/maintenance-status-tabs';
 import { usePermission } from '@/store/auth.store';
 import { toggleSort } from '@/components/shared/sortable-th';
 import type { Maintenance, MaintenanceQueryParams, MaintenanceSortableField } from '../types/maintenance.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDelete } from '@/lib/use-crud-dialog-state';
 import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: MaintenanceQueryParams = {
@@ -54,7 +54,6 @@ export function MaintenanceListPage() {
   // Dialog ini sekarang cuma dipakai untuk "Buat e-SPK" (create) — View & Edit sudah
   // pindah ke halaman penuh MaintenanceDetailPage (/maintenance/:id).
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<Maintenance | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading } = useMaintenanceList(params);
@@ -62,17 +61,12 @@ export function MaintenanceListPage() {
   const { data: statusCounts } = useMaintenanceStatusCounts(params);
   const { data: areas } = useAreasLookup();
   const deleteMutation = useDeleteMaintenance();
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Data maintenance "${deletingItem.spkNumber ?? deletingItem.equipment.tagNumber}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus data maintenance'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Maintenance>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `Data maintenance "${item.spkNumber ?? item.equipment.tagNumber}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus data maintenance',
+  });
 
   async function handleExport() {
     setIsExporting(true);

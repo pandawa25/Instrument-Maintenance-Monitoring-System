@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Plus, Users as UsersIcon } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -15,7 +14,7 @@ import { UserFormDialog } from '../components/user-form-dialog';
 import { ChangePasswordDialog } from '../components/change-password-dialog';
 import { useAuthStore } from '@/store/auth.store';
 import type { ManagedUser, UserQueryParams } from '../types/user.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 
 const DEFAULT_PARAMS: UserQueryParams = {
   page: 1,
@@ -29,35 +28,18 @@ export function UserManagementPage() {
   const currentUserId = useAuthStore((s) => s.user?.id);
 
   const [params, setParams] = useState<UserQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const dialog = useCrudDialogState<ManagedUser>();
   const [passwordUser, setPasswordUser] = useState<ManagedUser | null>(null);
-  const [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null);
 
   const { data, isLoading } = useUsersList(params);
   const { data: roles } = useRolesLookup();
   const deleteMutation = useDeleteUser();
-
-  function openCreate() {
-    setEditingUser(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(user: ManagedUser) {
-    setEditingUser(user);
-    setFormOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!deletingUser) return;
-    try {
-      await deleteMutation.mutateAsync(deletingUser.id);
-      toast.success(`User "${deletingUser.fullName}" berhasil dihapus`);
-      setDeletingUser(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus user'));
-    }
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<ManagedUser>({
+    deleteMutation,
+    getId: (user) => user.id,
+    successMessage: (user) => `User "${user.fullName}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus user',
+  });
 
   return (
     <div className="space-y-4">
@@ -66,7 +48,7 @@ export function UserManagementPage() {
         title="User Management"
         description="Kelola akun user dan role akses ke sistem."
         action={
-          <Button onClick={openCreate}>
+          <Button onClick={dialog.openCreate}>
             <Plus className="h-4 w-4" />
             Tambah User
           </Button>
@@ -108,9 +90,9 @@ export function UserManagementPage() {
             users={data?.data ?? []}
             isLoading={isLoading}
             currentUserId={currentUserId}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onChangePassword={setPasswordUser}
-            onDelete={setDeletingUser}
+            onDelete={setDeletingItem}
           />
         </div>
 
@@ -118,19 +100,19 @@ export function UserManagementPage() {
       </Card>
 
       <UserFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        user={editingUser}
-        isSelf={Boolean(editingUser && editingUser.id === currentUserId)}
+        open={dialog.formOpen}
+        onOpenChange={dialog.setFormOpen}
+        user={dialog.editingItem}
+        isSelf={Boolean(dialog.editingItem && dialog.editingItem.id === currentUserId)}
       />
 
       <ChangePasswordDialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && setPasswordUser(null)} user={passwordUser} />
 
       <ConfirmDialog
-        open={Boolean(deletingUser)}
-        onOpenChange={(open) => !open && setDeletingUser(null)}
+        open={Boolean(deletingItem)}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Hapus User"
-        description={`User "${deletingUser?.fullName}" akan dihapus dan tidak bisa login lagi.`}
+        description={`User "${deletingItem?.fullName}" akan dihapus dan tidak bisa login lagi.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
       />

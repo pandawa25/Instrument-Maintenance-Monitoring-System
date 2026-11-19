@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarClock, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -15,8 +13,8 @@ import { PmProgramTable } from '../components/pm-program-table';
 import { PmProgramFormDialog } from '../components/pm-program-form-dialog';
 import { usePermission } from '@/store/auth.store';
 import type { PmProgramListItem, PmProgramQueryParams } from '../types/pm-program.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDialogState, useCrudDelete } from '@/lib/use-crud-dialog-state';
 import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: PmProgramQueryParams = { page: 1, limit: 20, search: '', status: '', vendorId: '' };
@@ -30,37 +28,22 @@ export function PmProgramListPage() {
   const canEdit = usePermission('PM_PROGRAM', 'edit');
 
   const [params, setParams] = useQueryParamsState<PmProgramQueryParams>(DEFAULT_PARAMS);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingItem, setDeletingItem] = useState<PmProgramListItem | null>(null);
+  // PmProgramFormDialog cuma butuh ID (fetch detail sendiri), jadi editingItem di sini
+  // dipakai sekadar untuk tahu ID yang dipilih -- lihat dialog.editingItem?.id di bawah.
+  const dialog = useCrudDialogState<PmProgramListItem>();
 
   const { data, isLoading } = usePmProgramList(params);
   const { data: vendors } = useVendorsLookup();
   const deleteMutation = useDeletePmProgram();
-
-  function openCreate() {
-    setEditingId(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: PmProgramListItem) {
-    setEditingId(item.id);
-    setFormOpen(true);
-  }
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<PmProgramListItem>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `PM Program "${item.name}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus PM Program',
+  });
 
   function openDetail(item: PmProgramListItem) {
     navigate(`/pm-programs/${item.id}`, { state: withBackState(location) });
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`PM Program "${deletingItem.name}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus PM Program'));
-    }
   }
 
   return (
@@ -71,7 +54,7 @@ export function PmProgramListPage() {
         description="Kelola program PM (judul, periode, vendor, dan equipment yang dicakup)."
         action={
           canCreate && (
-            <Button onClick={openCreate}>
+            <Button onClick={dialog.openCreate}>
               <Plus className="h-4 w-4" />
               Tambah PM Program
             </Button>
@@ -114,7 +97,7 @@ export function PmProgramListPage() {
             programs={data?.data ?? []}
             isLoading={isLoading}
             canEdit={canEdit}
-            onEdit={openEdit}
+            onEdit={dialog.openEdit}
             onDelete={setDeletingItem}
             onView={openDetail}
           />
@@ -123,7 +106,7 @@ export function PmProgramListPage() {
         {data?.meta && <Pagination meta={data.meta} onPageChange={(page) => setParams((p) => ({ ...p, page }))} />}
       </Card>
 
-      <PmProgramFormDialog open={formOpen} onOpenChange={setFormOpen} programId={editingId} />
+      <PmProgramFormDialog open={dialog.formOpen} onOpenChange={dialog.setFormOpen} programId={dialog.editingItem?.id ?? null} />
 
       <ConfirmDialog
         open={Boolean(deletingItem)}

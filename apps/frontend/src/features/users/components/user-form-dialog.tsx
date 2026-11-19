@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +6,7 @@ import { Select } from '@/components/ui/select';
 import { useCreateUser, useUpdateUser } from '../hooks/use-users';
 import { useRolesLookup } from '../hooks/use-roles-lookup';
 import type { ManagedUser } from '../types/user.types';
-import { getErrorMessage } from '@/lib/axios';
+import { useCrudForm } from '@/lib/use-crud-form';
 
 interface FormState {
   fullName: string;
@@ -34,58 +32,23 @@ interface Props {
 }
 
 export function UserFormDialog({ open, onOpenChange, user, isSelf }: Props) {
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const createMutation = useCreateUser();
-  const updateMutation = useUpdateUser();
   const { data: roles } = useRolesLookup();
-  const isEdit = Boolean(user);
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setForm(
-        user
-          ? {
-              fullName: user.fullName,
-              email: user.email,
-              password: '',
-              roleId: user.role.id,
-              isActive: user.isActive,
-            }
-          : EMPTY_FORM,
-      );
-    }
-  }, [open, user]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      if (isEdit && user) {
-        await updateMutation.mutateAsync({
-          id: user.id,
-          payload: {
-            fullName: form.fullName,
-            email: form.email,
-            roleId: form.roleId,
-            isActive: form.isActive,
-          },
-        });
-        toast.success('User berhasil diperbarui');
-      } else {
-        await createMutation.mutateAsync({
-          fullName: form.fullName,
-          email: form.email,
-          password: form.password,
-          roleId: form.roleId,
-          isActive: form.isActive,
-        });
-        toast.success('User berhasil ditambahkan');
-      }
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menyimpan user'));
-    }
-  }
+  const { form, setForm, isEdit, isSaving, handleSubmit } = useCrudForm<ManagedUser, FormState>({
+    open,
+    entity: user,
+    emptyForm: EMPTY_FORM,
+    mapToForm: (u) => ({ fullName: u.fullName, email: u.email, password: '', roleId: u.role.id, isActive: u.isActive }),
+    createMutation: useCreateUser(),
+    updateMutation: useUpdateUser(),
+    getId: (u) => u.id,
+    onSuccess: () => onOpenChange(false),
+    successMessage: { create: 'User berhasil ditambahkan', update: 'User berhasil diperbarui' },
+    errorMessage: 'Gagal menyimpan user',
+    // UpdateUserDto sengaja tidak punya field password (ganti password = endpoint terpisah,
+    // lihat ChangePasswordDialog) dan backend pakai whitelist:true — kalau field ini ikut
+    // terkirim saat update, request ditolak 400, bukan diabaikan diam-diam.
+    omitOnUpdate: ['password'],
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

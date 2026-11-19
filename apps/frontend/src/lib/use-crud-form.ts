@@ -27,6 +27,12 @@ interface UseCrudFormOptions<TEntity, TFormValues> {
    * undefined untuk field optional). Default: kirim form apa adanya.
    */
   mapToPayload?: (form: TFormValues) => TFormValues;
+  /**
+   * Field yang ada di form tapi SENGAJA tidak pernah dikirim saat update (misal `password`
+   * di form User — ganti password punya endpoint/DTO sendiri, backend `UpdateUserDto` pakai
+   * `whitelist: true` jadi mengirim field ini di update akan ditolak 400, bukan diabaikan).
+   */
+  omitOnUpdate?: (keyof TFormValues)[];
 }
 
 /**
@@ -50,6 +56,7 @@ export function useCrudForm<TEntity, TFormValues>({
   successMessage,
   errorMessage,
   mapToPayload,
+  omitOnUpdate,
 }: UseCrudFormOptions<TEntity, TFormValues>) {
   const [form, setForm] = useState<TFormValues>(emptyForm);
   const isEdit = Boolean(entity);
@@ -70,7 +77,9 @@ export function useCrudForm<TEntity, TFormValues>({
     try {
       const payload = mapToPayload ? mapToPayload(form) : form;
       if (isEdit && entity) {
-        await updateMutation.mutateAsync({ id: getId(entity), payload });
+        const updatePayload: Partial<TFormValues> = { ...payload };
+        omitOnUpdate?.forEach((key) => delete updatePayload[key]);
+        await updateMutation.mutateAsync({ id: getId(entity), payload: updatePayload });
         toast.success(successMessage.update);
       } else {
         await createMutation.mutateAsync(payload);

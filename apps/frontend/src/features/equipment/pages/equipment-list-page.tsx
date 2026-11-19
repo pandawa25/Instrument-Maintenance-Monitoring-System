@@ -20,8 +20,8 @@ import { EquipmentRollbackDialog } from '../components/equipment-rollback-dialog
 import { EquipmentSummaryCards } from '../components/equipment-summary-cards';
 import { usePermission, useAuthStore } from '@/store/auth.store';
 import type { Equipment, EquipmentQueryParams } from '../types/equipment.types';
-import { getErrorMessage } from '@/lib/axios';
 import { useQueryParamsState } from '@/lib/use-query-params-state';
+import { useCrudDelete } from '@/lib/use-crud-dialog-state';
 import { withBackState } from '@/lib/list-nav-state';
 
 const DEFAULT_PARAMS: EquipmentQueryParams = {
@@ -57,7 +57,6 @@ export function EquipmentListPage() {
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [deletingItem, setDeletingItem] = useState<Equipment | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading } = useEquipmentList(params);
@@ -66,6 +65,12 @@ export function EquipmentListPage() {
   const { data: instrumentNames } = useInstrumentNames();
   const { data: manufacturers } = useManufacturers();
   const deleteMutation = useDeleteEquipment();
+  const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Equipment>({
+    deleteMutation,
+    getId: (item) => item.id,
+    successMessage: (item) => `Equipment "${item.tagNumber}" berhasil dihapus`,
+    errorMessage: 'Gagal menghapus equipment',
+  });
 
   // Pindahkan fokus ke field pertama saat panel "More Filter" dibuka — tanpa ini,
   // fokus keyboard tetap di tombol "More Filter" sehingga user screen reader/keyboard
@@ -108,17 +113,6 @@ export function EquipmentListPage() {
       toast.error('Gagal export data ke Excel');
     } finally {
       setIsExporting(false);
-    }
-  }
-
-  async function confirmDelete() {
-    if (!deletingItem) return;
-    try {
-      await deleteMutation.mutateAsync(deletingItem.id);
-      toast.success(`Equipment "${deletingItem.tagNumber}" berhasil dihapus`);
-      setDeletingItem(null);
-    } catch (err: any) {
-      toast.error(getErrorMessage(err, 'Gagal menghapus equipment'));
     }
   }
 
