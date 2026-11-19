@@ -32,6 +32,20 @@ function buildConfigMock() {
   return { get: jest.fn().mockReturnValue('7d') };
 }
 
+// AuthService.toAuthUser() memanggil PermissionsService.getMyPermissions() sejak
+// Risk #17 (RBAC, 4 Okt 2026) — tanpa mock ini, service dibuat manual (bukan
+// Test.createTestingModule) di bawah akan menerima `undefined` untuk param ke-4
+// dan melempar TypeError saat toAuthUser() dipanggil (lihat Risk #23,
+// docs/roadmap.md). Isi persis permission map tidak relevan untuk test login/
+// refresh di sini — nilai tetap dipakai supaya assertion `result.user` di bawah
+// stabil, bukan untuk menguji logic RBAC itu sendiri (sudah ada test terpisah
+// di permissions.service.spec.ts).
+const FAKE_PERMISSIONS = { AREA: { view: true, create: false, edit: false, delete: false } };
+
+function buildPermissionsServiceMock() {
+  return { getMyPermissions: jest.fn().mockResolvedValue(FAKE_PERMISSIONS) };
+}
+
 const activeUser = {
   id: 'user-1',
   email: 'teknisi@imms.local',
@@ -39,6 +53,7 @@ const activeUser = {
   passwordHash: 'hashed-password',
   isActive: true,
   deletedAt: null,
+  roleId: 'role-1',
   role: { id: 'role-1', name: 'Admin' },
 };
 
@@ -50,7 +65,7 @@ describe('AuthService.login', () => {
 
   beforeEach(() => {
     prisma = buildPrismaMock();
-    service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any);
+    service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any, buildPermissionsServiceMock() as any);
     jest.clearAllMocks();
   });
 
@@ -107,6 +122,8 @@ describe('AuthService.login', () => {
       email: activeUser.email,
       fullName: activeUser.fullName,
       role: 'Admin',
+      roleId: activeUser.roleId,
+      permissions: FAKE_PERMISSIONS,
     });
 
     expect(prisma.loginHistory.create).toHaveBeenCalledWith(
@@ -128,7 +145,7 @@ describe('AuthService.refresh', () => {
 
   beforeEach(() => {
     prisma = buildPrismaMock();
-    service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any);
+    service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any, buildPermissionsServiceMock() as any);
   });
 
   it('menolak kalau tidak ada raw token sama sekali', async () => {
@@ -193,7 +210,7 @@ describe('AuthService.refresh', () => {
 describe('AuthService.logout', () => {
   it('mencabut hanya refresh token yang sedang dipakai (bukan semua sesi)', async () => {
     const prisma = buildPrismaMock();
-    const service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any);
+    const service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any, buildPermissionsServiceMock() as any);
 
     const rawToken = 'token-aktif';
     await service.logout(rawToken);
@@ -206,7 +223,7 @@ describe('AuthService.logout', () => {
 
   it('tidak melakukan apa-apa kalau tidak ada token (mis. sudah logout sebelumnya)', async () => {
     const prisma = buildPrismaMock();
-    const service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any);
+    const service = new AuthService(prisma as any, buildJwtServiceMock() as any, buildConfigMock() as any, buildPermissionsServiceMock() as any);
 
     await service.logout(undefined);
 
