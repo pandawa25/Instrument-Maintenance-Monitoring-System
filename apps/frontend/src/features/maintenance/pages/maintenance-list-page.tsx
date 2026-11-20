@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,19 @@ export function MaintenanceListPage() {
   // pindah ke halaman penuh MaintenanceDetailPage (/maintenance/:id).
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Dukung link "Buat e-SPK" dari TopHeader (/maintenance?quickCreate=1):
+  // buka dialog create lalu bersihkan param-nya dari URL.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('quickCreate') === '1' && canCreate) {
+      setCreateDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('quickCreate');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading } = useMaintenanceList(params);
   const { data: kpiSummary, isLoading: kpiLoading } = useMaintenanceKpiSummary();

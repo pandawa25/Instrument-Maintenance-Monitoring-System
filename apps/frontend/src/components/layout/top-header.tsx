@@ -1,10 +1,13 @@
-import { LogOut, Menu, User } from 'lucide-react';
+import { useEffect } from 'react';
+import { LogOut, Menu, Plus, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { logoutRequest } from '@/features/auth/api/auth.api';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore, usePermission } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { GlobalQuickSearch } from './global-quick-search';
+import { NotificationBell } from './notification-bell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +33,23 @@ export function TopHeader({ title }: { title: string }) {
   const logout = useAuthStore((s) => s.logout);
   const toggleMobileSidebar = useUiStore((s) => s.toggleMobileSidebar);
   const navigate = useNavigate();
+  const canCreateMaintenance = usePermission('CORRECTIVE_MAINTENANCE', 'create');
+
+  // Shortcut keyboard "N" global untuk Buat e-SPK (kecuali saat user sedang
+  // mengetik di field lain, atau sedang menekan modifier key).
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (!isTyping && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'n' && canCreateMaintenance) {
+        e.preventDefault();
+        navigate('/maintenance?quickCreate=1');
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canCreateMaintenance, navigate]);
 
   async function handleLogout() {
     // Cabut refresh token di server dulu (best-effort — logout lokal tetap
@@ -52,7 +72,19 @@ export function TopHeader({ title }: { title: string }) {
         <h1 className="font-display truncate text-base font-bold text-text">{title}</h1>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <GlobalQuickSearch />
+
+      <div className="flex shrink-0 items-center gap-2">
+        {canCreateMaintenance && (
+          <Button size="sm" className="hidden md:inline-flex" onClick={() => navigate('/maintenance?quickCreate=1')}>
+            <Plus className="h-4 w-4" />
+            Buat e-SPK
+            <kbd className="ml-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium">N</kbd>
+          </Button>
+        )}
+
+        <NotificationBell />
+
         <ThemeToggle className="hidden sm:inline-flex" />
 
         <DropdownMenu>
