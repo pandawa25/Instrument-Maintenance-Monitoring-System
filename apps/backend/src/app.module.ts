@@ -24,6 +24,7 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenanceHistoryModule } from './modules/maintenance-history/maintenance-history.module';
 import { WorkOrdersModule } from './modules/work-orders/work-orders.module';
+import { HighlightsModule } from './modules/highlights/highlights.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { WorkOrdersModule } from './modules/work-orders/work-orders.module';
     MaintenanceModule,
     MaintenanceHistoryModule,
     WorkOrdersModule,
+    HighlightsModule,
     VendorsModule,
     PmActivityTypesModule,
     PmProgramsModule,

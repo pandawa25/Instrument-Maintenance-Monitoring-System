@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PermissionModule } from '@prisma/client';
 import { PmPeriodExecutionsService } from './pm-period-executions.service';
 import { UpdatePmPeriodExecutionDto } from './dto/update-pm-period-execution.dto';
+import { ToggleHighlightDto } from '../../common/dto/toggle-highlight.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -32,5 +33,13 @@ export class PmPeriodExecutionsController {
   @ApiOperation({ summary: 'Isi/update hasil eksekusi PM untuk 1 equipment + hasil checklist' })
   update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdatePmPeriodExecutionDto) {
     return this.service.update(id, dto);
+  }
+
+  @Patch(':id/highlight')
+  @RequirePermission(PermissionModule.PM_EXECUTION, 'edit')
+  @AuditLog('PmPeriodExecution')
+  @ApiOperation({ summary: 'Toggle Highlight Pekerjaan — ditolak kalau status sudah Completed' })
+  setHighlighted(@Param('id', ParseUuidPipe) id: string, @Body() dto: ToggleHighlightDto) {
+    return this.service.setHighlighted(id, dto.isHighlighted);
   }
 }

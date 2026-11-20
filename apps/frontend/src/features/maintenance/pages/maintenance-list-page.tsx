@@ -15,7 +15,9 @@ import {
   useDeleteMaintenance,
   useMaintenanceKpiSummary,
   useMaintenanceStatusCounts,
+  useSetMaintenanceHighlighted,
 } from '../hooks/use-maintenance';
+import { getErrorMessage } from '@/lib/axios';
 import { useAreasLookup } from '../hooks/use-maintenance-lookups';
 import { exportMaintenance } from '../api/maintenance.api';
 import { MaintenanceTable } from '../components/maintenance-table';
@@ -61,6 +63,7 @@ export function MaintenanceListPage() {
   const { data: statusCounts } = useMaintenanceStatusCounts(params);
   const { data: areas } = useAreasLookup();
   const deleteMutation = useDeleteMaintenance();
+  const highlightMutation = useSetMaintenanceHighlighted();
   const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Maintenance>({
     deleteMutation,
     getId: (item) => item.id,
@@ -81,6 +84,14 @@ export function MaintenanceListPage() {
 
   function handleSort(field: MaintenanceSortableField) {
     setParams((p) => ({ ...p, ...toggleSort(p, field), page: 1 }));
+  }
+
+  async function handleToggleHighlight(item: Maintenance) {
+    try {
+      await highlightMutation.mutateAsync({ id: item.id, isHighlighted: !item.isHighlighted });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
+    }
   }
 
   return (
@@ -201,6 +212,8 @@ export function MaintenanceListPage() {
             onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location, { mode: 'edit' }) })}
             onDelete={setDeletingItem}
             onView={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location) })}
+            onToggleHighlight={handleToggleHighlight}
+            togglingHighlightId={highlightMutation.isPending ? highlightMutation.variables?.id : undefined}
           />
         </div>
 

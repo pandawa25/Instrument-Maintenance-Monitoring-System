@@ -9,7 +9,10 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
-import { useMaintenanceById } from '../hooks/use-maintenance';
+import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/axios';
+import { useMaintenanceById, useSetMaintenanceHighlighted } from '../hooks/use-maintenance';
 import { MaintenanceForm } from '../components/maintenance-form';
 import { usePermission } from '@/store/auth.store';
 import { failureCategoryLabel, failureModeLabel } from '../utils/failure';
@@ -33,6 +36,16 @@ export function MaintenanceDetailPage() {
   );
 
   const { data: maintenance, isLoading } = useMaintenanceById(id);
+  const highlightMutation = useSetMaintenanceHighlighted();
+
+  async function handleToggleHighlight() {
+    if (!maintenance) return;
+    try {
+      await highlightMutation.mutateAsync({ id: maintenance.id, isHighlighted: !maintenance.isHighlighted });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
+    }
+  }
 
   function backToList() {
     navigate(resolveBackTo(location, '/maintenance'));
@@ -185,6 +198,12 @@ export function MaintenanceDetailPage() {
             <div className="mb-4 flex items-center gap-2">
               <StatusBadge value={maintenance.status} />
               <StatusBadge value={maintenance.priority} />
+              <HighlightToggleButton
+                isHighlighted={maintenance.isHighlighted}
+                onToggle={handleToggleHighlight}
+                canEdit={canEdit}
+                isLoading={highlightMutation.isPending}
+              />
             </div>
             <DetailFieldsGrid fields={fields} />
             <div className="mt-4 border-t border-border/60 pt-4">

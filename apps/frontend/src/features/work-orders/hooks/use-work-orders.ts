@@ -10,6 +10,7 @@ import {
   fetchWorkOrderStageCounts,
   previewWorkOrderImport,
   relinkWorkOrderEquipment,
+  setWorkOrderHighlighted,
   updateWorkOrderRemarks,
 } from '../api/work-orders.api';
 import type { ImportRowSeverity, WorkOrderQueryParams } from '../types/work-order.types';
@@ -83,6 +84,19 @@ export function useUpdateWorkOrderRemarks() {
   return useMutation({
     mutationFn: ({ id, remarks }: { id: string; remarks: string | null }) => updateWorkOrderRemarks(id, remarks),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] }),
+  });
+}
+
+/** Fitur Highlight Pekerjaan. */
+export function useSetWorkOrderHighlighted() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isHighlighted }: { id: string; isHighlighted: boolean }) =>
+      setWorkOrderHighlighted(id, isHighlighted),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [WORK_ORDER_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['highlights'] });
+    },
   });
 }
 

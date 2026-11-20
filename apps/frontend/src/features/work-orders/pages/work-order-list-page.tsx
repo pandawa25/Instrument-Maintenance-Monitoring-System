@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ClipboardList, History, RotateCcw, UploadCloud } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { PageHeader } from '@/components/shared/page-header';
+import { getErrorMessage } from '@/lib/axios';
 import {
   useWorkOrderLastImport,
   useWorkOrderList,
   useWorkOrderOrderTypes,
   useWorkOrderStageCounts,
+  useSetWorkOrderHighlighted,
 } from '../hooks/use-work-orders';
 import { toggleSort } from '@/components/shared/sortable-th';
 import { LifecycleStepper } from '../components/lifecycle-stepper';
@@ -19,7 +22,7 @@ import { WorkOrderTable, type WorkOrderSortableField } from '../components/work-
 import { WorkOrderDetailDialog } from '../components/work-order-detail-dialog';
 import { WorkOrderImportDialog } from '../components/work-order-import-dialog';
 import { usePermission } from '@/store/auth.store';
-import type { WorkOrderLifecycleStage, WorkOrderQueryParams } from '../types/work-order.types';
+import type { WorkOrder, WorkOrderLifecycleStage, WorkOrderQueryParams } from '../types/work-order.types';
 
 // Default sort by Basic Start Date (terbaru dulu) — paling relevan untuk tanggal kerja
 // aktual di ERP, bukan urutan insert ke database. Lihat juga SORTABLE_FIELDS di
@@ -46,6 +49,10 @@ export function WorkOrderListPage() {
   // khusus, supaya Teknisi (yang di seed default sudah dapat CRUD penuh modul ini) juga
   // bisa import, konsisten dengan hak akses yang sebenarnya di server.
   const canImport = usePermission('WORK_ORDER', 'create');
+  // Hak toggle Highlight Pekerjaan disamakan dengan hak edit modul WORK_ORDER (lihat
+  // backend: @RequirePermission(PermissionModule.WORK_ORDER, 'edit') di endpoint
+  // PATCH /work-orders/:id/highlight).
+  const canEditHighlight = usePermission('WORK_ORDER', 'edit');
   // State navigasi opsional dari halaman lain (mis. kartu/panel Dashboard) — pola sama
   // dengan EquipmentDetailPage (location.state?.mode) — supaya klik di Dashboard bisa
   // langsung membawa filter yang relevan ke sini.
@@ -58,12 +65,24 @@ export function WorkOrderListPage() {
     lifecycleStage: navState?.lifecycleStage,
   });
   const [tab, setTab] = useState<'all' | 'unmatched'>(navState?.tab ?? 'all');
-  const [viewingId, setViewingId] = useState<string | null>(null);
+  // Deep-link dari halaman Highlight Pekerjaan: ?open=<id> auto-buka dialog detail WO
+  // tersebut tanpa perlu rute per-id (list ini memang pakai dialog, bukan halaman detail).
+  const openIdFromUrl = new URLSearchParams(location.search).get('open');
+  const [viewingId, setViewingId] = useState<string | null>(openIdFromUrl);
   const [importOpen, setImportOpen] = useState(false);
 
   const effectiveParams: WorkOrderQueryParams = { ...params, unmatchedOnly: tab === 'unmatched' || undefined };
   const { data, isLoading } = useWorkOrderList(effectiveParams);
   const { data: stageCounts } = useWorkOrderStageCounts(effectiveParams);
+  const highlightMutation = useSetWorkOrderHighlighted();
+
+  async function handleToggleHighlight(row: WorkOrder) {
+    try {
+      await highlightMutation.mutateAsync({ id: row.id, isHighlighted: !row.isHighlighted });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
+    }
+  }
 
   function toggleStage(stage: WorkOrderLifecycleStage) {
     setParams((p) => ({ ...p, lifecycleStage: p.lifecycleStage === stage ? undefined : stage, page: 1 }));
@@ -185,6 +204,9 @@ export function WorkOrderListPage() {
             sortBy={params.sortBy}
             sortOrder={params.sortOrder}
             onSort={handleSort}
+            canEditHighlight={canEditHighlight}
+            onToggleHighlight={handleToggleHighlight}
+            togglingHighlightId={highlightMutation.isPending ? highlightMutation.variables?.id : undefined}
           />
         </div>
 

@@ -66,6 +66,11 @@ export async function updateWorkOrderRemarks(id: string, remarks: string | null)
   return data.data;
 }
 
+export async function setWorkOrderHighlighted(id: string, isHighlighted: boolean) {
+  const { data } = await api.patch<{ data: WorkOrder }>(`/work-orders/${id}/highlight`, { isHighlighted });
+  return data.data;
+}
+
 // ---- Import (Admin only di backend) ----
 
 export async function previewWorkOrderImport(file: File) {

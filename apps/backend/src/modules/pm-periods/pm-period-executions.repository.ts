@@ -24,11 +24,18 @@ export class PmPeriodExecutionsRepository {
   async update(id: string, dto: UpdatePmPeriodExecutionDto) {
     const { checklistResults, executionDate, workOrderDate, ...rest } = dto;
 
+    // Fitur Highlight Pekerjaan: begitu status BERUBAH jadi Completed, batalkan highlight
+    // otomatis (bukan issue aktif lagi) — lihat juga catatan di schema.prisma
+    // PmPeriodExecution.isHighlighted. dto.status di sini sudah hasil resolusi
+    // PmPeriodExecutionsService.update() (termasuk auto-complete saat executionDate+result diisi).
+    const willBeDone = dto.status === 'COMPLETED';
+
     return this.prisma.$transaction(async (tx: any) => {
       await tx.pmPeriodExecution.update({
         where: { id },
         data: {
           ...rest,
+          ...(willBeDone ? { isHighlighted: false } : {}),
           executionDate: executionDate ? new Date(executionDate) : undefined,
           workOrderDate: workOrderDate ? new Date(workOrderDate) : undefined,
         },
@@ -51,5 +58,11 @@ export class PmPeriodExecutionsRepository {
         },
       });
     }, UPDATE_EXECUTION_TX_OPTIONS);
+  }
+
+  /** Toggle fitur Highlight Pekerjaan — lihat PmPeriodExecutionsService.setHighlighted() untuk guard-nya. */
+  async setHighlighted(id: string, isHighlighted: boolean) {
+    await this.prisma.pmPeriodExecution.update({ where: { id }, data: { isHighlighted } });
+    return this.findById(id);
   }
 }

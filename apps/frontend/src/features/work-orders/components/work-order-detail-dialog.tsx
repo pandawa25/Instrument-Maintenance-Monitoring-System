@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
-import { useUpdateWorkOrderRemarks, useWorkOrderById } from '../hooks/use-work-orders';
+import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
+import { useSetWorkOrderHighlighted, useUpdateWorkOrderRemarks, useWorkOrderById } from '../hooks/use-work-orders';
 import { usePermission } from '@/store/auth.store';
 import { LinkEquipmentDialog } from './link-equipment-dialog';
 import { getErrorMessage } from '@/lib/axios';
@@ -82,8 +83,18 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
   const canEdit = usePermission('WORK_ORDER', 'edit');
   const [linkOpen, setLinkOpen] = useState(false);
   const { data: wo, isLoading } = useWorkOrderById(workOrderId ?? undefined);
+  const highlightMutation = useSetWorkOrderHighlighted();
 
   if (!workOrderId) return null;
+
+  async function handleToggleHighlight() {
+    if (!wo) return;
+    try {
+      await highlightMutation.mutateAsync({ id: wo.id, isHighlighted: !wo.isHighlighted });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
+    }
+  }
 
   const fields: DetailField[] = wo
     ? [
@@ -129,6 +140,12 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
         headerContent={
           wo && (
             <div className="flex items-center gap-2">
+              <HighlightToggleButton
+                isHighlighted={wo.isHighlighted}
+                onToggle={handleToggleHighlight}
+                canEdit={canEdit}
+                isLoading={highlightMutation.isPending}
+              />
               <StatusBadge value={wo.lifecycleStage} />
               {wo.equipment ? (
                 <span className="inline-flex items-center gap-1 text-xs text-success">

@@ -20,6 +20,7 @@ import { MaintenanceService } from './maintenance.service';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { QueryMaintenanceDto } from './dto/query-maintenance.dto';
+import { ToggleHighlightDto } from '../../common/dto/toggle-highlight.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -104,5 +105,13 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'Soft delete corrective maintenance' })
   remove(@Param('id', ParseUuidPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.maintenanceService.remove(id, user.id);
+  }
+
+  @Patch(':id/highlight')
+  @RequirePermission(PermissionModule.CORRECTIVE_MAINTENANCE, 'edit')
+  @AuditLog('CorrectiveMaintenance')
+  @ApiOperation({ summary: 'Toggle Highlight Pekerjaan — ditolak kalau status sudah Completed/Cancelled' })
+  setHighlighted(@Param('id', ParseUuidPipe) id: string, @Body() dto: ToggleHighlightDto) {
+    return this.maintenanceService.setHighlighted(id, dto.isHighlighted);
   }
 }

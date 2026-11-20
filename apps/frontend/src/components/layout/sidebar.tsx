@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   ChevronsLeft,
   ChevronsRight,
+  Star,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
@@ -58,6 +59,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'DASHBOARD' },
       { to: '/spare-parts/dashboard', label: 'Inventory Dashboard', icon: BarChart3, module: 'SPARE_PART' },
+      // Tanpa `module` = selalu tampil untuk semua user yang login (lihat canSee di bawah)
+      // — HighlightsService sendiri yang memfilter tiap section (CM/PM/WO) sesuai hak
+      // VIEW user ke modul masing-masing, jadi tidak perlu digerbang 1 module di sini.
+      { to: '/highlights', label: 'Highlight Pekerjaan', icon: Star },
     ],
   },
   {

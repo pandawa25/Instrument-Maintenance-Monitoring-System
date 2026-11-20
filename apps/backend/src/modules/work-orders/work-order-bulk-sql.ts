@@ -81,6 +81,13 @@ DO UPDATE SET
   user_status = EXCLUDED.user_status,
   system_status = EXCLUDED.system_status,
   lifecycle_stage = EXCLUDED.lifecycle_stage,
+  -- Fitur Highlight Pekerjaan: begitu WO baru ter-import dengan lifecycle_stage = CLOSED,
+  -- batalkan highlight otomatis (siklus ERP sudah selesai, bukan issue aktif lagi) — lihat
+  -- juga catatan di schema.prisma WorkOrder.isHighlighted. Baris yang BELUM Closed
+  -- mempertahankan nilai is_highlighted lama (w.is_highlighted), termasuk hasil toggle manual
+  -- lewat PATCH :id/highlight — SENGAJA tidak disebut di INSERT column list di atas supaya
+  -- baris baru (belum ada sebelumnya) default false dari skema, bukan dari payload import.
+  is_highlighted = CASE WHEN EXCLUDED.lifecycle_stage = 'CLOSED' THEN false ELSE w.is_highlighted END,
   import_batch_id = EXCLUDED.import_batch_id,
   updated_at = (NOW() AT TIME ZONE 'UTC')
 RETURNING id, (equipment_id IS NULL) AS unmatched

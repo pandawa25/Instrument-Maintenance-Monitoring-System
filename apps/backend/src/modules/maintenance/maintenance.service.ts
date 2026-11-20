@@ -57,6 +57,7 @@ export class MaintenanceService {
       additionalTechnicians: (row.additionalTechnicians ?? []).map((t) => t.user),
       priority: row.priority,
       status: row.status,
+      isHighlighted: row.isHighlighted,
       completionDate: row.completionDate,
       createdBy: row.createdBy,
       remarks: row.remarks,
@@ -189,6 +190,22 @@ export class MaintenanceService {
     await this.findOne(id);
     await this.repository.softDelete(id, actorId);
     return { id, deleted: true };
+  }
+
+  /**
+   * Fitur Highlight Pekerjaan — toggle manual. Menandai (true) ditolak kalau pekerjaan
+   * sudah Completed/Cancelled (bukan issue aktif lagi) — konsisten dengan auto-clear saat
+   * transisi status di MaintenanceRepository.update().
+   */
+  async setHighlighted(id: string, isHighlighted: boolean) {
+    const current = await this.findOne(id);
+    if (isHighlighted && (current.status === 'COMPLETED' || current.status === 'CANCELLED')) {
+      throw new BadRequestException(
+        'Pekerjaan yang sudah Completed/Cancelled tidak bisa ditandai sebagai highlight',
+      );
+    }
+    await this.repository.setHighlighted(id, isHighlighted);
+    return this.findOne(id);
   }
 
   /** 4 summary card paling atas halaman list — lihat catatan asumsi di repository.getKpiSummary(). */

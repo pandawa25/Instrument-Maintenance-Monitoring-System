@@ -67,3 +67,8 @@ export async function updateMaintenance(id: string, payload: Partial<Maintenance
 export async function deleteMaintenance(id: string) {
   await api.delete(`/maintenance/${id}`);
 }
+
+export async function setMaintenanceHighlighted(id: string, isHighlighted: boolean) {
+  const { data } = await api.patch<{ data: Maintenance }>(`/maintenance/${id}/highlight`, { isHighlighted });
+  return data.data;
+}

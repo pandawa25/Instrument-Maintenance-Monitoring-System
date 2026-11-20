@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { SortableTh } from '@/components/shared/sortable-th';
+import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
 import type { Maintenance, MaintenanceSortableField } from '../types/maintenance.types';
 import { dataRowProps } from '@/components/shared/data-row';
 
@@ -18,6 +19,8 @@ interface Props {
   onEdit: (item: Maintenance) => void;
   onDelete: (item: Maintenance) => void;
   onView: (item: Maintenance) => void;
+  onToggleHighlight: (item: Maintenance) => void;
+  togglingHighlightId?: string;
 }
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -48,7 +51,19 @@ function renderDurasi(item: Maintenance) {
   );
 }
 
-export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder, onSort, onEdit, onDelete, onView }: Props) {
+export function MaintenanceTable({
+  items,
+  isLoading,
+  canEdit,
+  sortBy,
+  sortOrder,
+  onSort,
+  onEdit,
+  onDelete,
+  onView,
+  onToggleHighlight,
+  togglingHighlightId,
+}: Props) {
   if (isLoading) {
     return <LoadingState />;
   }
@@ -61,6 +76,9 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-muted">
+          <th className="w-11 px-4 py-2.5 font-medium">
+            <span className="sr-only">Highlight</span>
+          </th>
           <th className="min-w-[140px] px-4 py-2.5 font-medium">No. e-SPK</th>
           <SortableTh label="Tanggal" field="maintenanceDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <SortableTh label="Tgl Selesai" field="completionDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
@@ -76,6 +94,14 @@ export function MaintenanceTable({ items, isLoading, canEdit, sortBy, sortOrder,
       <tbody>
         {items.map((item) => (
           <tr key={item.id} {...dataRowProps(() => onView(item))}>
+            <td className="px-4 py-2.5">
+              <HighlightToggleButton
+                isHighlighted={item.isHighlighted}
+                onToggle={() => onToggleHighlight(item)}
+                canEdit={canEdit}
+                isLoading={togglingHighlightId === item.id}
+              />
+            </td>
             <td className="min-w-[140px] px-4 py-2.5 font-mono text-xs font-medium text-primary">{item.spkNumber ?? '-'}</td>
             <td className="px-4 py-2.5 text-text-muted">
               {new Date(item.maintenanceDate).toLocaleDateString('id-ID')}

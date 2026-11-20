@@ -67,6 +67,7 @@ export class PmPeriodsService {
         vendorPersonnel: e.vendorPersonnel,
         remarks: e.remarks,
         status: e.status,
+        isHighlighted: e.isHighlighted,
         checklistResults: e.checklistResults.map((c: any) => ({
           id: c.id,
           activityTypeName: c.activityTypeName,

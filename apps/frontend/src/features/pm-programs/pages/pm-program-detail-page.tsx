@@ -39,7 +39,10 @@ export function PmProgramDetailPage() {
 
   const [periodDialogOpen, setPeriodDialogOpen] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<PmPeriodListItem | null>(null);
-  const [executionId, setExecutionId] = useState<string | null>(null);
+  // Deep-link dari halaman Highlight Pekerjaan: ?openExecution=<id> auto-buka dialog
+  // checklist execution tersebut (tidak ada rute detail standalone untuk 1 execution).
+  const openExecutionFromUrl = new URLSearchParams(location.search).get('openExecution');
+  const [executionId, setExecutionId] = useState<string | null>(openExecutionFromUrl);
 
   const { data: program, isLoading: isLoadingProgram } = usePmProgramDetail(id);
   const { data: periods, isLoading: isLoadingPeriods } = usePmPeriods(id);

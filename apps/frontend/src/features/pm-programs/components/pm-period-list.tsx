@@ -8,10 +8,12 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { usePmPeriodDetail, useDeletePmPeriod } from '../hooks/use-pm-periods';
+import { useSetPmPeriodExecutionHighlighted } from '../hooks/use-pm-period-executions';
 import { PmBulkExecutionFormDialog } from './pm-bulk-execution-form-dialog';
-import type { PmPeriodListItem } from '../types/pm-period.types';
+import type { PmPeriodExecutionItem, PmPeriodListItem } from '../types/pm-period.types';
 import { getErrorMessage } from '@/lib/axios';
 import { dataRowProps } from '@/components/shared/data-row';
+import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
 
 interface Props {
   periods: PmPeriodListItem[];
@@ -136,6 +138,15 @@ function PmPeriodExecutionsPanel({
   const { data: detail, isLoading } = usePmPeriodDetail(periodId);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const highlightMutation = useSetPmPeriodExecutionHighlighted();
+
+  async function handleToggleHighlight(exec: PmPeriodExecutionItem) {
+    try {
+      await highlightMutation.mutateAsync({ id: exec.id, isHighlighted: !exec.isHighlighted });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
+    }
+  }
 
   if (isLoading || !detail) {
     return (
@@ -180,6 +191,9 @@ function PmPeriodExecutionsPanel({
                 <input type="checkbox" className="h-4 w-4 rounded border-border" checked={allSelected} onChange={toggleAll} />
               </th>
             )}
+            <th className="w-11 px-4 py-2 font-medium">
+              <span className="sr-only">Highlight</span>
+            </th>
             <th className="px-4 py-2 font-medium">Tag Number</th>
             <th className="px-4 py-2 font-medium">Service</th>
             <th className="px-4 py-2 font-medium">Tgl Aktual</th>
@@ -202,6 +216,14 @@ function PmPeriodExecutionsPanel({
                   />
                 </td>
               )}
+              <td className="px-4 py-2">
+                <HighlightToggleButton
+                  isHighlighted={exec.isHighlighted}
+                  onToggle={() => handleToggleHighlight(exec)}
+                  canEdit={canEdit}
+                  isLoading={highlightMutation.isPending && highlightMutation.variables?.id === exec.id}
+                />
+              </td>
               <td className="px-4 py-2 font-mono text-xs text-text">{exec.equipment.tagNumber}</td>
               <td className="px-4 py-2 text-text-muted">{exec.equipment.service}</td>
               <td className="px-4 py-2 text-text-muted">

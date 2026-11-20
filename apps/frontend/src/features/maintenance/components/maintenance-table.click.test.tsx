@@ -12,7 +12,7 @@ const item = {
 } as unknown as Maintenance;
 
 function renderTable(props: Partial<Parameters<typeof MaintenanceTable>[0]> = {}) {
-  const onView = vi.fn(), onEdit = vi.fn(), onDelete = vi.fn(), onSort = vi.fn();
+  const onView = vi.fn(), onEdit = vi.fn(), onDelete = vi.fn(), onSort = vi.fn(), onToggleHighlight = vi.fn();
   render(
     <MemoryRouter>
       <MaintenanceTable
@@ -23,11 +23,12 @@ function renderTable(props: Partial<Parameters<typeof MaintenanceTable>[0]> = {}
         onEdit={onEdit}
         onDelete={onDelete}
         onView={onView}
+        onToggleHighlight={onToggleHighlight}
         {...props}
       />
     </MemoryRouter>,
   );
-  return { onView, onEdit, onDelete, onSort };
+  return { onView, onEdit, onDelete, onSort, onToggleHighlight };
 }
 
 describe('MaintenanceTable — baris bisa diklik', () => {

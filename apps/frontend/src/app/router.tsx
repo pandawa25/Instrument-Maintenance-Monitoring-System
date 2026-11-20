@@ -74,6 +74,9 @@ const InventoryDashboardPage = lazy(() =>
 const WorkOrderListPage = lazy(() =>
   import('@/features/work-orders/pages/work-order-list-page').then((m) => ({ default: m.WorkOrderListPage })),
 );
+const HighlightsPage = lazy(() =>
+  import('@/features/highlights/pages/highlights-page').then((m) => ({ default: m.HighlightsPage })),
+);
 
 // Fallback dipasang per-rute (bukan 1 Suspense besar membungkus seluruh router) supaya
 // pindah halaman tidak membuat Sidebar/TopHeader ikut unmount — cuma area <Outlet/>
@@ -96,6 +99,13 @@ export const router = createBrowserRouter([
             children: [{ path: '/dashboard', element: withSuspense(<DashboardPage />) }],
           },
         ],
+      },
+      {
+        // Tidak digerbang 1 module permission — tiap section (CM/PM/WO) difilter sendiri
+        // di HighlightsService sesuai hak VIEW user ke modul masing-masing (lihat juga
+        // Sidebar: item tanpa `module` = selalu tampil untuk semua user yang login).
+        element: <DashboardLayout title="Highlight Pekerjaan" />,
+        children: [{ path: '/highlights', element: withSuspense(<HighlightsPage />) }],
       },
       {
         element: <RequirePermission module="AREA" />,

@@ -10,3 +10,10 @@ export async function updatePmPeriodExecution(id: string, payload: UpdatePmPerio
   const { data } = await api.patch<{ data: PmPeriodExecutionItem }>(`/pm-period-executions/${id}`, payload);
   return data.data;
 }
+
+export async function setPmPeriodExecutionHighlighted(id: string, isHighlighted: boolean) {
+  const { data } = await api.patch<{ data: PmPeriodExecutionItem }>(`/pm-period-executions/${id}/highlight`, {
+    isHighlighted,
+  });
+  return data.data;
+}

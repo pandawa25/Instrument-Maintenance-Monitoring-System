@@ -6,6 +6,7 @@ import {
   fetchMaintenanceById,
   fetchMaintenanceKpiSummary,
   fetchMaintenanceStatusCounts,
+  setMaintenanceHighlighted,
   updateMaintenance,
 } from '../api/maintenance.api';
 import type { MaintenanceFormValues, MaintenanceQueryParams } from '../types/maintenance.types';
@@ -68,5 +69,18 @@ export function useDeleteMaintenance() {
   return useMutation({
     mutationFn: (id: string) => deleteMaintenance(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [MAINTENANCE_KEY] }),
+  });
+}
+
+/** Fitur Highlight Pekerjaan. Juga invalidate query 'highlights' supaya halaman gabungan ikut sinkron. */
+export function useSetMaintenanceHighlighted() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isHighlighted }: { id: string; isHighlighted: boolean }) =>
+      setMaintenanceHighlighted(id, isHighlighted),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [MAINTENANCE_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['highlights'] });
+    },
   });
 }

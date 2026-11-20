@@ -59,6 +59,19 @@ export class WorkOrdersService {
     return this.repository.updateRemarks(id, dto.remarks?.trim() || null);
   }
 
+  /**
+   * Fitur Highlight Pekerjaan — toggle manual. Menandai (true) ditolak kalau WO sudah
+   * CLOSED (siklus ERP sudah selesai) — konsisten dengan auto-clear saat re-import
+   * menemukan lifecycle_stage baru = CLOSED (lihat WORK_ORDER_UPSERT_SQL).
+   */
+  async setHighlighted(id: string, isHighlighted: boolean) {
+    const current = await this.findOne(id);
+    if (isHighlighted && current.lifecycleStage === 'CLOSED') {
+      throw new BadRequestException('Work Order yang sudah Closed tidak bisa ditandai sebagai highlight');
+    }
+    return this.repository.setHighlighted(id, isHighlighted);
+  }
+
   /** Dropdown WO milik satu equipment — dipakai field searchable-select di form Corrective Maintenance. */
   findDropdownByEquipment(equipmentId: string) {
     return this.repository.findDropdownByEquipment(equipmentId);

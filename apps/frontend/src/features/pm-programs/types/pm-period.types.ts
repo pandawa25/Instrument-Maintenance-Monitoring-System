@@ -39,6 +39,7 @@ export interface PmPeriodExecutionItem {
   vendorPersonnel: string | null;
   remarks: string | null;
   status: PmExecutionStatus;
+  isHighlighted: boolean;
   workOrderNumber: string | null;
   workOrderDate: string | null;
   workOrderStatus: string | null;

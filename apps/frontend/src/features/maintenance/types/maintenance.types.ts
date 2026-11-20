@@ -75,6 +75,7 @@ export interface Maintenance {
   additionalTechnicians: TechnicianRef[];
   priority: MaintenancePriority;
   status: MaintenanceStatus;
+  isHighlighted: boolean;
   completionDate: string | null;
   createdBy: TechnicianRef;
   remarks: string | null;

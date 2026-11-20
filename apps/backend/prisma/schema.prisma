@@ -447,6 +447,11 @@ model PmPeriodExecution {
   vendorPersonnel String?            @map("vendor_personnel") @db.VarChar(150)
   status          PmExecutionStatus  @default(PENDING)
   remarks         String?            @db.VarChar(500)
+  // Tandai pekerjaan sebagai "highlight" (shared/global — lihat catatan di
+  // CorrectiveMaintenance.isHighlighted). Toggle manual lewat PATCH :id/highlight
+  // (permission PM_PROGRAM edit), auto-clear ke false saat status → COMPLETED
+  // (lihat PmPeriodExecutionsService.update()).
+  isHighlighted   Boolean            @default(false) @map("is_highlighted")
   // Referensi Work Order dari ERP (mis. SAP PM) — dicatat manual setelah WO
   // diterbitkan di sana, bukan dikelola sebagai workflow WO internal aplikasi
   // ini. Semua nullable & free-text karena bisa diisi belakangan dan format
@@ -465,6 +470,7 @@ model PmPeriodExecution {
   @@unique([pmPeriodId, equipmentId])
   @@index([equipmentId])
   @@index([status])
+  @@index([isHighlighted])
   @@map("pm_period_executions")
 }
 
@@ -519,6 +525,12 @@ model CorrectiveMaintenance {
   needsSparePart     Boolean           @default(false) @map("needs_spare_part")
   createdById        String            @map("created_by_id") @db.Uuid
   remarks            String?           @db.VarChar(500)
+  // Tandai pekerjaan sebagai "highlight" (shared/global, bukan per-user — lihat
+  // docs/roadmap.md fitur Highlight Pekerjaan). Toggle manual lewat PATCH :id/highlight
+  // (permission CORRECTIVE_MAINTENANCE edit), DAN otomatis di-set false lagi saat status
+  // berubah ke COMPLETED atau CANCELLED (lihat MaintenanceService.update()) — highlight
+  // dianggap "selesai jadi issue" begitu pekerjaan tidak lagi open/in-progress.
+  isHighlighted      Boolean           @default(false) @map("is_highlighted")
   // Referensi Notifikasi & Work Order dari ERP (mis. SAP PM) — dicatat manual
   // setelah diterbitkan di sana, bukan dikelola sebagai workflow internal
   // aplikasi ini. Semua nullable & free-text (status WO/notifikasi bervariasi
@@ -552,6 +564,10 @@ model CorrectiveMaintenance {
   @@index([priority])
   @@index([areaId, maintenanceDate])
   @@index([workOrderId])
+  // Partial index untuk GET /highlights (lihat migration manual — Prisma schema tidak
+  // punya syntax partial index, jadi WHERE is_highlighted = true AND deleted_at IS NULL
+  // ditambahkan lewat raw SQL di migration).
+  @@index([isHighlighted])
   @@map("corrective_maintenance")
 }
 
@@ -857,6 +873,13 @@ model WorkOrder {
   // supaya re-import ERP tidak pernah menimpanya — kolom yang tidak disebut di klausa SET pada
   // ON CONFLICT DO UPDATE otomatis dipertahankan oleh Postgres.
   remarks            String?                  @db.VarChar(1000)
+  // Tandai pekerjaan sebagai "highlight" (shared/global — lihat catatan di
+  // CorrectiveMaintenance.isHighlighted). Toggle manual lewat PATCH :id/highlight
+  // (permission WORK_ORDER edit). Auto-clear ke false SAAT RE-IMPORT ERP (bukan
+  // di endpoint update biasa) kalau lifecycle_stage baru = CLOSED — lihat CASE
+  // di WORK_ORDER_UPSERT_SQL (work-order-bulk-sql.ts), karena lifecycleStage hanya
+  // berubah lewat proses import massal, tidak ada endpoint update status manual.
+  isHighlighted      Boolean                  @default(false) @map("is_highlighted")
   importBatchId      String?                  @map("import_batch_id") @db.Uuid
   createdAt          DateTime                 @default(now()) @map("created_at")
   updatedAt          DateTime                 @updatedAt @map("updated_at")
@@ -873,6 +896,7 @@ model WorkOrder {
   @@index([notificationId])
   @@index([importBatchId])
   @@index([lifecycleStage])
+  @@index([isHighlighted])
   // Index biasa — uniqueness sebenarnya (PARTIAL, case-insensitive, WHERE deleted_at IS NULL)
   // ada di migration SQL manual, pola sama dengan Notification.notificationNo. JANGAN tambahkan
   // @unique di field orderNo.

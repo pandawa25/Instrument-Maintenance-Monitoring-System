@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PmPeriodExecutionsRepository } from './pm-period-executions.repository';
 import { UpdatePmPeriodExecutionDto } from './dto/update-pm-period-execution.dto';
 
@@ -17,6 +17,7 @@ export class PmPeriodExecutionsService {
       vendorPersonnel: row.vendorPersonnel,
       remarks: row.remarks,
       status: row.status,
+      isHighlighted: row.isHighlighted,
       workOrderNumber: row.workOrderNumber,
       workOrderDate: row.workOrderDate,
       workOrderStatus: row.workOrderStatus,
@@ -50,6 +51,20 @@ export class PmPeriodExecutionsService {
     }
 
     const updated = await this.repository.update(id, payload);
+    return this.toDetail(updated);
+  }
+
+  /**
+   * Fitur Highlight Pekerjaan — toggle manual. Menandai (true) ditolak kalau eksekusi sudah
+   * Completed (bukan issue aktif lagi) — konsisten dengan auto-clear saat transisi status
+   * di PmPeriodExecutionsRepository.update().
+   */
+  async setHighlighted(id: string, isHighlighted: boolean) {
+    const current = await this.findOne(id);
+    if (isHighlighted && current.status === 'COMPLETED') {
+      throw new BadRequestException('Eksekusi PM yang sudah Completed tidak bisa ditandai sebagai highlight');
+    }
+    const updated = await this.repository.setHighlighted(id, isHighlighted);
     return this.toDetail(updated);
   }
 }

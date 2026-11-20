@@ -21,6 +21,7 @@ import { WorkOrderImportService } from './work-order-import.service';
 import { QueryWorkOrderDto } from './dto/query-work-order.dto';
 import { RelinkEquipmentDto } from './dto/relink-equipment.dto';
 import { UpdateRemarksDto } from './dto/update-remarks.dto';
+import { ToggleHighlightDto } from '../../common/dto/toggle-highlight.dto';
 import { QueryImportRowsDto } from './dto/query-import-rows.dto';
 import { WoLastImportInfoDto } from './dto/wo-last-import-info.dto';
 import { WoImportPreviewResultDto } from './dto/wo-import-preview-result.dto';
@@ -172,5 +173,13 @@ export class WorkOrdersController {
   })
   updateRemarks(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateRemarksDto) {
     return this.service.updateRemarks(id, dto);
+  }
+
+  @Patch(':id/highlight')
+  @RequirePermission(PermissionModule.WORK_ORDER, 'edit')
+  @AuditLog('WorkOrder')
+  @ApiOperation({ summary: 'Toggle Highlight Pekerjaan — ditolak kalau lifecycle stage sudah Closed' })
+  setHighlighted(@Param('id', ParseUuidPipe) id: string, @Body() dto: ToggleHighlightDto) {
+    return this.service.setHighlighted(id, dto.isHighlighted);
   }
 }

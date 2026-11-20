@@ -40,6 +40,7 @@ export interface WorkOrder {
   equipmentLinkSource: WorkOrderEquipmentLinkSource;
   // Catatan manual internal (bukan field ERP) — lihat WorkOrder.remarks di schema.prisma.
   remarks: string | null;
+  isHighlighted: boolean;
   notification: { id: string; notificationNo: string } | null;
   equipment: {
     id: string;

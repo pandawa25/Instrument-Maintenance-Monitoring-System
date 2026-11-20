@@ -264,12 +264,19 @@ export class MaintenanceRepository {
         ? new Date()
         : undefined;
 
+    // Fitur Highlight Pekerjaan: begitu status BERUBAH jadi Completed/Cancelled, batalkan
+    // highlight otomatis (dianggap bukan issue aktif lagi) — lihat juga catatan di
+    // schema.prisma CorrectiveMaintenance.isHighlighted. Hanya berlaku saat transisi (dto.status
+    // disebutkan), bukan setiap kali record yang sudah Completed diedit field lain.
+    const willBeDone = dto.status === 'COMPLETED' || dto.status === 'CANCELLED';
+
     return this.prisma.$transaction(async (tx: any) => {
       const updated = await tx.correctiveMaintenance.update({
         where: { id },
         data: {
           ...rest,
           ...(areaId ? { areaId } : {}),
+          ...(willBeDone ? { isHighlighted: false } : {}),
           maintenanceDate: maintenanceDate ? new Date(maintenanceDate) : undefined,
           completionDate: resolvedCompletionDate,
           notificationDate: notificationDate ? new Date(notificationDate) : undefined,
@@ -332,6 +339,12 @@ export class MaintenanceRepository {
 
       return tx.correctiveMaintenance.findFirst({ where: { id }, include: LIST_INCLUDE });
     });
+  }
+
+  /** Toggle fitur Highlight Pekerjaan — lihat MaintenanceService.setHighlighted() untuk guard-nya. */
+  async setHighlighted(id: string, isHighlighted: boolean) {
+    await this.prisma.correctiveMaintenance.update({ where: { id }, data: { isHighlighted } });
+    return this.prisma.correctiveMaintenance.findFirst({ where: { id }, include: LIST_INCLUDE });
   }
 
   /**

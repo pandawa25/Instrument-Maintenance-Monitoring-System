@@ -31,6 +31,7 @@ const LIST_SELECT = {
   equipmentTagRaw: true,
   equipmentLinkSource: true,
   remarks: true,
+  isHighlighted: true,
   notification: { select: { id: true, notificationNo: true } },
   equipment: {
     select: { id: true, tagNumber: true, service: true, area: { select: { id: true, areaCode: true, areaName: true } } },
@@ -153,6 +154,15 @@ export class WorkOrdersRepository {
     return this.prisma.workOrder.update({
       where: { id },
       data: { remarks },
+      select: LIST_SELECT,
+    });
+  }
+
+  /** Toggle fitur Highlight Pekerjaan — lihat WorkOrdersService.setHighlighted() untuk guard-nya. */
+  setHighlighted(id: string, isHighlighted: boolean) {
+    return this.prisma.workOrder.update({
+      where: { id },
+      data: { isHighlighted },
       select: LIST_SELECT,
     });
   }

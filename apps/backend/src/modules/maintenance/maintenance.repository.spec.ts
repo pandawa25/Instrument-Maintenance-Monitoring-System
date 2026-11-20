@@ -30,10 +30,17 @@ function build({ updatedRow = { status: 'OPEN', completionDate: null }, existing
     },
     correctiveMaintenanceTechnician: { deleteMany: jest.fn(), createMany: jest.fn() },
   };
-  const prisma = { $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
+  const prisma = {
+    $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    // Dipakai setHighlighted() — DI LUAR transaksi, beda dari tx.correctiveMaintenance di atas.
+    correctiveMaintenance: {
+      update: jest.fn().mockResolvedValue(updatedRow),
+      findFirst: jest.fn().mockResolvedValue({ id: CM_ID }),
+    },
+  };
   const sparePartsRepository = { recordMovement: jest.fn().mockResolvedValue(undefined) };
   const repository = new MaintenanceRepository(prisma as any, sparePartsRepository as any);
-  return { repository, tx, sparePartsRepository };
+  return { repository, tx, prisma, sparePartsRepository };
 }
 
 function movementsOf(sparePartsRepository: { recordMovement: jest.Mock }) {
@@ -147,6 +154,61 @@ describe('MaintenanceRepository.update — transisi stock', () => {
     await repository.update(CM_ID, { remarks: 'catatan' } as any, ACTOR, 'COMPLETED');
 
     expect(sparePartsRepository.recordMovement).not.toHaveBeenCalled();
+  });
+});
+
+describe('MaintenanceRepository.update — auto-clear Highlight Pekerjaan', () => {
+  it('status berubah ke COMPLETED: isHighlighted ikut di-set false di data update', async () => {
+    const { repository, tx } = build({ updatedRow: { status: 'COMPLETED', completionDate: COMPLETION } });
+
+    await repository.update(CM_ID, { status: 'COMPLETED', completionDate: '2026-10-02' } as any, ACTOR, 'OPEN');
+
+    expect(tx.correctiveMaintenance.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ isHighlighted: false }) }),
+    );
+  });
+
+  it('status berubah ke CANCELLED: isHighlighted ikut di-set false di data update', async () => {
+    const { repository, tx } = build({ updatedRow: { status: 'CANCELLED', completionDate: null } });
+
+    await repository.update(CM_ID, { status: 'CANCELLED' } as any, ACTOR, 'IN_PROGRESS');
+
+    expect(tx.correctiveMaintenance.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ isHighlighted: false }) }),
+    );
+  });
+
+  it('edit field lain TANPA mengubah status: isHighlighted TIDAK disentuh (tidak ada di data update)', async () => {
+    const { repository, tx } = build({ updatedRow: { status: 'OPEN', completionDate: null } });
+
+    await repository.update(CM_ID, { remarks: 'catatan' } as any, ACTOR, 'OPEN');
+
+    const callData = tx.correctiveMaintenance.update.mock.calls[0][0].data;
+    expect(callData).not.toHaveProperty('isHighlighted');
+  });
+
+  it('status berubah ke IN_PROGRESS (bukan Completed/Cancelled): isHighlighted TIDAK disentuh', async () => {
+    const { repository, tx } = build({ updatedRow: { status: 'IN_PROGRESS', completionDate: null } });
+
+    await repository.update(CM_ID, { status: 'IN_PROGRESS' } as any, ACTOR, 'OPEN');
+
+    const callData = tx.correctiveMaintenance.update.mock.calls[0][0].data;
+    expect(callData).not.toHaveProperty('isHighlighted');
+  });
+});
+
+describe('MaintenanceRepository.setHighlighted', () => {
+  it('meng-update is_highlighted lalu mengembalikan baris lengkap', async () => {
+    const { repository, prisma } = build();
+    (prisma.correctiveMaintenance.findFirst as jest.Mock).mockResolvedValue({ id: CM_ID, isHighlighted: true });
+
+    const result = await repository.setHighlighted(CM_ID, true);
+
+    expect(prisma.correctiveMaintenance.update).toHaveBeenCalledWith({
+      where: { id: CM_ID },
+      data: { isHighlighted: true },
+    });
+    expect(result).toEqual({ id: CM_ID, isHighlighted: true });
   });
 });
 

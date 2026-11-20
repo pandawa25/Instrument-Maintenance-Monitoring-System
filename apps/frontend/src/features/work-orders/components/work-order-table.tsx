@@ -4,6 +4,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { dataRowProps } from '@/components/shared/data-row';
 import { SortableTh } from '@/components/shared/sortable-th';
+import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
 import type { WorkOrder } from '../types/work-order.types';
 
 function fmtDate(value: string | null) {
@@ -19,13 +20,26 @@ interface Props {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort: (field: WorkOrderSortableField) => void;
+  canEditHighlight: boolean;
+  onToggleHighlight: (row: WorkOrder) => void;
+  togglingHighlightId?: string;
 }
 
 // Kolom sesuai docs/design-notification-work-order.md §3/§9 (10 field) — Start/Finish Date
 // ditaruh paling kiri (kolom paling sering dipakai untuk menyortir pekerjaan), disusul
 // Notification, lalu identitas & status lainnya. Kolom Equipment menampilkan badge "Belum
 // Terhubung" kalau equipmentId null — baris itu juga ada di tab "Antrian Belum Terhubung".
-export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onSort }: Props) {
+export function WorkOrderTable({
+  rows,
+  isLoading,
+  onView,
+  sortBy,
+  sortOrder,
+  onSort,
+  canEditHighlight,
+  onToggleHighlight,
+  togglingHighlightId,
+}: Props) {
   if (isLoading) return <LoadingState />;
   if (rows.length === 0) {
     return <EmptyState icon={ClipboardList} message="Belum ada data Work Order — import dari export ERP terlebih dahulu." />;
@@ -35,6 +49,9 @@ export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onS
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-text-muted">
+          <th className="w-11 px-4 py-2.5">
+            <span className="sr-only">Highlight</span>
+          </th>
           <SortableTh label="Start Date" field="basicStartDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <SortableTh label="Finish Date" field="basicFinDate" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
           <th className="px-4 py-2.5">Notification</th>
@@ -50,6 +67,14 @@ export function WorkOrderTable({ rows, isLoading, onView, sortBy, sortOrder, onS
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} {...dataRowProps(() => onView(row))}>
+            <td className="px-4 py-2.5">
+              <HighlightToggleButton
+                isHighlighted={row.isHighlighted}
+                onToggle={() => onToggleHighlight(row)}
+                canEdit={canEditHighlight}
+                isLoading={togglingHighlightId === row.id}
+              />
+            </td>
             <td className="px-4 py-2.5 text-text-muted">{fmtDate(row.basicStartDate)}</td>
             <td className="px-4 py-2.5 text-text-muted">{fmtDate(row.basicFinDate)}</td>
             <td className="px-4 py-2.5 text-text-muted">{row.notification?.notificationNo ?? '—'}</td>
