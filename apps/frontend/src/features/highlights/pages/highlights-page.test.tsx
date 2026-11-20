@@ -111,7 +111,20 @@ describe('HighlightsPage', () => {
     expect(screen.getByText('PT-301')).toBeInTheDocument();
   });
 
-  it('klik tombol bintang pada baris Corrective Maintenance membatalkan highlight item itu saja', async () => {
+  it('klik tombol bintang membuka dialog konfirmasi tanpa langsung memicu mutasi', async () => {
+    fetchHighlightsMock.mockResolvedValue(ITEMS);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Control valve macet');
+    const toggleButtons = screen.getAllByRole('button', { name: 'Batalkan highlight' });
+    await user.click(toggleButtons[0]);
+
+    expect(await screen.findByText('Batalkan Highlight Pekerjaan?')).toBeInTheDocument();
+    expect(setMaintenanceHighlightedMock).not.toHaveBeenCalled();
+  });
+
+  it('klik tombol bintang pada baris Corrective Maintenance, lalu konfirmasi, membatalkan highlight item itu saja', async () => {
     fetchHighlightsMock.mockResolvedValue(ITEMS);
     setMaintenanceHighlightedMock.mockResolvedValue({ ...ITEMS[0], isHighlighted: false });
     const user = userEvent.setup();
@@ -120,6 +133,8 @@ describe('HighlightsPage', () => {
     await screen.findByText('Control valve macet');
     const toggleButtons = screen.getAllByRole('button', { name: 'Batalkan highlight' });
     await user.click(toggleButtons[0]);
+
+    await user.click(await screen.findByRole('button', { name: 'Ya, Batalkan' }));
 
     await waitFor(() => expect(setMaintenanceHighlightedMock).toHaveBeenCalledWith('cm-1', false));
     expect(setPmPeriodExecutionHighlightedMock).not.toHaveBeenCalled();

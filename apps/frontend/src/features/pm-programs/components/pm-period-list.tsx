@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -15,6 +14,8 @@ import type { PmPeriodExecutionItem, PmPeriodListItem } from '../types/pm-period
 import { getErrorMessage } from '@/lib/axios';
 import { dataRowProps } from '@/components/shared/data-row';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
+import { useHighlightConfirm } from '@/lib/use-highlight-confirm';
 
 interface Props {
   periods: PmPeriodListItem[];
@@ -140,16 +141,12 @@ function PmPeriodExecutionsPanel({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const highlightMutation = useSetPmPeriodExecutionHighlighted();
-
-  async function handleToggleHighlight(exec: PmPeriodExecutionItem) {
-    try {
-      const next = !exec.isHighlighted;
-      await highlightMutation.mutateAsync({ id: exec.id, isHighlighted: next });
-      notifyHighlightToggled(next);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
-    }
-  }
+  const highlightConfirm = useHighlightConfirm<PmPeriodExecutionItem>({
+    toggleMutation: highlightMutation,
+    getId: (exec) => exec.id,
+    getIsHighlighted: (exec) => exec.isHighlighted,
+    getLabel: (exec) => exec.equipment.tagNumber,
+  });
 
   if (isLoading || !detail) {
     return (
@@ -222,9 +219,9 @@ function PmPeriodExecutionsPanel({
               <td className="px-4 py-2">
                 <HighlightToggleButton
                   isHighlighted={exec.isHighlighted}
-                  onToggle={() => handleToggleHighlight(exec)}
+                  onToggle={() => highlightConfirm.requestToggle(exec)}
                   canEdit={canEdit}
-                  isLoading={highlightMutation.isPending && highlightMutation.variables?.id === exec.id}
+                  isLoading={highlightConfirm.isToggling && highlightConfirm.pendingId === exec.id}
                 />
               </td>
               <td className="px-4 py-2 font-mono text-xs text-text">{exec.equipment.tagNumber}</td>
@@ -259,6 +256,15 @@ function PmPeriodExecutionsPanel({
           executions={selectedExecutions}
         />
       )}
+
+      <HighlightConfirmDialog
+        open={Boolean(highlightConfirm.pendingItem)}
+        onOpenChange={(open) => !open && highlightConfirm.cancel()}
+        targetHighlighted={highlightConfirm.targetHighlighted}
+        itemLabel={highlightConfirm.itemLabel}
+        loading={highlightConfirm.isToggling}
+        onConfirm={highlightConfirm.confirmToggle}
+      />
     </div>
   );
 }

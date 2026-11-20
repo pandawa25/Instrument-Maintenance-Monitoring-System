@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarClock, ClipboardList, Star, Wrench } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -8,6 +9,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
 import { dataRowProps } from '@/components/shared/data-row';
 import { getErrorMessage } from '@/lib/axios';
 import { notifyHighlightToggled } from '@/lib/highlight-toast';
@@ -55,18 +57,26 @@ export function HighlightsPage() {
     return mutation.isPending && mutation.variables?.id === item.id;
   }
 
-  async function handleUnhighlight(item: HighlightItem) {
+  // Halaman ini hanya pernah membatalkan highlight (tidak pernah menandai baru), jadi dialog
+  // konfirmasi di sini selalu bertindak sebagai "Batalkan Highlight?" — targetHighlighted selalu false.
+  const [pendingItem, setPendingItem] = useState<HighlightItem | null>(null);
+  const isConfirmPending = pendingItem ? isToggling(pendingItem) : false;
+
+  async function confirmUnhighlight() {
+    if (!pendingItem) return;
     try {
-      if (item.type === 'CORRECTIVE_MAINTENANCE') {
-        await cmMutation.mutateAsync({ id: item.id, isHighlighted: false });
-      } else if (item.type === 'PM_EXECUTION') {
-        await pmMutation.mutateAsync({ id: item.id, isHighlighted: false });
+      if (pendingItem.type === 'CORRECTIVE_MAINTENANCE') {
+        await cmMutation.mutateAsync({ id: pendingItem.id, isHighlighted: false });
+      } else if (pendingItem.type === 'PM_EXECUTION') {
+        await pmMutation.mutateAsync({ id: pendingItem.id, isHighlighted: false });
       } else {
-        await woMutation.mutateAsync({ id: item.id, isHighlighted: false });
+        await woMutation.mutateAsync({ id: pendingItem.id, isHighlighted: false });
       }
       notifyHighlightToggled(false);
+      setPendingItem(null);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal membatalkan highlight'));
+      setPendingItem(null);
     }
   }
 
@@ -109,7 +119,7 @@ export function HighlightsPage() {
                       <td className="px-4 py-2.5">
                         <HighlightToggleButton
                           isHighlighted
-                          onToggle={() => handleUnhighlight(item)}
+                          onToggle={() => setPendingItem(item)}
                           canEdit={canEdit(item.type)}
                           isLoading={isToggling(item)}
                         />
@@ -139,6 +149,15 @@ export function HighlightsPage() {
           </div>
         )}
       </Card>
+
+      <HighlightConfirmDialog
+        open={Boolean(pendingItem)}
+        onOpenChange={(open) => !open && setPendingItem(null)}
+        targetHighlighted={false}
+        itemLabel={pendingItem?.title}
+        loading={isConfirmPending}
+        onConfirm={confirmUnhighlight}
+      />
     </div>
   );
 }

@@ -10,10 +10,10 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-fields-grid';
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
-import { toast } from 'sonner';
-import { notifyHighlightToggled } from '@/lib/highlight-toast';
-import { getErrorMessage } from '@/lib/axios';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
+import { useHighlightConfirm } from '@/lib/use-highlight-confirm';
 import { useMaintenanceById, useSetMaintenanceHighlighted } from '../hooks/use-maintenance';
+import type { Maintenance } from '../types/maintenance.types';
 import { MaintenanceForm } from '../components/maintenance-form';
 import { usePermission } from '@/store/auth.store';
 import { failureCategoryLabel, failureModeLabel } from '../utils/failure';
@@ -38,17 +38,12 @@ export function MaintenanceDetailPage() {
 
   const { data: maintenance, isLoading } = useMaintenanceById(id);
   const highlightMutation = useSetMaintenanceHighlighted();
-
-  async function handleToggleHighlight() {
-    if (!maintenance) return;
-    try {
-      const next = !maintenance.isHighlighted;
-      await highlightMutation.mutateAsync({ id: maintenance.id, isHighlighted: next });
-      notifyHighlightToggled(next);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
-    }
-  }
+  const highlightConfirm = useHighlightConfirm<Maintenance>({
+    toggleMutation: highlightMutation,
+    getId: (item) => item.id,
+    getIsHighlighted: (item) => item.isHighlighted,
+    getLabel: (item) => item.spkNumber ?? item.equipment.tagNumber,
+  });
 
   function backToList() {
     navigate(resolveBackTo(location, '/maintenance'));
@@ -203,9 +198,9 @@ export function MaintenanceDetailPage() {
               <StatusBadge value={maintenance.priority} />
               <HighlightToggleButton
                 isHighlighted={maintenance.isHighlighted}
-                onToggle={handleToggleHighlight}
+                onToggle={() => highlightConfirm.requestToggle(maintenance)}
                 canEdit={canEdit}
-                isLoading={highlightMutation.isPending}
+                isLoading={highlightConfirm.isToggling}
               />
             </div>
             <DetailFieldsGrid fields={fields} />
@@ -218,6 +213,15 @@ export function MaintenanceDetailPage() {
           <MaintenanceForm maintenance={maintenance} onSuccess={() => setMode('view')} onCancel={() => setMode('view')} />
         )}
       </Card>
+
+      <HighlightConfirmDialog
+        open={Boolean(highlightConfirm.pendingItem)}
+        onOpenChange={(open) => !open && highlightConfirm.cancel()}
+        targetHighlighted={highlightConfirm.targetHighlighted}
+        itemLabel={highlightConfirm.itemLabel}
+        loading={highlightConfirm.isToggling}
+        onConfirm={highlightConfirm.confirmToggle}
+      />
     </div>
   );
 }

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { ClipboardList, LinkIcon, Unlink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
+import { useHighlightConfirm } from '@/lib/use-highlight-confirm';
 import { useSetWorkOrderHighlighted, useUpdateWorkOrderRemarks, useWorkOrderById } from '../hooks/use-work-orders';
 import { usePermission } from '@/store/auth.store';
 import { LinkEquipmentDialog } from './link-equipment-dialog';
@@ -85,19 +86,14 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const { data: wo, isLoading } = useWorkOrderById(workOrderId ?? undefined);
   const highlightMutation = useSetWorkOrderHighlighted();
+  const highlightConfirm = useHighlightConfirm<WorkOrderDetail>({
+    toggleMutation: highlightMutation,
+    getId: (item) => item.id,
+    getIsHighlighted: (item) => item.isHighlighted,
+    getLabel: (item) => item.orderNo,
+  });
 
   if (!workOrderId) return null;
-
-  async function handleToggleHighlight() {
-    if (!wo) return;
-    try {
-      const next = !wo.isHighlighted;
-      await highlightMutation.mutateAsync({ id: wo.id, isHighlighted: next });
-      notifyHighlightToggled(next);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
-    }
-  }
 
   const fields: DetailField[] = wo
     ? [
@@ -145,9 +141,9 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
             <div className="flex items-center gap-2">
               <HighlightToggleButton
                 isHighlighted={wo.isHighlighted}
-                onToggle={handleToggleHighlight}
+                onToggle={() => highlightConfirm.requestToggle(wo)}
                 canEdit={canEdit}
-                isLoading={highlightMutation.isPending}
+                isLoading={highlightConfirm.isToggling}
               />
               <StatusBadge value={wo.lifecycleStage} />
               {wo.equipment ? (
@@ -191,6 +187,15 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
       </DetailDialog>
 
       {wo && <LinkEquipmentDialog open={linkOpen} onOpenChange={setLinkOpen} workOrder={wo} />}
+
+      <HighlightConfirmDialog
+        open={Boolean(highlightConfirm.pendingItem)}
+        onOpenChange={(open) => !open && highlightConfirm.cancel()}
+        targetHighlighted={highlightConfirm.targetHighlighted}
+        itemLabel={highlightConfirm.itemLabel}
+        loading={highlightConfirm.isToggling}
+        onConfirm={highlightConfirm.confirmToggle}
+      />
     </>
   );
 }

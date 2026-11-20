@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,8 @@ import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
+import { useHighlightConfirm } from '@/lib/use-highlight-confirm';
 import { PageHeader } from '@/components/shared/page-header';
 import {
   useMaintenanceList,
@@ -18,7 +19,6 @@ import {
   useMaintenanceStatusCounts,
   useSetMaintenanceHighlighted,
 } from '../hooks/use-maintenance';
-import { getErrorMessage } from '@/lib/axios';
 import { useAreasLookup } from '../hooks/use-maintenance-lookups';
 import { exportMaintenance } from '../api/maintenance.api';
 import { MaintenanceTable } from '../components/maintenance-table';
@@ -65,6 +65,12 @@ export function MaintenanceListPage() {
   const { data: areas } = useAreasLookup();
   const deleteMutation = useDeleteMaintenance();
   const highlightMutation = useSetMaintenanceHighlighted();
+  const highlightConfirm = useHighlightConfirm<Maintenance>({
+    toggleMutation: highlightMutation,
+    getId: (item) => item.id,
+    getIsHighlighted: (item) => item.isHighlighted,
+    getLabel: (item) => item.spkNumber ?? item.equipment.tagNumber,
+  });
   const { deletingItem, setDeletingItem, confirmDelete } = useCrudDelete<Maintenance>({
     deleteMutation,
     getId: (item) => item.id,
@@ -87,15 +93,6 @@ export function MaintenanceListPage() {
     setParams((p) => ({ ...p, ...toggleSort(p, field), page: 1 }));
   }
 
-  async function handleToggleHighlight(item: Maintenance) {
-    try {
-      const next = !item.isHighlighted;
-      await highlightMutation.mutateAsync({ id: item.id, isHighlighted: next });
-      notifyHighlightToggled(next);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -215,8 +212,8 @@ export function MaintenanceListPage() {
             onEdit={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location, { mode: 'edit' }) })}
             onDelete={setDeletingItem}
             onView={(item) => navigate(`/maintenance/${item.id}`, { state: withBackState(location) })}
-            onToggleHighlight={handleToggleHighlight}
-            togglingHighlightId={highlightMutation.isPending ? highlightMutation.variables?.id : undefined}
+            onToggleHighlight={highlightConfirm.requestToggle}
+            togglingHighlightId={highlightConfirm.isToggling ? highlightConfirm.pendingId : undefined}
           />
         </div>
 
@@ -234,6 +231,15 @@ export function MaintenanceListPage() {
         description={`Data corrective maintenance ${deletingItem?.spkNumber ? `"${deletingItem.spkNumber}" ` : ''}untuk equipment "${deletingItem?.equipment.tagNumber}" akan dihapus.`}
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
+      />
+
+      <HighlightConfirmDialog
+        open={Boolean(highlightConfirm.pendingItem)}
+        onOpenChange={(open) => !open && highlightConfirm.cancel()}
+        targetHighlighted={highlightConfirm.targetHighlighted}
+        itemLabel={highlightConfirm.itemLabel}
+        loading={highlightConfirm.isToggling}
+        onConfirm={highlightConfirm.confirmToggle}
       />
     </div>
   );

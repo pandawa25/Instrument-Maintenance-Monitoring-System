@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ClipboardList, History, RotateCcw, UploadCloud } from 'lucide-react';
-import { toast } from 'sonner';
-import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { SearchInput } from '@/components/shared/search-input';
 import { Pagination } from '@/components/shared/pagination';
 import { PageHeader } from '@/components/shared/page-header';
-import { getErrorMessage } from '@/lib/axios';
+import { HighlightConfirmDialog } from '@/components/shared/highlight-confirm-dialog';
+import { useHighlightConfirm } from '@/lib/use-highlight-confirm';
 import {
   useWorkOrderLastImport,
   useWorkOrderList,
@@ -76,16 +75,12 @@ export function WorkOrderListPage() {
   const { data, isLoading } = useWorkOrderList(effectiveParams);
   const { data: stageCounts } = useWorkOrderStageCounts(effectiveParams);
   const highlightMutation = useSetWorkOrderHighlighted();
-
-  async function handleToggleHighlight(row: WorkOrder) {
-    try {
-      const next = !row.isHighlighted;
-      await highlightMutation.mutateAsync({ id: row.id, isHighlighted: next });
-      notifyHighlightToggled(next);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
-    }
-  }
+  const highlightConfirm = useHighlightConfirm<WorkOrder>({
+    toggleMutation: highlightMutation,
+    getId: (item) => item.id,
+    getIsHighlighted: (item) => item.isHighlighted,
+    getLabel: (item) => item.orderNo,
+  });
 
   function toggleStage(stage: WorkOrderLifecycleStage) {
     setParams((p) => ({ ...p, lifecycleStage: p.lifecycleStage === stage ? undefined : stage, page: 1 }));
@@ -208,8 +203,8 @@ export function WorkOrderListPage() {
             sortOrder={params.sortOrder}
             onSort={handleSort}
             canEditHighlight={canEditHighlight}
-            onToggleHighlight={handleToggleHighlight}
-            togglingHighlightId={highlightMutation.isPending ? highlightMutation.variables?.id : undefined}
+            onToggleHighlight={highlightConfirm.requestToggle}
+            togglingHighlightId={highlightConfirm.isToggling ? highlightConfirm.pendingId : undefined}
           />
         </div>
 
@@ -219,6 +214,15 @@ export function WorkOrderListPage() {
       <WorkOrderDetailDialog workOrderId={viewingId} onOpenChange={(open) => !open && setViewingId(null)} />
 
       <WorkOrderImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <HighlightConfirmDialog
+        open={Boolean(highlightConfirm.pendingItem)}
+        onOpenChange={(open) => !open && highlightConfirm.cancel()}
+        targetHighlighted={highlightConfirm.targetHighlighted}
+        itemLabel={highlightConfirm.itemLabel}
+        loading={highlightConfirm.isToggling}
+        onConfirm={highlightConfirm.confirmToggle}
+      />
     </div>
   );
 }
