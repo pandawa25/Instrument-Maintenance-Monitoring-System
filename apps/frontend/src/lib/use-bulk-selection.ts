@@ -20,7 +20,9 @@ export function useBulkSelection<T>(items: T[], getId: (item: T) => string, rese
     setSelectedIds(new Set());
     // Sengaja hanya depend ke resetKey — bukan ke `items`/`getId`, supaya refetch dengan
     // data yang sama (misal refetch saat window focus) tidak ikut mengosongkan pilihan.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // (Catatan: versi eslint-plugin-react-hooks saat ini sudah tidak memperingatkan
+    // dependency ini meski `items`/`getId` tidak diikutkan, jadi directive disable di
+    // bawah dulu dibuang — "unused eslint-disable" sekarang jadi error, bukan warning.)
   }, [resetKey]);
 
   const toggleAll = useCallback(() => {

@@ -14,7 +14,7 @@ const PM_ROW = {
   executionDate: new Date('2026-11-05'),
   status: 'PENDING',
   equipment: { tagNumber: 'TT-002', service: 'Temperature' },
-  pmPeriod: { periodNumber: 3, pmProgram: { name: 'PM Rutin TT' } },
+  pmPeriod: { periodNumber: 3, pmProgram: { id: 'prog-1', name: 'PM Rutin TT' } },
 };
 const WO_ROW = {
   id: 'wo-1',
@@ -50,7 +50,7 @@ describe('HighlightsService.findAll', () => {
     const result = await service.findAll(USER);
 
     expect(result.map((r) => r.id)).toEqual(['pm-1', 'wo-1', 'cm-1']); // 11-05, 11-03, 11-01
-    expect(result[0]).toMatchObject({ type: 'PM_EXECUTION', linkTo: '/pm-period-executions/pm-1' });
+    expect(result[0]).toMatchObject({ type: 'PM_EXECUTION', linkTo: '/pm-programs/prog-1?openExecution=pm-1' });
   });
 
   it('user tanpa akses view WORK_ORDER: section WO tidak ikut dipanggil & tidak muncul di hasil', async () => {
