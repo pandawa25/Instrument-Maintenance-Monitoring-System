@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
 import { dataRowProps } from '@/components/shared/data-row';
 import { getErrorMessage } from '@/lib/axios';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { usePermission } from '@/store/auth.store';
 import { useHighlights } from '../hooks/use-highlights';
 import { useSetMaintenanceHighlighted } from '@/features/maintenance/hooks/use-maintenance';
@@ -63,6 +64,7 @@ export function HighlightsPage() {
       } else {
         await woMutation.mutateAsync({ id: item.id, isHighlighted: false });
       }
+      notifyHighlightToggled(false);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal membatalkan highlight'));
     }

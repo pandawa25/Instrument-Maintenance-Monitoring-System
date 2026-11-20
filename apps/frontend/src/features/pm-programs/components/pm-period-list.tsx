@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CalendarClock, ChevronDown, ChevronRight, ClipboardEdit, ClipboardList, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -142,7 +143,9 @@ function PmPeriodExecutionsPanel({
 
   async function handleToggleHighlight(exec: PmPeriodExecutionItem) {
     try {
-      await highlightMutation.mutateAsync({ id: exec.id, isHighlighted: !exec.isHighlighted });
+      const next = !exec.isHighlighted;
+      await highlightMutation.mutateAsync({ id: exec.id, isHighlighted: next });
+      notifyHighlightToggled(next);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
     }

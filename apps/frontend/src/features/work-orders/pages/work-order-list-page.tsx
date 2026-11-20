@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ClipboardList, History, RotateCcw, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -78,7 +79,9 @@ export function WorkOrderListPage() {
 
   async function handleToggleHighlight(row: WorkOrder) {
     try {
-      await highlightMutation.mutateAsync({ id: row.id, isHighlighted: !row.isHighlighted });
+      const next = !row.isHighlighted;
+      await highlightMutation.mutateAsync({ id: row.id, isHighlighted: next });
+      notifyHighlightToggled(next);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
     }

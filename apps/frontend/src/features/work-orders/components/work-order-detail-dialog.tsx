@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ClipboardList, LinkIcon, Unlink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { DetailDialog, type DetailField } from '@/components/shared/detail-dialog';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -90,7 +91,9 @@ export function WorkOrderDetailDialog({ workOrderId, onOpenChange }: Props) {
   async function handleToggleHighlight() {
     if (!wo) return;
     try {
-      await highlightMutation.mutateAsync({ id: wo.id, isHighlighted: !wo.isHighlighted });
+      const next = !wo.isHighlighted;
+      await highlightMutation.mutateAsync({ id: wo.id, isHighlighted: next });
+      notifyHighlightToggled(next);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
     }

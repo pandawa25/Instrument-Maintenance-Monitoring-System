@@ -11,6 +11,7 @@ import { DetailFieldsGrid, type DetailField } from '@/components/shared/detail-f
 import { AttachmentsSection } from '@/features/attachments/components/attachments-section';
 import { HighlightToggleButton } from '@/components/shared/highlight-toggle-button';
 import { toast } from 'sonner';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { getErrorMessage } from '@/lib/axios';
 import { useMaintenanceById, useSetMaintenanceHighlighted } from '../hooks/use-maintenance';
 import { MaintenanceForm } from '../components/maintenance-form';
@@ -41,7 +42,9 @@ export function MaintenanceDetailPage() {
   async function handleToggleHighlight() {
     if (!maintenance) return;
     try {
-      await highlightMutation.mutateAsync({ id: maintenance.id, isHighlighted: !maintenance.isHighlighted });
+      const next = !maintenance.isHighlighted;
+      await highlightMutation.mutateAsync({ id: maintenance.id, isHighlighted: next });
+      notifyHighlightToggled(next);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
     }

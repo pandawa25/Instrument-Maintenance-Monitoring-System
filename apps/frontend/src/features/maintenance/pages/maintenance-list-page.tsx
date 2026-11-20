@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Wrench, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { notifyHighlightToggled } from '@/lib/highlight-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -88,7 +89,9 @@ export function MaintenanceListPage() {
 
   async function handleToggleHighlight(item: Maintenance) {
     try {
-      await highlightMutation.mutateAsync({ id: item.id, isHighlighted: !item.isHighlighted });
+      const next = !item.isHighlighted;
+      await highlightMutation.mutateAsync({ id: item.id, isHighlighted: next });
+      notifyHighlightToggled(next);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Gagal mengubah highlight'));
     }
