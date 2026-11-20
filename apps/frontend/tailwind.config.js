@@ -47,15 +47,17 @@ export default {
         '2xl': '1rem',
       },
       fontFamily: {
-        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         soft: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
-        // Elevation untuk card/container konten — lebih tegas dari shadow-sm bawaan
-        // Tailwind supaya card terasa "terangkat" dari background, bukan cuma dikasih border.
-        card: '0 1px 2px 0 rgb(15 23 42 / 0.04), 0 3px 10px -2px rgb(15 23 42 / 0.10)',
-        'card-hover': '0 4px 14px -2px rgb(15 23 42 / 0.14), 0 2px 6px -2px rgb(15 23 42 / 0.08)',
+        // Elevation untuk card/container konten — dibuat lebih flat/tipis (mendekati
+        // shadow-sm bawaan Tailwind) supaya cocok dengan border tipis di sekelilingnya,
+        // ala referensi desain dashboard modern (Stitch) — sebelumnya lebih "mengambang".
+        card: '0 1px 2px 0 rgb(15 23 42 / 0.04)',
+        'card-hover': '0 4px 12px -2px rgb(15 23 42 / 0.10), 0 2px 4px -2px rgb(15 23 42 / 0.06)',
       },
       keyframes: {
         'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },

@@ -46,10 +46,10 @@ export function TopHeader({ title }: { title: string }) {
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={toggleMobileSidebar} aria-label="Buka menu">
+        <Button variant="ghost" size="icon" className="rounded-lg lg:hidden" onClick={toggleMobileSidebar} aria-label="Buka menu">
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="truncate text-base font-semibold text-text">{title}</h1>
+        <h1 className="font-display truncate text-base font-bold text-text">{title}</h1>
       </div>
 
       <div className="flex shrink-0 items-center gap-3">

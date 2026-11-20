@@ -65,7 +65,7 @@ export function StatusBadge({ value, dot = false }: StatusBadgeProps) {
   // seluruh halaman karena satu badge, tampilkan "-" saja.
   if (!value) {
     return (
-      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-surface-2 text-text-muted border-border">
+      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide bg-surface-2 text-text-muted border-border">
         -
       </span>
     );
@@ -74,7 +74,7 @@ export function StatusBadge({ value, dot = false }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide',
         STATUS_STYLES[value] ?? 'bg-surface-2 text-text-muted border-border',
       )}
     >

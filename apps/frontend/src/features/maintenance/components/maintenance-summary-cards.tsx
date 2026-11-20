@@ -69,17 +69,17 @@ export function MaintenanceSummaryCards({ summary, isLoading }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.label} className="flex items-center gap-3 p-4">
-          <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', card.accent)}>
-            <card.icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-2xl font-semibold text-text">
-              {isLoading ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-surface-2" /> : card.value}
+        <Card key={card.label} className="p-4">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{card.label}</span>
+            <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', card.accent)}>
+              <card.icon className="h-5 w-5" />
             </div>
-            <p className="truncate text-xs text-text-muted">{card.label}</p>
-            <p className={cn('text-[11px] font-medium', card.hintClass)}>{card.hint}</p>
           </div>
+          <div className="mt-1 font-display text-2xl font-extrabold tracking-tight text-text">
+            {isLoading ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-surface-2" /> : card.value}
+          </div>
+          <p className={cn('mt-1 text-[11px] font-medium', card.hintClass)}>{card.hint}</p>
         </Card>
       ))}
     </div>

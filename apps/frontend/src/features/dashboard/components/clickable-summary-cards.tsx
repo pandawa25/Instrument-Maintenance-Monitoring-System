@@ -18,6 +18,13 @@ interface Props {
   onSelect: (metric: TrendMetric) => void;
 }
 
+// card.accent selalu berupa class "text-*" (dipakai sebagai warna ikon/border
+// aktif) — chip ikon butuh versi "bg-*/10" dari warna yang sama, jadi diturunkan
+// di sini (bukan field terpisah) supaya tidak bisa nyasar tidak sinkron.
+function accentChipBg(accent: string): string {
+  return `${accent.replace('text-', 'bg-')}/10`;
+}
+
 // Kotak data (summary) yang bisa diklik — klik kotak mengganti metric yang
 // digambar di TrendChart di bawahnya (lihat referensi desain dashboard).
 export function ClickableSummaryCards({ cards, values, isLoading, activeMetric, onSelect }: Props) {
@@ -36,11 +43,13 @@ export function ClickableSummaryCards({ cards, values, isLoading, activeMetric, 
               active ? 'border-primary ring-1 ring-primary/30' : 'border-border',
             )}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-text-muted">{card.label}</span>
-              <card.icon className={cn('h-4 w-4 shrink-0', card.accent)} />
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{card.label}</span>
+              <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', accentChipBg(card.accent))}>
+                <card.icon className={cn('h-4 w-4 shrink-0', card.accent)} />
+              </div>
             </div>
-            <div className="mt-2 text-2xl font-semibold text-text">
+            <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-text">
               {isLoading || value === undefined ? (
                 <span className="inline-block h-7 w-12 animate-pulse rounded bg-surface-2" />
               ) : (

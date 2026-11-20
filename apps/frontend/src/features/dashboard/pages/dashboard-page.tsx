@@ -91,15 +91,13 @@ export function DashboardPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-text">Dashboard</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight text-text">Dashboard Pemeliharaan &amp; Aset</h2>
         <p className="text-sm text-text-muted">Ringkasan kondisi maintenance instrumentasi terkini.</p>
       </div>
 
-      <div className="flex flex-col gap-3 border-b border-border pb-0 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs tabs={tabs} value={tab} onChange={setTab} className="border-b-0" />
-        <div className="pb-2 sm:pb-0">
-          <DateRangePicker value={range} onChange={setRange} />
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs tabs={tabs} value={tab} onChange={setTab} />
+        <DateRangePicker value={range} onChange={setRange} />
       </div>
 
       <TabPanel active={tab === 'maintenance'}>

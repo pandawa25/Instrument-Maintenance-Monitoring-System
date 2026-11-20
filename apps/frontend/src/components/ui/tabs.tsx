@@ -21,7 +21,10 @@ interface TabsProps {
 // Maintenance, cuma di sini dibuat generic/reusable.
 export function Tabs({ tabs, value, onChange, className }: TabsProps) {
   return (
-    <div role="tablist" className={cn('flex flex-wrap gap-1 border-b border-border', className)}>
+    <div
+      role="tablist"
+      className={cn('flex flex-wrap items-center gap-1 rounded-xl bg-surface-2 p-1', className)}
+    >
       {tabs.map((tab) => {
         const active = tab.value === value;
         const Icon = tab.icon;
@@ -33,8 +36,8 @@ export function Tabs({ tabs, value, onChange, className }: TabsProps) {
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={cn(
-              'flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
-              active ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text',
+              'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              active ? 'bg-surface text-primary shadow-sm' : 'text-text-muted hover:text-text',
             )}
           >
             {Icon && <Icon className="h-4 w-4" />}

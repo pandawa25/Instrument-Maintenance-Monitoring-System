@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -103,7 +103,7 @@
 
   body {
     @apply bg-background text-text antialiased;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     transition: background-color 150ms ease-out, color 150ms ease-out;
   }
 
@@ -135,6 +135,15 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer utilities {
+  /* Font untuk heading/angka besar (judul halaman, KPI, nama brand) — Plus Jakarta
+     Sans dipakai terpisah dari body (Inter) supaya ada kontras tegas ala dashboard
+     modern (lihat referensi desain Stitch: headline bold + body ringan). */
+  .font-display {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   }
 }
 

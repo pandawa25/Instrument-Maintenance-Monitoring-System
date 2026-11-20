@@ -111,9 +111,9 @@ function NavItemLink({ item, collapsed, onNavigate }: { item: NavItem; collapsed
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-primary-tint hover:text-primary',
+          'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-primary-tint hover:text-primary',
           collapsed && 'justify-center px-0',
-          isActive && 'bg-primary text-white shadow-sm hover:bg-primary hover:text-white',
+          isActive && 'bg-primary text-white font-semibold shadow-sm hover:bg-primary hover:text-white',
         )
       }
     >
@@ -168,7 +168,7 @@ export function Sidebar() {
           return (
             <div key={group.label ?? idx}>
               {group.label && !collapsed && (
-                <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted/70">
+                <div className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-text-muted/70">
                   {group.label}
                 </div>
               )}
